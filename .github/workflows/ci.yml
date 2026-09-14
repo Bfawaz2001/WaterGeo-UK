@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.13"
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run --locked ruff check .
+      - run: uv run --locked ruff format --check .
+      - run: uv run --locked mypy src
+      - run: uv run --locked pytest -m "not integration"
+      - run: uv build
+
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.13"
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Generate disposable database credentials
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+          keys = ("POSTGRES_PASSWORD", "WATERGEO_DB_PASSWORD", "WATERGEO_MIGRATION_PASSWORD")
+          with open(os.environ["GITHUB_ENV"], "a") as destination:
+              for key in keys:
+                  value = secrets.token_hex(24)
+                  print(f"::add-mask::{value}")
+                  destination.write(f"{key}={value}\n")
+          PY
+      - run: docker compose --profile app config --quiet
+      - run: docker compose up --build --wait db
+      - name: Check migrations, spatial operations, readiness, and role permissions
+        env:
+          WATERGEO_TEST_DATABASE: "1"
+        run: uv run --locked pytest -m integration
+      - name: Build and start API with automatic migration
+        run: docker compose --profile app up --build --wait
+      - name: Verify HTTP endpoints and database failure behaviour
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8000/health
+          curl --fail --silent --show-error http://127.0.0.1:8000/ready
+          docker compose stop db
+          curl --fail --silent --show-error http://127.0.0.1:8000/health
+          status=$(curl --silent --show-error --max-time 15 --output /tmp/readiness.json --write-out '%{http_code}' http://127.0.0.1:8000/ready)
+          test "$status" = 503
+          docker compose up --wait db
+          curl --fail --silent --show-error http://127.0.0.1:8000/ready
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose --profile app logs --no-color --tail 80
+      - name: Remove disposable CI database
+        if: always()
+        run: docker compose --profile app down --volumes

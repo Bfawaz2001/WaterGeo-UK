@@ -1,0 +1,60 @@
+name: watergeo
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    environment:
+      POSTGRES_DB: watergeo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      WATERGEO_MIGRATION_PASSWORD: ${WATERGEO_MIGRATION_PASSWORD:?Set WATERGEO_MIGRATION_PASSWORD in .env}
+      WATERGEO_DB_PASSWORD: ${WATERGEO_DB_PASSWORD:?Set WATERGEO_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${WATERGEO_DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "watergeo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  migrate:
+    profiles: [app]
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      WATERGEO_DB_HOST: db
+      WATERGEO_MIGRATION_PASSWORD: ${WATERGEO_MIGRATION_PASSWORD:?Set WATERGEO_MIGRATION_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  api:
+    profiles: [app]
+    build: .
+    environment:
+      WATERGEO_DB_HOST: db
+      WATERGEO_DB_PASSWORD: ${WATERGEO_DB_PASSWORD:?Set WATERGEO_DB_PASSWORD in .env}
+      WATERGEO_LOG_LEVEL: ${WATERGEO_LOG_LEVEL:-INFO}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  postgres_data:

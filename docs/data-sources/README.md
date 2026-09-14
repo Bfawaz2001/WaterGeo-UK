@@ -1,0 +1,27 @@
+# Data source acceptance
+
+No source is integrated or approved yet. Public availability is not permission to
+redistribute. For each proposed integration, record the following from current
+official documentation and actual sample responses before implementation:
+
+1. Publisher, dataset title, official source URL, and documentation/API links.
+2. Licence name/version/link, permitted persistence/caching/redistribution, exact
+   required attribution, and any source-specific terms or unresolved questions.
+3. Date reviewed, retrieval method, documented update frequency, observed source
+   update/version fields, rate limits, and availability limitations.
+4. Source schema and identifiers, geography/coverage, coordinate reference system,
+   geometry types, temporal semantics, nulls, and known data-quality constraints.
+5. Proposed transformations and retained source-specific fields, deduplication
+   keys, raw retention, incremental/replacement policy, and deletion handling.
+6. How each resulting record links to its publisher, dataset, original identifier,
+   source URL, licence, ingestion timestamp, source version/update information,
+   and transformation version where appropriate.
+
+Record evidence and uncertainties explicitly. Stop implementation if licence
+conditions remain unclear. Use only public sources; employment access confers no
+rights on this project. Do not put bulk source data in Git. Keep small fixtures
+synthetic or verify and record their redistribution rights.
+
+The first candidate investigation is public water-company boundary data. Its
+licensing, boundaries' meaning (for example water versus sewerage service), CRS,
+identifiers, and coverage must drive the eventual model and API contract.

@@ -1,0 +1,14 @@
+# Allowlist the build context so local secrets/data never reach the builder.
+**
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!src/
+!src/**
+!alembic.ini
+!migrations/
+!migrations/**
+!docker/
+!docker/**
+**/__pycache__/

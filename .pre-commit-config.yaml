@@ -1,0 +1,19 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff lint (locked)
+        entry: uv run --locked ruff check
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: Ruff format (locked)
+        entry: uv run --locked ruff format --check
+        language: system
+        types_or: [python, pyi]
+      - id: mypy
+        name: mypy (locked)
+        entry: uv run --locked mypy src
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]
