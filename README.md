@@ -144,8 +144,9 @@ See the [Phase 0 architecture](docs/architecture/phase-0.md) and
 trade-offs, and known limits. Contribution and vulnerability-reporting guidance
 are in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
-**Next milestone:** investigate one authoritative public water-company boundary
-dataset. Verify official documentation, licence, attribution, identifiers,
-geometry/CRS, update behaviour, and real sample responses. Use that evidence to
-define the first small ingestion-to-PostGIS-to-API implementation. No candidate
-source is approved for redistribution merely by being publicly accessible.
+The [first source assessment](docs/data-sources/ofwat-company-boundaries.md)
+examines Ofwat's publicly distributed water-supply and sewerage boundaries, including
+their actual fields and geometry quality. **Next milestone:** resolve its licence
+edition/attribution and invalid-geometry policy, then design the first water-supply
+ingestion-to-PostGIS-to-API implementation. No source is approved for redistribution
+merely by being publicly accessible.

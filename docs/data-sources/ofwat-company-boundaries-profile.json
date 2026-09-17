@@ -1,0 +1,402 @@
+{
+  "review_date": "2026-09-17",
+  "purpose": "Read-only source assessment; no dataset integration or redistribution approval.",
+  "method": "Read all records as strict UTF-8 with PyShp; convert each unmodified shape through __geo_interface__ to Shapely; use is_valid and explain_validity before any repair or reprojection; identify the .prj with PyProj.",
+  "tools": {
+    "python": "3.12.0",
+    "pyshp": "3.1.6",
+    "shapely": "2.1.2",
+    "geos": "3.13.1",
+    "pyproj": "3.8.0",
+    "proj": "9.8.1"
+  },
+  "scope_limits": [
+    "No geometry repair or reprojection",
+    "No inter-feature overlap or coverage-gap analysis",
+    "No comparison with appointments or newer releases",
+    "No guarantee of ID stability between releases"
+  ],
+  "ids_shared_across_layers": 748,
+  "layers": {
+    "water": {
+      "download_url": "https://data.parliament.uk/resources/constituencystatistics/water/WaterSupplyAreas_incNAVsv1_5.zip",
+      "http_headers": {
+        "date": "Thu, 17 Sep 2026 19:35:08 GMT",
+        "content-type": "application/x-zip-compressed",
+        "content-length": "15192919",
+        "etag": "\"754226b99591da1:0\"",
+        "last-modified": "Thu, 18 Apr 2024 13:38:40 GMT"
+      },
+      "archive_bytes": 15192919,
+      "sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
+      "members": [
+        "WaterSupplyAreas_incNAVs v1_5.dbf",
+        "WaterSupplyAreas_incNAVs v1_5.prj",
+        "WaterSupplyAreas_incNAVs v1_5.shp",
+        "WaterSupplyAreas_incNAVs v1_5.shx"
+      ],
+      "records": 1141,
+      "shape_type": 5,
+      "geometry_types": {
+        "Polygon": 1086,
+        "MultiPolygon": 55
+      },
+      "empty_geometries": 0,
+      "invalid_geometries": [
+        {
+          "id": 6,
+          "reason": "Self-intersection[358603.558935728 179983.31154219]"
+        },
+        {
+          "id": 1,
+          "reason": "Self-intersection[600773.247854483 117705.38908025]"
+        },
+        {
+          "id": 28,
+          "reason": "Self-intersection[474462.490786559 116501.800991215]"
+        },
+        {
+          "id": 4,
+          "reason": "Self-intersection[639307.579147224 257565.571914059]"
+        },
+        {
+          "id": 30,
+          "reason": "Self-intersection[511932.038011859 162430.972345171]"
+        }
+      ],
+      "bbox_bng": [
+        80700.74052465154,
+        5184.79930117511,
+        655643.4609597785,
+        657535.8479522829
+      ],
+      "epsg": 27700,
+      "fields": [
+        [
+          "AreaServed",
+          "C",
+          80,
+          0
+        ],
+        [
+          "ID",
+          "N",
+          10,
+          0
+        ],
+        [
+          "COMPANY",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Acronym",
+          "C",
+          254,
+          0
+        ],
+        [
+          "CoType",
+          "C",
+          254,
+          0
+        ],
+        [
+          "AreaType",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Date Grant",
+          "D",
+          8,
+          0
+        ],
+        [
+          "Disclaimer",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Disclaim2",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Disclaim3",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Provenance",
+          "C",
+          254,
+          0
+        ],
+        [
+          "WARNINGS",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Created",
+          "D",
+          8,
+          0
+        ],
+        [
+          "LastUpdate",
+          "D",
+          8,
+          0
+        ],
+        [
+          "Version",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Revisions",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Licence",
+          "C",
+          250,
+          0
+        ]
+      ],
+      "company_names": 25,
+      "acronyms": 24,
+      "area_types": {
+        "inset": 1104,
+        "Whole water supply area": 8,
+        "Part of water supply area": 27,
+        "Whole sewerage services area": 2
+      },
+      "company_types": {
+        "small new entrant water/sewerage company (sometimes referred to as a NAV)": 1096,
+        "regional water and sewerage company": 32,
+        "regional water only company": 13
+      },
+      "versions": {
+        "1_5": 1141
+      },
+      "last_updates": {
+        "2024-04-25": 1141
+      },
+      "created": {
+        "2020-08-04": 1141
+      },
+      "missing_grant_dates": 36,
+      "duplicate_ids": 0,
+      "id_min": 1,
+      "id_max": 1141,
+      "inconsistent_area_type_examples": [
+        {
+          "ID": 888,
+          "AreaServed": "Norton Farm, Cribbs Causeway (with Berwick Drive correction)",
+          "COMPANY": "South West Water",
+          "AreaType": "Whole sewerage services area"
+        },
+        {
+          "ID": 1117,
+          "AreaServed": "Willows, Station Road, Pershore (Boundary Variation)",
+          "COMPANY": "Severn Trent Water",
+          "AreaType": "Whole sewerage services area"
+        }
+      ],
+      "nonblank_warning_count": 6
+    },
+    "sewerage": {
+      "download_url": "https://data.parliament.uk/resources/constituencystatistics/water/SewerageServicesAreas_incNAVsv1_5a.zip",
+      "http_headers": {
+        "date": "Thu, 17 Sep 2026 19:35:09 GMT",
+        "content-type": "application/x-zip-compressed",
+        "content-length": "8092181",
+        "etag": "\"35f8cb1a5abbda1:0\"",
+        "last-modified": "Mon, 10 Jun 2024 17:17:43 GMT"
+      },
+      "archive_bytes": 8092181,
+      "sha256": "48129b880cad01729215a9a6db38d0328302df0e7fdb5a2257cc23d75bdfdd74",
+      "members": [
+        "SewerageServicesAreas_incNAVs v1_5a.dbf",
+        "SewerageServicesAreas_incNAVs v1_5a.prj",
+        "SewerageServicesAreas_incNAVs v1_5a.shp",
+        "SewerageServicesAreas_incNAVs v1_5a.shx"
+      ],
+      "records": 748,
+      "shape_type": 5,
+      "geometry_types": {
+        "Polygon": 711,
+        "MultiPolygon": 37
+      },
+      "empty_geometries": 0,
+      "invalid_geometries": [
+        {
+          "id": 11,
+          "reason": "Holes are nested[367946.217472054 177082.637024304]"
+        }
+      ],
+      "bbox_bng": [
+        80700.74000000115,
+        5184.800000000745,
+        655643.4600000009,
+        657535.8150360725
+      ],
+      "epsg": 27700,
+      "fields": [
+        [
+          "AreaServed",
+          "C",
+          80,
+          0
+        ],
+        [
+          "ID",
+          "N",
+          10,
+          0
+        ],
+        [
+          "COMPANY",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Acronym",
+          "C",
+          254,
+          0
+        ],
+        [
+          "CoType",
+          "C",
+          254,
+          0
+        ],
+        [
+          "AreaType",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Date Grant",
+          "D",
+          8,
+          0
+        ],
+        [
+          "Disclaimer",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Disclaim2",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Disclaim3",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Provenance",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Licence",
+          "C",
+          254,
+          0
+        ],
+        [
+          "WARNINGS",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Created",
+          "D",
+          8,
+          0
+        ],
+        [
+          "LastUpdate",
+          "D",
+          8,
+          0
+        ],
+        [
+          "Version",
+          "C",
+          254,
+          0
+        ],
+        [
+          "Revisions",
+          "C",
+          254,
+          0
+        ]
+      ],
+      "company_names": 21,
+      "acronyms": 21,
+      "area_types": {
+        "inset": 735,
+        "Part of water supply area": 2,
+        "Whole sewerage services area": 11
+      },
+      "company_types": {
+        "small new entrant water/sewerage company (sometimes referred to as a NAV)": 733,
+        "regional water and sewerage company": 15
+      },
+      "versions": {
+        "1_5": 748
+      },
+      "last_updates": {
+        "2024-04-25": 748
+      },
+      "created": {
+        "2020-08-04": 748
+      },
+      "missing_grant_dates": 13,
+      "duplicate_ids": 0,
+      "id_min": 1,
+      "id_max": 748,
+      "inconsistent_area_type_examples": [
+        {
+          "ID": 7,
+          "AreaServed": "Isles of Scilly",
+          "COMPANY": "South West Water",
+          "AreaType": "Part of water supply area"
+        },
+        {
+          "ID": 6,
+          "AreaServed": "South West Water",
+          "COMPANY": "South West Water",
+          "AreaType": "Part of water supply area"
+        }
+      ],
+      "nonblank_warning_count": 4
+    }
+  }
+}

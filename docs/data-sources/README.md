@@ -1,6 +1,6 @@
 # Data source acceptance
 
-No source is integrated or approved yet. Public availability is not permission to
+No source is integrated or approved for redistribution yet. Public availability is not permission to
 redistribute. For each proposed integration, record the following from current
 official documentation and actual sample responses before implementation:
 
@@ -22,6 +22,9 @@ conditions remain unclear. Use only public sources; employment access confers no
 rights on this project. Do not put bulk source data in Git. Keep small fixtures
 synthetic or verify and record their redistribution rights.
 
-The first candidate investigation is public water-company boundary data. Its
-licensing, boundaries' meaning (for example water versus sewerage service), CRS,
-identifiers, and coverage must drive the eventual model and API contract.
+## Assessments
+
+- [Ofwat water-company boundaries](ofwat-company-boundaries.md), reviewed
+  17 September 2026: preferred first source, conditional on resolving the licence
+  edition/attribution and invalid-geometry handling. Includes measured schema and
+  quality findings for both official downloads; no integration implemented.
