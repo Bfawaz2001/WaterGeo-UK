@@ -1,6 +1,6 @@
 # Contributing
 
-WaterGeo UK is at the foundation stage. Small, coherent changes with clear
+WaterGeo UK is at the first geospatial schema stage. Small, coherent changes with clear
 reasoning are welcome. For a new source or a significant architecture change,
 open an issue describing the problem and proposed scope before building it.
 Keep discussion respectful and constructive.
@@ -17,6 +17,9 @@ Run pytest, Ruff lint/format checks, and `mypy src` before submitting a pull req
 Run the opt-in integration suite for database or migration changes. Describe the
 behaviour changed, why it matters, tests actually run, and any limitations.
 Do not claim skipped tests passed. No external data access is needed in unit tests.
+Pytest uses short tracebacks to avoid displaying database-driver argument values
+in verbose source frames. Do not enable `--showlocals` or share unreviewed failure
+logs from tests that use credentials; short tracebacks are not a general redactor.
 
 Warnings fail tests except for the documented Starlette 1.6/AnyIO
 `BlockingPortal` deprecation inside the upstream test client. Review that narrow
@@ -28,7 +31,8 @@ Create migrations with `uv run --locked alembic revision -m "describe change"`,
 review the SQL, and test upgrade/downgrade against a disposable PostGIS database.
 Keep application objects in the `watergeo` schema. Update `SCHEMA_REVISION` when
 changing the schema expected by the application. Never run migrations at API startup.
-There is no ORM metadata or autogeneration configuration until actual domain models exist.
+The water-supply schema is defined by explicit migrations; no ORM metadata or
+autogeneration is configured yet. See the [schema decision](docs/adr/0002-water-supply-snapshots.md).
 
 Administrator provisioning creates roles, the schema, and PostGIS; Alembic owns
 application schema evolution. Database role or extension changes need explicit

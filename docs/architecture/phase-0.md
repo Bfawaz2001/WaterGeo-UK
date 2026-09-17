@@ -1,7 +1,9 @@
 # Phase 0 architecture
 
-The present system is one Python application and one PostgreSQL/PostGIS database.
-There are no providers, ingestion services, domain tables, or water-data endpoints.
+This document records the Phase 0 foundation: one Python application and one
+PostgreSQL/PostGIS database. Migration `0002` now adds water-supply domain tables;
+see the [schema decision](../adr/0002-water-supply-snapshots.md). There are still
+no providers, ingestion services, or water-data endpoints.
 
 ```mermaid
 flowchart LR
@@ -55,7 +57,8 @@ only to the explicit migration process.
 Alembic's version table lives in `watergeo`. Revision `0001` verifies that PostGIS
 is provisioned and establishes the application baseline. Its downgrade removes
 the revision marker; it intentionally leaves the administrator-owned schema,
-roles, and extension intact. Empty domain tables would provide no value yet.
+roles, and extension intact. The subsequent source assessment justified the
+snapshot/area tables in revision `0002`, which readiness now expects.
 
 Database initialisation scripts run only once, on an empty volume. For an existing
 volume, password changes need administrator-driven role rotation; editing `.env`
@@ -99,12 +102,12 @@ and real SQL permission denials.
 CI runs quality checks and package builds, then builds and exercises the complete
 Compose setup on AMD64 and ARM64 Linux. It checks readiness during a database outage
 and recovery. Security jobs audit dependencies and run CodeQL on changes and weekly.
-These workflows need their first GitHub run before remote results can be claimed.
+Local verification and GitHub CI results must be reported separately for each change.
 
 ## Postponed
 
 Provider interfaces, canonical models, geometry libraries, raw storage, dataset
 licensing implementations, observation schemas, spatial query APIs, SDK/CLI, maps,
 authentication, cloud services, and production operations follow actual needs.
-The first source investigation must establish licence and schema facts before any
-domain models or provider abstractions are introduced.
+The first source investigation now informs the water-supply schema and synthetic
+tests. Real-data integration still requires completing the licence assessment.

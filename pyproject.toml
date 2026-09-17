@@ -35,7 +35,7 @@ packages = ["src/watergeo"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--strict-config --strict-markers -ra"
+addopts = "--strict-config --strict-markers --tb=short -ra"
 markers = ["integration: requires an explicitly enabled disposable PostgreSQL/PostGIS database"]
 filterwarnings = [
     "error",

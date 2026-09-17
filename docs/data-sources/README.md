@@ -25,6 +25,9 @@ synthetic or verify and record their redistribution rights.
 ## Assessments
 
 - [Ofwat water-company boundaries](ofwat-company-boundaries.md), reviewed
-  17 September 2026: preferred first source, conditional on resolving the licence
-  edition/attribution and invalid-geometry handling. Includes measured schema and
-  quality findings for both official downloads; no integration implemented.
+  17 September 2026: publisher OGL declaration confirmed; exact edition remains
+  unverified. Empty schema and synthetic geometry tests implemented, with real-data
+  integration pending the edition/final attribution check and resolution of invalid
+  geometries. Includes measured schema,
+  quality findings, and comparisons with OpenPostcodes and MOSL; no integration
+  implemented. Missing bespoke attribution alone does not require publisher contact.

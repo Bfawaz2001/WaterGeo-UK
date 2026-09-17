@@ -1,14 +1,18 @@
 # Source assessment: Ofwat water-company boundaries
 
-Reviewed **17 September 2026**. Scope: public documentation and downloaded files;
-no ingestion, database changes, or new application dependencies.
+Reviewed **17 September 2026**. Assessment scope: public documentation and downloaded
+files; no ingestion or new application dependencies. A subsequent
+[schema milestone](../adr/0002-water-supply-snapshots.md) adds empty tables and
+synthetic geometry tests, without loading these files.
 
 ## Recommendation
 
-**Preferred first source, conditionally accepted for planning only.** Start with
-the water-supply layer after resolving the licence edition/attribution and deciding
-how to handle invalid geometries. Keep sewerage as a separately identified future
-dataset. Do not implement redistribution while the licence questions remain open.
+**Preferred first source; the publisher's OGL declaration is confirmed.** Proceed
+with water-supply schema design and geometry tests using synthetic fixtures. Keep
+sewerage as a separately identified future dataset. The exact OGL edition remains
+unverified: resolve the edition and final attribution before integrating real data,
+in accordance with this project's source-acceptance requirements. Publisher contact
+is not a prerequisite for the design and synthetic-test work.
 
 The initial product should answer **which published supply areas cover a point in
 this dated snapshot**. It must not promise the definitive current supplier for a
@@ -39,15 +43,59 @@ An alternative checked was the Environment Agency's
 Those are planning/supply resource zones collated from companies, not a substitute
 for the appointed service-area meaning required here. It is not assessed further.
 
-## 2. Licence and attribution gate
+## 2. Licence evidence and remaining question
 
-The Commons page and every downloaded record's `Licence` field explicitly declare
-the **Open Government Licence (OGL)**. The ZIPs contain only Shapefile components:
+Ofwat's indexed sector overview, the Commons page, and every downloaded record's
+`Licence` field explicitly declare the **Open Government Licence (OGL)**. This is
+positive licensing evidence, not an inference from public availability. The ZIPs
+contain only Shapefile components:
 there is no separate licence file, copyright notice, or metadata sidecar. The
 accessible dataset material does not identify an OGL edition or prescribe a
 dataset-specific attribution statement. The Ofwat page's licence-link target could
 not be inspected because direct requests returned 403. Do not infer an edition
 from unrelated Ofwat publications or the year of this release.
+
+### Follow-up public research, 17 September 2026
+
+- The National Archives' [guidance for OGL users](https://cdn.nationalarchives.gov.uk/documents/information-management/ogl-user-guidance.pdf)
+  explains that an express OGL declaration authorises reuse under its terms without
+  registration or an application. If no bespoke attribution is supplied, credit
+  the source using the information available and preserve existing rights notices.
+  **Missing bespoke attribution alone does not require an email to the publisher.**
+- [Data.gov.uk's metadata guidance](https://guidance.data.gov.uk/publish_and_manage_data/harvest_or_add_data/harvest_data/dcat/)
+  accepts either a licence URI or the title `Open Government Licence`. An
+  unversioned title is therefore recognised catalogue metadata; this does not
+  establish which edition applies to this particular archive.
+- The National Archives' [OGL overview](https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/open-government-licence/)
+  describes the three editions as substantially similar, while saying providers
+  specify the applicable edition. The [provider guidance](https://cdn.nationalarchives.gov.uk/documents/information-management/ogl-information-provider-guidance.pdf)
+  includes an unversioned OGL hyperlink example. Neither document proves this
+  dataset is specifically OGL v3.0.
+
+**Assessment:** the open-licence grant is established; the edition is an unresolved
+metadata/terms detail. The earlier requirement to obtain a bespoke attribution
+statement from Ofwat was too strong. Preserve the declared licence as
+`Open Government Licence`, with edition recorded as unknown, rather than silently
+normalising it to `OGL-UK-3.0`. Under this project's instruction to resolve unclear
+terms before integration, keep real-data integration pending while design and
+synthetic tests proceed. No enquiry has been sent or is required from the maintainer
+to begin that work.
+
+### Comparable public projects
+
+These are primary descriptions of each project's own use, not licence grants to
+WaterGeo UK. No implementation code was copied or independently audited.
+
+| Project | Publicly documented use | Useful lesson and limit |
+| --- | --- | --- |
+| [OpenPostcodes sources](https://openpostcodes.uk/sources) | Its API's water and sewerage fields use Ofwat v1.5, April 2024, via Commons. It labels the data OGL and links to v3.0; code is separately described as MIT. | A close precedent for the intended API and separate code/data licensing. Its v3.0 link is the project's assertion, not confirmation by Ofwat. |
+| [MOSL water-switching map](https://mosl.co.uk/market-insight/market-functions/switching-activity/water-switch-rates-by-wholesale-region) | Credits Ofwat v1_4 dated 25 May 2022 and assigns postal sectors using their centre points. | Credit the exact release and explain spatial approximations. Its postal-boundary copyright notices belong to its combined map, not automatically to our Ofwat-only data. |
+
+For WaterGeo UK, retain separate water/sewerage layers, source dates, attribution,
+and spatial caveats. These precedents do not justify reporting a single definitive
+current property supplier from a dated polygon match.
+
+### Attribution to carry into implementation
 
 [OGL v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
 permits copying, adaptation, and commercial/non-commercial redistribution of
@@ -63,12 +111,17 @@ distributor, and retain the Ordnance Survey digitisation provenance. No separate
 OS attribution wording was found in the inspected files; neither invent a licence
 number nor assume an unrelated OS licence applies.
 
-**Before implementation:** obtain a public, dataset-specific licence reference
-confirming the edition and required credits, or clarification from the publisher
-through its public channel. Ask whether any additional third-party attribution
-applies to these exact archives. No enquiry has been sent. Keep this evidence with
-the source record, retain the original licence text, and keep the repository's MIT
-licence separate from the data licence. Never imply publisher endorsement.
+The source credit can already identify **Ofwat water-supply boundaries, release
+v1_5 (April 2024), distributed by the House of Commons Library; digitised by Ofwat
+with Ordnance Survey support**, linking the source page and archive. This is a
+proposed project credit, not publisher-prescribed wording, and does not replace any
+edition-specific mandatory statement.
+
+**Before real-data integration:** verify a dataset-specific edition reference and
+finalise the associated attribution. A publisher licence-link target or public
+clarification could supply that evidence; another project's choice cannot. Retain
+the original licence/provenance notices and the evidence URLs. Keep the repository's
+MIT licence separate from the data licence and never imply publisher endorsement.
 
 ## 3. Exact files inspected
 
@@ -201,8 +254,11 @@ evaluate `is_valid` / `explain_validity` using GEOS 3.13.1; identify the unchang
 projection WKT using PyProj 3.8.0 / PROJ 9.8.1. Counts are for this decode, before
 repair or reprojection. The profile is evidence, not an executable ingestion contract.
 
-**Next action:** resolve the OGL edition/attribution through public evidence and
-review the invalid-geometry policy. Then implement one water-supply snapshot end
-to end, with synthetic fixtures for the observed anomalies. This assessment does
-not authorise inventing missing licence terms, correcting publisher fields without
+**Schema milestone completed:** migration `0002` and synthetic PostGIS tests enforce
+strict geometry acceptance; see the [decision](../adr/0002-water-supply-snapshots.md).
+**Next action:** evaluate repair behaviour on synthetic cases and define the
+evidence needed before permitting any repaired geometry. Resolve the exact OGL
+edition and final attribution before loading real data; then implement one snapshot
+end to end. This assessment does not
+authorise inventing missing licence terms, correcting publisher fields without
 lineage, or treating these snapshots as current legal supplier records.

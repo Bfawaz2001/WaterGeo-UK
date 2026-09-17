@@ -4,10 +4,11 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phase 0 — engineering foundation.** The application currently provides
-health and database readiness endpoints. It does not yet ingest or serve water
-datasets. The intended product is data infrastructure and a developer API;
-a visual explorer comes later.
+**Status: Phase 1 — water-supply schema and synthetic geometry tests.** The
+application provides health and database readiness endpoints, with tables for
+future water-supply snapshots and areas. It does not yet ingest or serve water
+datasets. The intended product is data infrastructure and a developer API; a
+visual explorer comes later.
 
 ## Independence and licensing
 
@@ -106,8 +107,9 @@ WATERGEO_DB_PORT=55432 docker compose -p watergeo-test down --volumes
 ```
 
 The last command deletes **that test project's** database volume. The tests verify
-actual migrations, readiness, PostGIS point operations, and database permission
-denials. They do not substitute SQLite for PostgreSQL.
+actual migrations, readiness, geometry acceptance/rejection, snapshot provenance,
+transaction rollback, and database permission denials. All geometry fixtures are
+synthetic. They do not substitute SQLite for PostgreSQL.
 
 For the locked dependency audit (requires internet access):
 
@@ -139,14 +141,19 @@ uv.lock                  Resolved dependencies and distribution hashes
 
 ## Design and next milestone
 
-See the [Phase 0 architecture](docs/architecture/phase-0.md) and
-[foundation decision record](docs/adr/0001-engineering-foundation.md) for rationale,
-trade-offs, and known limits. Contribution and vulnerability-reporting guidance
-are in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+See the [Phase 0 architecture](docs/architecture/phase-0.md),
+[foundation decision record](docs/adr/0001-engineering-foundation.md), and
+[water-supply schema decision](docs/adr/0002-water-supply-snapshots.md) for rationale,
+trade-offs, and known limits. Contribution and vulnerability-reporting guidance are
+in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 The [first source assessment](docs/data-sources/ofwat-company-boundaries.md)
 examines Ofwat's publicly distributed water-supply and sewerage boundaries, including
-their actual fields and geometry quality. **Next milestone:** resolve its licence
-edition/attribution and invalid-geometry policy, then design the first water-supply
-ingestion-to-PostGIS-to-API implementation. No source is approved for redistribution
-merely by being publicly accessible.
+their actual fields and geometry quality. Its publisher OGL declaration is confirmed;
+the exact edition remains unverified. Migration `0002` adds the snapshot/area
+schema and rejects invalid geometry. **Next milestone:** evaluate geometry repair
+on synthetic examples and define the evidence required to accept a repaired area.
+The inspected release has five invalid water-supply polygons and cannot yet pass
+the strict policy. Resolve the licence edition and final attribution before
+real-data integration. No source is approved for redistribution merely by being
+publicly accessible.

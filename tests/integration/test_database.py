@@ -1,7 +1,5 @@
 """Explicit opt-in: run only against a disposable, bootstrapped database."""
 
-import os
-
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -13,14 +11,6 @@ from watergeo.api.app import create_app
 from watergeo.core.config import Settings
 from watergeo.db.engine import create_database_engine
 
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.skipif(
-        os.environ.get("WATERGEO_TEST_DATABASE") != "1",
-        reason="Set WATERGEO_TEST_DATABASE=1 with a disposable PostGIS database to opt in",
-    ),
-]
-
 
 def test_migration_round_trip_and_readiness() -> None:
     config = Config("alembic.ini")
@@ -29,6 +19,8 @@ def test_migration_round_trip_and_readiness() -> None:
     with TestClient(create_app()) as client:
         assert client.get("/ready").status_code == 200
         try:
+            command.downgrade(config, "0001")
+            assert client.get("/ready").status_code == 503
             command.downgrade(config, "base")
             assert client.get("/ready").status_code == 503
             assert client.get("/health").status_code == 200
