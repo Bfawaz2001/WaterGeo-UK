@@ -122,6 +122,41 @@ def test_valid_archive_is_verified_and_retained(
     ]
 
 
+def test_repeated_verified_retrieval_preserves_existing_artifacts(
+    tmp_path: Path,
+) -> None:
+    payload = _zip_bytes()
+    source = _source(payload)
+
+    with _client(
+        payload,
+        headers={"Last-Modified": "first"},
+    ) as client:
+        first = fetch_boundary_source(
+            source,
+            raw_root=tmp_path,
+            client=client,
+        )
+
+    original_manifest = first.manifest_path.read_text(encoding="utf-8")
+    original_inode = first.archive_path.stat().st_ino
+
+    with _client(
+        payload,
+        headers={"Last-Modified": "second"},
+    ) as client:
+        second = fetch_boundary_source(
+            source,
+            raw_root=tmp_path,
+            client=client,
+        )
+
+    assert second.archive_path == first.archive_path
+    assert second.manifest_path == first.manifest_path
+    assert second.archive_path.stat().st_ino == original_inode
+    assert second.manifest_path.read_text(encoding="utf-8") == original_manifest
+
+
 def test_wrong_sha_is_rejected_and_partial_removed(
     tmp_path: Path,
 ) -> None:

@@ -100,6 +100,16 @@ def _is_symlink(info: zipfile.ZipInfo) -> bool:
     return stat.S_ISLNK(mode)
 
 
+def _sha256_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(CHUNK_SIZE), b""):
+            hasher.update(chunk)
+
+    return hasher.hexdigest()
+
+
 def _validate_archive(
     path: Path,
     source: BoundarySource,
@@ -346,6 +356,67 @@ def fetch_boundary_source(
             )
 
             archive_path = raw_root / f"{digest}.zip"
+            manifest_path = raw_root / f"{digest}.json"
+
+            if archive_path.exists() or manifest_path.exists():
+                if (
+                    archive_path.is_symlink()
+                    or manifest_path.is_symlink()
+                    or not archive_path.is_file()
+                    or not manifest_path.is_file()
+                ):
+                    raise BoundaryRetrievalError(
+                        "Existing content-addressed source state is incomplete."
+                    )
+
+                if (
+                    archive_path.stat().st_size != byte_count
+                    or _sha256_file(archive_path) != digest
+                ):
+                    raise BoundaryRetrievalError(
+                        "Existing content-addressed archive failed integrity verification."
+                    )
+
+                existing_members = _validate_archive(
+                    archive_path,
+                    source,
+                )
+
+                if existing_members != members:
+                    raise BoundaryRetrievalError(
+                        "Existing archive members do not match the verified download."
+                    )
+
+                try:
+                    existing_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as error:
+                    raise BoundaryRetrievalError(
+                        "Existing retrieval manifest is unreadable."
+                    ) from error
+
+                if (
+                    not isinstance(existing_manifest, dict)
+                    or existing_manifest.get("dataset") != source.dataset
+                    or existing_manifest.get("release") != source.release
+                    or existing_manifest.get("source_url") != source.source_url
+                    or existing_manifest.get("sha256") != digest
+                    or existing_manifest.get("bytes") != byte_count
+                    or existing_manifest.get("archive_members") != list(members)
+                ):
+                    raise BoundaryRetrievalError(
+                        "Existing retrieval manifest does not match the verified source."
+                    )
+
+                temporary.unlink(missing_ok=True)
+                temporary = None
+
+                return RetrievalResult(
+                    archive_path=archive_path,
+                    manifest_path=manifest_path,
+                    sha256=digest,
+                    byte_count=byte_count,
+                    archive_members=members,
+                )
 
             os.replace(
                 temporary,
