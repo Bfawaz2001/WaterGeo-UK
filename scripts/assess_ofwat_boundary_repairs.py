@@ -43,7 +43,7 @@ def main() -> int:
                 f"{comparison.right_candidate}: "
                 f"equal={comparison.topologically_equal}, "
                 "symmetric_difference="
-                f"{comparison.symmetric_difference_area_m2:.6f} m², "
+                f"{comparison.symmetric_difference_area_m2:.12g} m², "
                 "hausdorff="
                 f"{comparison.hausdorff_distance_m:.6f} m, "
                 "probes="
