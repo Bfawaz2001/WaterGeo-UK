@@ -872,12 +872,18 @@ def _existing_snapshot_id(
 def _verify_loaded_snapshot(
     connection: Connection,
     snapshot_id: UUID,
+    snapshot: CanonicalSnapshot,
 ) -> tuple[int, int]:
-    source_ids = tuple(
-        int(value)
-        for value in connection.execute(
+    area_rows = (
+        connection.execute(
             text("""
-                SELECT source_id
+                SELECT
+                    source_id,
+                    source_fields,
+                    public.ST_AsBinary(
+                        geom,
+                        'NDR'
+                    ) AS geometry_wkb
                 FROM watergeo.water_supply_area
                 WHERE snapshot_id = :snapshot_id
                 ORDER BY source_id
@@ -885,18 +891,35 @@ def _verify_loaded_snapshot(
             {
                 "snapshot_id": snapshot_id,
             },
-        ).scalars()
-    )
-
-    expected_ids = tuple(
-        range(
-            1,
-            EXPECTED_RECORD_COUNT + 1,
         )
+        .mappings()
+        .all()
     )
 
-    if source_ids != expected_ids:
-        raise CanonicalIngestionError("Loaded source ID set does not match the canonical contract.")
+    expected_ids = tuple(area.source_id for area in snapshot.areas)
+
+    stored_ids = tuple(int(row["source_id"]) for row in area_rows)
+
+    if stored_ids != expected_ids:
+        raise CanonicalIngestionError("Loaded source ID set does not match the canonical snapshot.")
+
+    expected_areas = {area.source_id: area for area in snapshot.areas}
+
+    for row in area_rows:
+        source_id = int(row["source_id"])
+
+        expected_area = expected_areas[source_id]
+        if row["source_fields"] != expected_area.source_fields:
+            raise CanonicalIngestionError(
+                f"Loaded source fields for {source_id} do not match the canonical snapshot."
+            )
+
+        stored_wkb = bytes(row["geometry_wkb"])
+
+        if stored_wkb != expected_area.geometry_wkb:
+            raise CanonicalIngestionError(
+                f"Loaded geometry for {source_id} does not match the canonical snapshot."
+            )
 
     bad_geometry_count = int(
         connection.execute(
@@ -927,24 +950,29 @@ def _verify_loaded_snapshot(
     if bad_geometry_count != 0:
         raise CanonicalIngestionError("Loaded snapshot contains unacceptable canonical geometry.")
 
-    rows = (
+    transformation_rows = (
         connection.execute(
             text("""
-            SELECT
-                source_id,
-                transformation_id,
-                method,
-                keep_collapsed,
-                shapely_version,
-                geos_version,
-                source_decoded_wkb_sha256,
-                canonical_wkb_sha256,
-                review_status,
-                review_reference
-            FROM watergeo.water_supply_area_transformation
-            WHERE snapshot_id = :snapshot_id
-            ORDER BY source_id
-        """),
+                SELECT
+                    source_id,
+                    transformation_id,
+                    method,
+                    keep_collapsed,
+                    shapely_version,
+                    geos_version,
+                    invalid_reason,
+                    source_decoded_wkb_sha256,
+                    canonical_wkb_sha256,
+                    review_status,
+                    review_reason,
+                    review_reference,
+                    details
+                FROM
+                    watergeo
+                    .water_supply_area_transformation
+                WHERE snapshot_id = :snapshot_id
+                ORDER BY source_id
+            """),
             {
                 "snapshot_id": snapshot_id,
             },
@@ -953,26 +981,39 @@ def _verify_loaded_snapshot(
         .all()
     )
 
-    transformed_ids = tuple(int(row["source_id"]) for row in rows)
+    expected_transformations: dict[
+        int,
+        TransformationProvenance,
+    ] = {}
 
-    if transformed_ids != tuple(sorted(APPROVED_REPAIR_IDS)):
-        raise CanonicalIngestionError("Loaded transformation IDs do not match ADR 0004.")
+    for area in snapshot.areas:
+        if area.transformation is not None:
+            expected_transformations[area.source_id] = area.transformation
 
-    for row in rows:
+    stored_transformation_ids = tuple(int(row["source_id"]) for row in transformation_rows)
+
+    if stored_transformation_ids != tuple(expected_transformations):
+        raise CanonicalIngestionError(
+            "Loaded transformation IDs do not match the canonical snapshot."
+        )
+
+    for row in transformation_rows:
         source_id = int(row["source_id"])
 
-        contract = APPROVED_GEOMETRY_CONTRACTS[source_id]
-
+        expected_transformation = expected_transformations[source_id]
         expected_values = {
-            "transformation_id": (TRANSFORMATION_VERSION),
-            "method": (TRANSFORMATION_METHOD),
-            "keep_collapsed": (TRANSFORMATION_KEEP_COLLAPSED),
-            "shapely_version": (EXPECTED_SHAPELY_VERSION),
-            "geos_version": (EXPECTED_GEOS_VERSION),
-            "source_decoded_wkb_sha256": (contract.source_wkb_sha256),
-            "canonical_wkb_sha256": (contract.canonical_wkb_sha256),
-            "review_status": "approved",
-            "review_reference": (REVIEW_REFERENCE),
+            "transformation_id": (expected_transformation.transformation_id),
+            "method": expected_transformation.method,
+            "keep_collapsed": (expected_transformation.keep_collapsed),
+            "shapely_version": (expected_transformation.shapely_version),
+            "geos_version": (expected_transformation.geos_version),
+            "invalid_reason": (expected_transformation.invalid_reason),
+            "source_decoded_wkb_sha256": (expected_transformation.source_decoded_wkb_sha256),
+            "canonical_wkb_sha256": (expected_transformation.canonical_wkb_sha256),
+            "review_status": (expected_transformation.review_status),
+            "review_reason": (expected_transformation.review_reason),
+            "review_reference": (expected_transformation.review_reference),
+            "details": expected_transformation.details,
         }
 
         for key, expected_value in expected_values.items():
@@ -984,8 +1025,8 @@ def _verify_loaded_snapshot(
                 )
 
     return (
-        len(source_ids),
-        len(rows),
+        len(area_rows),
+        len(transformation_rows),
     )
 
 
@@ -1015,6 +1056,7 @@ def load_canonical_snapshot(
             ) = _verify_loaded_snapshot(
                 connection,
                 snapshot_id,
+                snapshot,
             )
 
             return LoadResult(
@@ -1102,6 +1144,7 @@ def load_canonical_snapshot(
         ) = _verify_loaded_snapshot(
             connection,
             snapshot_id,
+            snapshot,
         )
 
     return LoadResult(

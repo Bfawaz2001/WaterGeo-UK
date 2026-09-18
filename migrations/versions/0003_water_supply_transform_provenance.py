@@ -77,19 +77,25 @@ def upgrade() -> None:
     op.execute("""
         DO $$
         BEGIN
-            IF EXISTS (
+            IF NOT EXISTS (
                 SELECT 1
                 FROM pg_roles
                 WHERE rolname = 'watergeo_ingest'
             ) THEN
-                GRANT SELECT, INSERT
-                ON watergeo.water_supply_snapshot,
-                   watergeo.water_supply_area,
-                   watergeo.water_supply_area_transformation
-                TO watergeo_ingest;
+                RAISE EXCEPTION
+                    'watergeo_ingest role is missing; '
+                    'bootstrap database roles before running migration 0003';
             END IF;
         END
         $$
+    """)
+
+    op.execute("""
+        GRANT SELECT, INSERT
+        ON watergeo.water_supply_snapshot,
+           watergeo.water_supply_area,
+           watergeo.water_supply_area_transformation
+        TO watergeo_ingest
     """)
 
 

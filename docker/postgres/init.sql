@@ -20,8 +20,3 @@ GRANT USAGE ON SCHEMA watergeo TO watergeo_app, watergeo_ingest;
 ALTER DEFAULT PRIVILEGES FOR ROLE watergeo_migrator IN SCHEMA watergeo
     GRANT SELECT ON TABLES TO watergeo_app;
 ALTER ROLE watergeo_app SET default_transaction_read_only = on;
-
-ALTER DEFAULT PRIVILEGES
-FOR ROLE watergeo_migrator
-IN SCHEMA watergeo
-GRANT SELECT, INSERT ON TABLES TO watergeo_ingest;
