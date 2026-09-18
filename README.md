@@ -4,11 +4,12 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phase 1 — water-supply schema and synthetic geometry tests.** The
-application provides health and database readiness endpoints, with tables for
-future water-supply snapshots and areas. It does not yet ingest or serve water
-datasets. The intended product is data infrastructure and a developer API; a
-visual explorer comes later.
+**Status: Phase 1 — canonical Ofwat ingestion and public boundary API.** The
+reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
+with five recorded geometry transformations. Developers can query metadata,
+paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
+longitude/latitude. This is a local development service; a hosted API and visual
+explorer come later.
 
 ## Independence and licensing
 
@@ -35,7 +36,9 @@ uv sync --locked
 cp .env.example .env
 ```
 
-Edit `.env` and fill in its **three distinct password values**. Generate each with:
+Edit `.env` and fill in **four distinct password values**: `POSTGRES_PASSWORD`,
+`WATERGEO_MIGRATION_PASSWORD`, `WATERGEO_DB_PASSWORD`, and
+`WATERGEO_INGESTION_PASSWORD`. Generate each with:
 
 ```bash
 python3 -c 'import secrets; print(secrets.token_hex(24))'
@@ -52,10 +55,19 @@ uv run --locked uvicorn watergeo.api.app:create_app --factory --reload --no-acce
 
 Open <http://127.0.0.1:8000/docs> for OpenAPI documentation.
 
+Existing databases from before the ingestion role was introduced need that role
+provisioned before migration `0003`; editing `.env` alone does not create it. See
+the [existing-volume instructions](#existing-database-volumes).
+
 | Endpoint | Meaning |
 | --- | --- |
 | `GET /health` | HTTP 200: the application can respond, independent of database health. |
 | `GET /ready` | HTTP 200: PostGIS is available and the migration revision matches; otherwise HTTP 503 with a generic response. |
+| `GET /v1/water-supply/dataset` | Release, source identity, attribution, licence, counts and caveats. |
+| `GET /v1/water-supply/areas` | Paginated area summaries without geometry. |
+| `GET /v1/water-supply/areas/at-point?lon=-2&lat=52` | All covering areas, including boundary matches, with pagination. |
+| `GET /v1/water-supply/areas/{source_id}` | Area labels, publisher notices and reviewed transformation provenance. |
+| `GET /v1/water-supply/areas/{source_id}/geometry` | One GeoJSON Feature in WGS84 longitude/latitude. |
 
 The database and API ports bind only to loopback. If port 5432 is occupied, change
 `WATERGEO_DB_PORT` in `.env`; Compose and host-based Python tools use the same value.
@@ -81,6 +93,90 @@ docker compose --profile app down
 The named database volume survives `down`. Initialisation SQL runs only on an
 empty volume: changing passwords in `.env` does not rotate existing database roles.
 See [database operations](docs/architecture/phase-0.md#database-lifecycle).
+
+### Existing database volumes
+
+Fresh volumes receive all roles from `docker/postgres/init.sql`. For a pre-0003
+volume, first set `WATERGEO_INGESTION_PASSWORD` in `.env` and recreate the database
+container to refresh its environment (the existing volume is retained):
+
+```bash
+docker compose up --wait --force-recreate db
+docker compose exec -T db psql -X -U postgres -d watergeo -v ON_ERROR_STOP=1 <<'SQL'
+\getenv ingestion_password WATERGEO_INGESTION_PASSWORD
+CREATE ROLE watergeo_ingest LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+    PASSWORD :'ingestion_password';
+GRANT CONNECT ON DATABASE watergeo TO watergeo_ingest;
+GRANT USAGE ON SCHEMA watergeo TO watergeo_ingest;
+SQL
+uv run --locked alembic upgrade head
+```
+
+Run this bootstrap only if the role is missing. Migration `0003` grants SELECT and
+INSERT on the three ingestion tables; the ingestion role has no UPDATE, DELETE,
+schema CREATE, or blanket future-table write grants. The API continues to use the
+separate read-only `watergeo_app` role.
+
+## Load and query the reviewed dataset
+
+With the database at revision `0003`, run these from the repository root:
+
+```bash
+uv run --locked python scripts/fetch_ofwat_water_supply.py
+uv run --locked python scripts/validate_ofwat_water_supply.py
+uv run --locked python scripts/load_ofwat_water_supply.py
+```
+
+Retrieval verifies the exact source ZIP and retains it with a provenance manifest
+under ignored `data/raw/ofwat/water-supply/`. Validation reports five invalid
+publisher polygons (IDs 1, 4, 6, 28, 30). Its strict raw-geometry eligibility result
+is separate from canonical acceptance: [ADR 0004](docs/adr/0004-ofwat-v1_5-canonical-transformation.md)
+approves those five transformations for this exact archive and pinned runtime only.
+Canonical loading produces **1,141 areas and five transformation records**, atomically.
+Repeating the load verifies stored content and returns a **verified no-op**.
+
+The raw ZIP remains authoritative source evidence. Canonical geometry is an
+explicit WaterGeo transformation for analysis; it is not the definitive legal
+record. There is no generic automatic repair policy. The source declares
+`Open Government Licence`, with **`licence_version = null`** because the edition
+is unidentified. The API preserves this uncertainty and exposes the generic
+official licence URL, attribution and publisher notices.
+
+Once the API is running:
+
+```bash
+curl --fail http://127.0.0.1:8000/v1/water-supply/dataset
+curl --fail 'http://127.0.0.1:8000/v1/water-supply/areas?limit=10'
+curl --fail 'http://127.0.0.1:8000/v1/water-supply/areas/at-point?lon=-2&lat=52'
+curl --fail http://127.0.0.1:8000/v1/water-supply/areas/1
+curl --fail http://127.0.0.1:8000/v1/water-supply/areas/1/geometry
+```
+
+Use `next_after_id` as the next request's `after_id`; `null` means the final page.
+The maximum page size is 100. Point pagination must retain the same coordinates.
+Point queries use PostGIS `ST_Covers`: shared boundaries, overlaps and inset areas
+can return multiple results, and points inside holes do not match that area.
+This dated snapshot does not establish a property's current supplier. Valid
+coordinates outside the conservative GB processing extent (-9..3 longitude,
+49..61 latitude) return an empty page.
+
+GeoJSON uses `application/geo+json`, longitude/latitude order, and query-time
+reprojection from the stored EPSG:27700 geometry. Output rings follow the right-hand
+rule. No simplification is applied; geometry above 8 MiB returns 413, and an invalid
+serialized representation returns 503. Transform accuracy depends on installed
+PROJ grids and is not a legal or centimetre-accuracy guarantee. Bbox filtering is
+not implemented; unknown parameters, including `bbox`, return 422.
+
+**Known GeoJSON limitation:** local verification found that reprojection makes
+areas **3, 4, 16 and 21** self-intersecting. Their geometry routes return 503 in
+that environment; metadata and point lookup remain available. Increasing decimal
+precision did not resolve this. A separately reviewed output transformation is
+needed before claiming complete WGS84 geometry availability.
+
+Data routes return 503 until the reviewed snapshot is loaded or if the database
+is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
+infrastructure and migration `0003`, not dataset availability. See the
+[API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Checks
 
@@ -126,11 +222,13 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic environment and initial database baseline
+migrations/              Alembic revisions through canonical provenance (0003)
+scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
-  api/                   Application factory, health and readiness endpoints
+  api/                   Operational routes, water-supply routes and public models
   core/                  Validated configuration and JSON application logs
-  db/                    Connection pool and database readiness check
+  db/                    Connection pool, readiness and parameterised water-supply queries
+  ingestion/             Verified Ofwat retrieval, decoding, reviewed transforms and atomic load
 tests/                   Configuration and HTTP behaviour tests
   integration/           Opt-in PostGIS and migration tests
 Dockerfile               Non-root application image
@@ -142,18 +240,21 @@ uv.lock                  Resolved dependencies and distribution hashes
 ## Design and next milestone
 
 See the [Phase 0 architecture](docs/architecture/phase-0.md),
-[foundation decision record](docs/adr/0001-engineering-foundation.md), and
-[water-supply schema decision](docs/adr/0002-water-supply-snapshots.md) for rationale,
+[foundation decision record](docs/adr/0001-engineering-foundation.md),
+[water-supply schema decision](docs/adr/0002-water-supply-snapshots.md),
+[canonical transformation](docs/adr/0004-ofwat-v1_5-canonical-transformation.md), and
+[public API decision](docs/adr/0005-water-supply-api.md) for rationale,
 trade-offs, and known limits. Contribution and vulnerability-reporting guidance are
 in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 The [first source assessment](docs/data-sources/ofwat-company-boundaries.md)
 examines Ofwat's publicly distributed water-supply and sewerage boundaries, including
-their actual fields and geometry quality. Its publisher OGL declaration is confirmed;
-the exact edition remains unverified. Migration `0002` adds the snapshot/area
-schema and rejects invalid geometry. **Next milestone:** evaluate geometry repair
-on synthetic examples and define the evidence required to accept a repaired area.
-The inspected release has five invalid water-supply polygons and cannot yet pass
-the strict policy. Resolve the licence edition and final attribution before
-real-data integration. No source is approved for redistribution merely by being
-publicly accessible.
+their actual fields and geometry quality. ADR 0004 and migration `0003` now provide
+the reviewed canonical ingestion path; the versioned API exposes its provenance
+and analytical boundaries. Historical ADRs describe decisions at their acceptance
+dates; consult later ADRs for subsequent source-specific decisions.
+
+**Next milestone:** address the four observed WGS84 output failures through a
+reviewed presentation policy, then finish the end-to-end developer walkthrough,
+operational guidance and usability fixes before starting Environment
+Agency Phase 2. Public hosting still requires the controls described in SECURITY.md.

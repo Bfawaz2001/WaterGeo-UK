@@ -71,9 +71,17 @@ def test_readiness_rejects_wrong_schema_revision(client, database) -> None:
     assert client.get("/ready").status_code == 503
 
 
-def test_openapi_documents_readiness_failure_and_no_data_endpoints(client: TestClient) -> None:
+def test_openapi_documents_operational_and_water_supply_endpoints(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
-    assert set(paths) == {"/health", "/ready"}
+    assert set(paths) == {
+        "/health",
+        "/ready",
+        "/v1/water-supply/dataset",
+        "/v1/water-supply/areas",
+        "/v1/water-supply/areas/at-point",
+        "/v1/water-supply/areas/{source_id}",
+        "/v1/water-supply/areas/{source_id}/geometry",
+    }
     assert "503" in paths["/ready"]["get"]["responses"]
 
 

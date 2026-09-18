@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 
 import httpx2
 
+from watergeo.core.datasets import OFWAT_WATER_SUPPLY_SHA256
+
 SOURCE_HOST = "data.parliament.uk"
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
@@ -52,7 +54,7 @@ OFWAT_WATER_SUPPLY_V1_5 = BoundarySource(
         "https://data.parliament.uk/resources/constituencystatistics/water/"
         "WaterSupplyAreas_incNAVsv1_5.zip"
     ),
-    expected_sha256=("5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78"),
+    expected_sha256=OFWAT_WATER_SUPPLY_SHA256,
     expected_bytes=15_192_919,
     expected_basename="WaterSupplyAreas_incNAVs v1_5",
     licence_name="Open Government Licence",

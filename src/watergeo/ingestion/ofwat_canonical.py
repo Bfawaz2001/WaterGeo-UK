@@ -20,6 +20,7 @@ from shapely.geometry import shape as shapely_shape
 from shapely.validation import explain_validity
 from sqlalchemy import Connection, Engine, text
 
+from watergeo.core.datasets import OFWAT_WATER_SUPPLY_TRANSFORMATION
 from watergeo.ingestion.ofwat_boundaries import (
     OFWAT_WATER_SUPPLY_V1_5,
 )
@@ -29,7 +30,7 @@ from watergeo.ingestion.ofwat_boundary_validation import (
     validate_boundary_archive,
 )
 
-TRANSFORMATION_VERSION = "ofwat-water-supply-v1_5-structure-v1"
+TRANSFORMATION_VERSION = OFWAT_WATER_SUPPLY_TRANSFORMATION
 TRANSFORMATION_METHOD = "structure"
 TRANSFORMATION_KEEP_COLLAPSED = False
 
