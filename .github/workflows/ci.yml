@@ -55,7 +55,12 @@ jobs:
           python - <<'PY'
           import os
           import secrets
-          keys = ("POSTGRES_PASSWORD", "WATERGEO_DB_PASSWORD", "WATERGEO_MIGRATION_PASSWORD")
+          keys = (
+              "POSTGRES_PASSWORD",
+              "WATERGEO_DB_PASSWORD",
+              "WATERGEO_MIGRATION_PASSWORD",
+              "WATERGEO_INGESTION_PASSWORD",
+          )
           with open(os.environ["GITHUB_ENV"], "a") as destination:
               for key in keys:
                   value = secrets.token_hex(24)

@@ -276,6 +276,9 @@ def test_runtime_can_read_but_cannot_write_new_tables(writer: Engine) -> None:
             connection.execute(text("SET TRANSACTION READ WRITE"))
             connection.execute(text("SELECT id FROM watergeo.water_supply_snapshot LIMIT 1"))
             connection.execute(text("SELECT source_id FROM watergeo.water_supply_area LIMIT 1"))
+            connection.execute(
+                text("SELECT source_id FROM watergeo.water_supply_area_transformation LIMIT 1")
+            )
             for statement in (
                 "DELETE FROM watergeo.water_supply_snapshot",
                 "DELETE FROM watergeo.water_supply_area",
