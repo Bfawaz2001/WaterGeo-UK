@@ -8,10 +8,17 @@ from sqlalchemy.exc import SQLAlchemyError
 from watergeo.core.config import DatabaseSettings
 
 logger = logging.getLogger(__name__)
-SCHEMA_REVISION = "0002"
+SCHEMA_REVISION = "0003"
 
 
-def create_database_engine(settings: DatabaseSettings) -> Engine:
+def create_database_engine(
+    settings: DatabaseSettings,
+    *,
+    statement_timeout_ms: int = 3_000,
+) -> Engine:
+    if statement_timeout_ms <= 0:
+        raise ValueError("statement_timeout_ms must be positive.")
+
     return create_engine(
         settings.database_url,
         pool_pre_ping=True,
@@ -21,7 +28,7 @@ def create_database_engine(settings: DatabaseSettings) -> Engine:
         hide_parameters=True,
         connect_args={
             "connect_timeout": 3,
-            "options": "-c statement_timeout=3000 -c lock_timeout=3000",
+            "options": (f"-c statement_timeout={statement_timeout_ms} -c lock_timeout=3000"),
             "application_name": "watergeo",
         },
     )

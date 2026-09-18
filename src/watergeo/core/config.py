@@ -41,3 +41,16 @@ class Settings(DatabaseSettings):
 class MigrationSettings(DatabaseSettings):
     db_user: str = Field(default="watergeo_migrator", validation_alias="WATERGEO_MIGRATION_USER")
     db_password: SecretStr = Field(min_length=16, validation_alias="WATERGEO_MIGRATION_PASSWORD")
+
+
+class IngestionSettings(DatabaseSettings):
+    """Least-privilege identity for canonical ingestion jobs."""
+
+    db_user: str = Field(
+        default="watergeo_ingest",
+        validation_alias="WATERGEO_INGESTION_USER",
+    )
+    db_password: SecretStr = Field(
+        min_length=16,
+        validation_alias="WATERGEO_INGESTION_PASSWORD",
+    )
