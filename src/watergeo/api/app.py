@@ -3,12 +3,14 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Literal, cast
+from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Response
 from pydantic import BaseModel
 from sqlalchemy import Engine
 
+from watergeo.api.dependencies import get_database as get_database
+from watergeo.api.water_supply import router as water_supply_router
 from watergeo.core.config import Settings
 from watergeo.core.logging import configure_logging
 from watergeo.db.engine import create_database_engine, database_is_ready
@@ -22,10 +24,6 @@ class HealthResponse(BaseModel):
 
 class ReadinessResponse(BaseModel):
     status: Literal["ready", "not_ready"]
-
-
-def get_database(request: Request) -> Engine:
-    return cast(Engine, request.app.state.database)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -46,7 +44,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="WaterGeo UK",
         version="0.1.0",
-        description="Independent open-source project. Phase 0 operational endpoints only.",
+        description=(
+            "Independent public water-data API. Dated analytical boundaries, not legal records."
+        ),
         lifespan=lifespan,
     )
 
@@ -69,4 +69,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return ReadinessResponse(status="not_ready")
         return ReadinessResponse(status="ready")
 
+    app.include_router(water_supply_router)
     return app
