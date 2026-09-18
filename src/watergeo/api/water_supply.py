@@ -117,7 +117,8 @@ def geometry(source_id: SourceId, query: Annotated[NoQuery, Query()], db: Querie
     """One GeoJSON Feature, WGS84 longitude/latitude, with counterclockwise shells.
 
     Geometry is reprojected at query time, without simplifying canonical storage.
-    Serialized geometry is limited to 8 MiB. An invalid output representation fails
-    with 503 rather than being repaired. Precision depends on installed PROJ data.
+    Four exact reviewed geometries have a hash-checked presentation-only structure
+    repair (ADR 0006). Other geometries use plain reprojection. Invalid output or
+    a reviewed output hash mismatch returns 503. Geometry is limited to 8 MiB.
     """
     return db.feature(db.dataset().snapshot_id, source_id)
