@@ -1,0 +1,137 @@
+{
+  "stations": [
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/stations/a",
+      "notation": "a",
+      "label": "Synthetic a",
+      "lat": 52.0,
+      "long": -1.0,
+      "measures": [
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/a-flow-i-900-m3s-qualified",
+          "parameter": "flow"
+        }
+      ]
+    },
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/stations/b",
+      "notation": "b",
+      "label": "Synthetic b",
+      "lat": 52.0,
+      "long": -1.0,
+      "measures": [
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/b-flow-i-900-m3s-qualified",
+          "parameter": "flow"
+        }
+      ]
+    },
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/stations/unlocated",
+      "notation": "unlocated",
+      "label": "Synthetic unlocated",
+      "measures": [
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/unlocated-flow-i-900-m3s-qualified",
+          "parameter": "flow"
+        }
+      ]
+    }
+  ],
+  "measures": [
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/measures/a-flow-i-900-m3s-qualified",
+      "notation": "a-flow-i-900-m3s-qualified",
+      "station": {
+        "@id": "http://environment.data.gov.uk/hydrology/id/stations/a"
+      },
+      "parameter": "flow",
+      "parameterName": "Flow",
+      "unitName": "m3/s",
+      "period": 900,
+      "unit": {
+        "@id": "http://qudt.org/1.1/vocab/unit#CubicMeterPerSecond"
+      },
+      "valueStatistic": {
+        "@id": "http://environment.data.gov.uk/reference/def/core/instantaneous"
+      },
+      "observedProperty": {
+        "@id": "http://environment.data.gov.uk/reference/def/op/waterFlow"
+      },
+      "observationType": {
+        "@id": "http://environment.data.gov.uk/reference/def/core/Qualified"
+      }
+    },
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/measures/b-flow-i-900-m3s-qualified",
+      "notation": "b-flow-i-900-m3s-qualified",
+      "station": {
+        "@id": "http://environment.data.gov.uk/hydrology/id/stations/b"
+      },
+      "parameter": "flow",
+      "parameterName": "Flow",
+      "unitName": "m3/s",
+      "period": 900,
+      "unit": {
+        "@id": "http://qudt.org/1.1/vocab/unit#CubicMeterPerSecond"
+      },
+      "valueStatistic": {
+        "@id": "http://environment.data.gov.uk/reference/def/core/instantaneous"
+      },
+      "observedProperty": {
+        "@id": "http://environment.data.gov.uk/reference/def/op/waterFlow"
+      },
+      "observationType": {
+        "@id": "http://environment.data.gov.uk/reference/def/core/Qualified"
+      }
+    },
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/measures/unlocated-flow-i-900-m3s-qualified",
+      "notation": "unlocated-flow-i-900-m3s-qualified",
+      "station": {
+        "@id": "http://environment.data.gov.uk/hydrology/id/stations/unlocated"
+      },
+      "parameter": "flow",
+      "parameterName": "Flow",
+      "unitName": "m3/s",
+      "period": 900,
+      "unit": {
+        "@id": "http://qudt.org/1.1/vocab/unit#CubicMeterPerSecond"
+      },
+      "valueStatistic": {
+        "@id": "http://environment.data.gov.uk/reference/def/core/instantaneous"
+      },
+      "observedProperty": {
+        "@id": "http://environment.data.gov.uk/reference/def/op/waterFlow"
+      },
+      "observationType": {
+        "@id": "http://environment.data.gov.uk/reference/def/core/Qualified"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "measure": {
+        "@id": "http://environment.data.gov.uk/hydrology/id/measures/a-flow-i-900-m3s-qualified"
+      },
+      "dateTime": "2020-01-01T12:00:00",
+      "quality": "Good",
+      "value": 0
+    },
+    {
+      "measure": {
+        "@id": "http://environment.data.gov.uk/hydrology/id/measures/b-flow-i-900-m3s-qualified"
+      },
+      "dateTime": "2020-01-01T12:00:00",
+      "quality": "Missing"
+    },
+    {
+      "measure": {
+        "@id": "http://environment.data.gov.uk/hydrology/id/measures/unlocated-flow-i-900-m3s-qualified"
+      },
+      "dateTime": "2020-01-01T12:00:00",
+      "quality": "Good",
+      "value": 2.5
+    }
+  ]
+}

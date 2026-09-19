@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import Engine
 
 from watergeo.api.dependencies import get_database as get_database
+from watergeo.api.hydrology import router as hydrology_router
 from watergeo.api.water_supply import router as water_supply_router
 from watergeo.core.config import Settings
 from watergeo.core.logging import configure_logging
@@ -69,5 +70,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return ReadinessResponse(status="not_ready")
         return ReadinessResponse(status="ready")
 
+    app.include_router(hydrology_router)
     app.include_router(water_supply_router)
     return app
