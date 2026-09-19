@@ -1,0 +1,141 @@
+{
+  "verified_at": "2026-09-19T19:46:02.629352+00:00",
+  "source": "https://environment.data.gov.uk/hydrology",
+  "scope": [
+    "waterLevel",
+    "waterFlow"
+  ],
+  "api_version": "2.1.1",
+  "licence": "Open Government Licence v3",
+  "coverage": "England",
+  "normalization_version": "ea-hydrology-river-v1",
+  "content_sha256": "b21accd87a458f42499fa6622dec71eb2f95d2c7fdebaec6f806ee7608da14ed",
+  "normalized_sha256": "01d2bf85bef7d973699c8dbc3161f0f51ba384e36cfd3a1d862f2a00a44a43d7",
+  "retrieval_started_at": "2026-09-19T19:33:22.772419+00:00",
+  "retrieval_completed_at": "2026-09-19T19:34:45.800475+00:00",
+  "retrieval_duration_seconds": 83.028056,
+  "counts": {
+    "station_count": 2982,
+    "station_with_location_count": 2981,
+    "station_without_location_count": 1,
+    "measure_count": 12326,
+    "latest_observation_count": 12243
+  },
+  "page_count": 3,
+  "pages": [
+    {
+      "api_version": "2.1.1",
+      "bytes": 6249010,
+      "count": 2982,
+      "effective_limit": 30000,
+      "file": "stations-0.json",
+      "headers": {
+        "content-type": "application/json",
+        "date": "Sat, 19 Sep 2026 19:33:24 GMT"
+      },
+      "kind": "stations",
+      "offset": 0,
+      "request_completed_at": "2026-09-19T19:33:26.753446+00:00",
+      "request_started_at": "2026-09-19T19:33:22.830388+00:00",
+      "request_url": "https://environment.data.gov.uk/hydrology/id/stations?observedProperty=waterLevel&observedProperty=waterFlow&_limit=30000&_offset=0&_sort=notation",
+      "sha256": "9d1ac5867302447b72000da38bf71a30020e8bab5c790f5999ee2a7648634c12"
+    },
+    {
+      "api_version": "2.1.1",
+      "bytes": 11834136,
+      "count": 12326,
+      "effective_limit": 30000,
+      "file": "measures-0.json",
+      "headers": {
+        "content-type": "application/json",
+        "date": "Sat, 19 Sep 2026 19:33:28 GMT"
+      },
+      "kind": "measures",
+      "offset": 0,
+      "request_completed_at": "2026-09-19T19:33:30.963908+00:00",
+      "request_started_at": "2026-09-19T19:33:26.878312+00:00",
+      "request_url": "https://environment.data.gov.uk/hydrology/id/measures?observedProperty=waterLevel&observedProperty=waterFlow&_limit=30000&_offset=0&_sort=notation",
+      "sha256": "1e30f9549c42eb0012cbd42e616eec0bda47811671c587fe028215124e82b591"
+    },
+    {
+      "api_version": "2.1.1",
+      "bytes": 3404464,
+      "count": 12243,
+      "effective_limit": 30000,
+      "file": "observations-0.json",
+      "headers": {
+        "content-type": "application/json",
+        "date": "Sat, 19 Sep 2026 19:33:46 GMT"
+      },
+      "kind": "observations",
+      "offset": 0,
+      "request_completed_at": "2026-09-19T19:34:45.700329+00:00",
+      "request_started_at": "2026-09-19T19:33:31.172080+00:00",
+      "request_url": "https://environment.data.gov.uk/hydrology/data/readings?observedProperty=waterLevel&observedProperty=waterFlow&_limit=30000&_offset=0&latest=",
+      "sha256": "ec3b9f83d191512e548430f81a5a53a2f7368c1c8bf54ce28bdf43ddc33bb4da"
+    }
+  ],
+  "duplicate_counts": {
+    "stations": 0,
+    "measures": 0,
+    "latest_measure": 0
+  },
+  "validation_failures": 0,
+  "coordinate_bounds": {
+    "longitude": [
+      -5.633119,
+      1.710425
+    ],
+    "latitude": [
+      50.050073,
+      55.722365
+    ]
+  },
+  "observation_timestamp_range": [
+    "2003-02-17T06:00:00+00:00",
+    "2026-09-19T19:05:00+00:00"
+  ],
+  "observation_quality_counts": {
+    "Unchecked": 11944,
+    "Missing": 67,
+    "Good": 141,
+    "Suspect": 66,
+    "Estimated": 25
+  },
+  "missing_observation_values": 67,
+  "zero_values": 155,
+  "measures_without_observation": 83,
+  "unlocated_station_ids": [
+    "32f5b1ea-29f7-4d6c-b473-a9e5da0e59d1_U30028"
+  ],
+  "station_optional_field_missing_or_null_counts": {
+    "lat": 1,
+    "long": 1,
+    "easting": 1,
+    "northing": 1,
+    "riverName": 224,
+    "catchmentName": 2982,
+    "status": 0
+  },
+  "http_verification": {
+    "dataset_status": 200,
+    "station_list_unique_ids": 2982,
+    "station_detail_200_count": 2982,
+    "measures_exposed": 12326,
+    "observations_exposed": 12243,
+    "nearby_bounded_distance_order_verified": true,
+    "unlocated_detail_verified": true
+  },
+  "ingestion": {
+    "atomic_load": "passed",
+    "exact_content_retry": "verified_noop",
+    "database": "disposable PostGIS only"
+  },
+  "verification_duration_seconds": 42.666,
+  "runtime": {
+    "python": "3.12.0",
+    "postgresql": "PostgreSQL 17.11 (Debian 17.11-1.pgdg12+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
+    "postgis": "POSTGIS=\"3.6.4 94d984b\" [EXTENSION] PGSQL=\"170\" GEOS=\"3.11.1-CAPI-1.17.1\" PROJ=\"9.8.1 NETWORK_ENABLED=OFF URL_ENDPOINT=https://cdn.proj.org USER_WRITABLE_DIRECTORY=/var/lib/postgresql/.local/share/proj DATABASE_PATH=/usr/share/proj/proj.db\" (compiled against PROJ 9.1.1) LIBXML=\"2.9.14\" LIBJSON=\"0.16\" LIBPROTOBUF=\"1.4.1\" WAGYU=\"0.5.0 (Internal)\""
+  },
+  "baseline_comparison": "Counts and unlocated station identity match 2026-09-19 research; content remains a new timed retrieval of a dynamic API."
+}

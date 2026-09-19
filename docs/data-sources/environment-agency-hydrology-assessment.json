@@ -1,0 +1,96 @@
+{
+  "status": "research_only_not_an_accepted_ingestion_snapshot",
+  "review_date": "2026-09-19",
+  "scope": [
+    "waterLevel",
+    "waterFlow"
+  ],
+  "runtime": {
+    "profiler": "Python 3.12.0"
+  },
+  "limitations": [
+    "Research responses were retrieved independently, not as a publisher-atomic release.",
+    "Request start/end times and response headers were not retained; local file timestamps are not retrieval-window evidence.",
+    "Single responses below declared limits; no production pagination or ingestion verification has run.",
+    "One station lacks coordinates. No records were loaded into PostgreSQL."
+  ],
+  "pages": [
+    {
+      "kind": "stations",
+      "file": "hydrology-river-stations.json",
+      "request_url": "https://environment.data.gov.uk/hydrology/id/stations?observedProperty=waterLevel&observedProperty=waterFlow&_limit=10000&_sort=notation",
+      "sha256": "b5b766532bade8f7ecaefdefced5a9194f1237495076a2aafcfd17bd25472a08",
+      "bytes": 6248940,
+      "count": 2982,
+      "effective_limit": 10000,
+      "api_version": "2.1.1",
+      "local_file_written_at": "2026-09-19T14:15:26.085433+00:00"
+    },
+    {
+      "kind": "measures",
+      "file": "hydrology-river-measures.json",
+      "request_url": "https://environment.data.gov.uk/hydrology/id/measures?observedProperty=waterLevel&observedProperty=waterFlow&_limit=30000&_sort=notation",
+      "sha256": "e787739555bd17353bededc2cddc538c12d90742e92dc7805b5baba39bb1820f",
+      "bytes": 11834066,
+      "count": 12326,
+      "effective_limit": 30000,
+      "api_version": "2.1.1",
+      "local_file_written_at": "2026-09-19T14:15:29.621813+00:00"
+    },
+    {
+      "kind": "latest_observations",
+      "file": "hydrology-river-latest-corrected.json",
+      "request_url": "https://environment.data.gov.uk/hydrology/data/readings?observedProperty=waterLevel&observedProperty=waterFlow&latest&_limit=30000",
+      "sha256": "04d0a171459a7b006a68dac2d37e4e9238a15214c6abfe9c9ecc6d2fb71cf4e6",
+      "bytes": 3404433,
+      "count": 12243,
+      "effective_limit": 30000,
+      "api_version": "2.1.1",
+      "local_file_written_at": "2026-09-19T14:17:50.390445+00:00"
+    }
+  ],
+  "counts": {
+    "stations": 2982,
+    "measures": 12326,
+    "latest_observations": 12243
+  },
+  "duplicate_station_ids": 0,
+  "duplicate_measure_ids": 0,
+  "duplicate_latest_measure_ids": 0,
+  "orphan_measures": 0,
+  "orphan_observations": 0,
+  "stations_without_coordinates": [
+    "32f5b1ea-29f7-4d6c-b473-a9e5da0e59d1_U30028"
+  ],
+  "coordinate_bounds": {
+    "lon_min": -5.633119,
+    "lon_max": 1.710425,
+    "lat_min": 50.050073,
+    "lat_max": 55.722365
+  },
+  "latest_timestamp_range_as_published": [
+    "2003-02-17T06:00:00",
+    "2026-09-19T13:48:15"
+  ],
+  "quality_counts": {
+    "Unchecked": 11944,
+    "Good": 141,
+    "Missing": 67,
+    "Suspect": 66,
+    "Estimated": 25
+  },
+  "missing_value_count": 67,
+  "zero_value_count": 155,
+  "measures_without_latest_observation": 83,
+  "station_field_missing_or_null_counts": {
+    "lat": 1,
+    "long": 1,
+    "easting": 1,
+    "northing": 1,
+    "riverName": 224,
+    "catchmentName": 2982,
+    "wiskiID": 0,
+    "stationGuid": 0,
+    "status": 0
+  }
+}
