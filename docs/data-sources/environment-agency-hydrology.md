@@ -74,8 +74,10 @@ with quality `Missing` and no numeric value. Keep these states distinct from the
 as valid/invalid/missing proportions without undocumented numeric reinterpretation.
 Non-finite values, booleans masquerading as numbers and malformed times must fail.
 Records may be corrected after publication. Retrieval snapshots are observations
-of a changing API, not immutable publisher editions. Historical data is available;
-historical ingestion/querying is deferred.
+of a changing API, not immutable publisher editions. Bounded historical retrieval
+is now implemented as a separate evidence product. A later retrieval of the same
+measure/time window may legitimately contain different publisher content and is
+therefore stored separately rather than updating an earlier retrieval.
 
 ## Requests, limits and completeness
 
@@ -89,6 +91,18 @@ items: it is not the documented readings filter and is excluded from the evidenc
 Hydrology supports `_limit`/`_offset` and sorting. Readings have a documented default
 100,000-row limit and a currently documented hard maximum of 2,000,000, subject to
 change. Inspect effective metadata limits instead of assuming requested limits.
+
+For historical observations, the reviewed endpoint is
+`/hydrology/id/measures/{measure_id}/readings`. Empirical source verification on
+2026-09-19 confirmed inclusive `mineq-dateTime` / `maxeq-dateTime` filters,
+timezone-aware `Z` request values, `_sort=dateTime`, `_limit` and `_offset`.
+The first page may omit `meta.offset`; subsequent pages report it. WaterGeo limits
+one historical retrieval to one measure and at most 31 days, validates every page
+and duplicate timestamp, and records each request URL and response hash.
+
+A reviewed 31-day level-series sample returned 3,041 unique measure/timestamp pairs
+with no duplicate timestamps. This is evidence for the bounded retrieval design,
+not a claim that publisher measure/timestamp pairs are globally immutable.
 The publisher asks clients to keep one request in flight; no fixed requests-per-
 minute allowance was found. Requests may be blocked for excessive use.
 
@@ -149,4 +163,12 @@ duplicates or validation failures, all 2,982 station detail HTTP responses, and 
 verified no-op on exact-content retry. Responses supplied Date and Content-Type;
 ETag and Last-Modified were absent, so neither is invented.
 
-See [ADR 0007](../adr/0007-environment-agency-hydrology.md) for the implemented design.
+A real bounded history verification on 2026-09-19 retrieved 81 observations for
+measure `c7e13884-4a02-4df3-b184-09aea28cf8e8-level-i-900-m-qualified` over
+`2026-09-19T00:00:00Z` to `2026-09-19T20:15:00Z`. The evidence loaded atomically;
+an exact retry returned the same stored retrieval after child-row verification,
+and the public retrieval endpoint returned the stored observations with cursor
+pagination and `Cache-Control: no-store`.
+
+See [ADR 0007](../adr/0007-environment-agency-hydrology.md) for snapshot ingestion
+and [ADR 0008](../adr/0008-hydrology-history.md) for bounded historical evidence.

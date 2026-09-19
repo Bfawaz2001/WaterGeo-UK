@@ -81,6 +81,7 @@ def test_openapi_documents_operational_and_water_supply_endpoints(client: TestCl
         "/v1/hydrology/stations",
         "/v1/hydrology/stations/near",
         "/v1/hydrology/stations/{station_id}",
+        "/v1/hydrology/history/{retrieval_id}",
         "/v1/water-supply/areas",
         "/v1/water-supply/areas/at-point",
         "/v1/water-supply/areas/{source_id}",

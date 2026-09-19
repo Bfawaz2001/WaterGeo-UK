@@ -72,6 +72,11 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /v1/water-supply/areas/at-point?lon=-2&lat=52` | All covering areas, including boundary matches, with pagination. |
 | `GET /v1/water-supply/areas/{source_id}` | Area labels, publisher notices and reviewed transformation provenance. |
 | `GET /v1/water-supply/areas/{source_id}/geometry` | One GeoJSON Feature in WGS84 longitude/latitude. |
+| `GET /v1/hydrology/dataset` | Current reviewed Environment Agency hydrology snapshot metadata and coverage. |
+| `GET /v1/hydrology/stations` | Paginated river level/flow station summaries. |
+| `GET /v1/hydrology/stations/near` | Nearby located stations using WGS84 geography distance. |
+| `GET /v1/hydrology/stations/{station_id}` | Station, measures and latest available observations. |
+| `GET /v1/hydrology/history/{retrieval_id}` | One explicit bounded historical retrieval with cursor pagination. |
 
 The database and API ports bind only to loopback. If port 5432 is occupied, change
 `WATERGEO_DB_PORT` in `.env`; Compose and host-based Python tools use the same value.
@@ -123,7 +128,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0004`), run these from the repository root:
+With the database at migration head (`0005`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -194,7 +199,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0004`), not dataset availability. See the
+infrastructure and migration head (`0005`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Checks
@@ -241,7 +246,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through hydrology snapshots (0004)
+migrations/              Alembic revisions through bounded hydrology history (0005)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational routes, water-supply routes and public models
@@ -274,14 +279,18 @@ the reviewed canonical ingestion path; the versioned API exposes its provenance
 and analytical boundaries. Historical ADRs describe decisions at their acceptance
 dates; consult later ADRs for subsequent source-specific decisions.
 
-**Phase 2 first slice:** Environment Agency station metadata, measures, latest available
-observations and nearby search are implemented for river level/flow. See the
+**Phase 2A and 2B:** Environment Agency station metadata, measures, latest available
+observations, nearby search and bounded historical observations are implemented for
+river level/flow. See the
 [source assessment](docs/data-sources/environment-agency-hydrology.md),
-[ADR 0007](docs/adr/0007-environment-agency-hydrology.md) and
+[ADR 0007](docs/adr/0007-environment-agency-hydrology.md),
+[ADR 0008](docs/adr/0008-hydrology-history.md) and
 [hydrology walkthrough](docs/guides/hydrology-walkthrough.md). Unlocated stations
 remain available by identity; nearby search reports its spatial coverage limitation.
+Historical retrievals are explicit immutable evidence products: WaterGeo does not
+silently stitch overlapping windows or pretend publisher readings are globally immutable.
 
-Proposed follow-ups are bounded historical querying (PR #15), catchment relationships
-(PR #16), then scheduling, freshness monitoring and hardening (PR #17), subject to
-source evidence. Phase 3 is water quality. Public hosting still requires the
+Proposed follow-ups are catchment relationships (Phase 2C), then scheduling,
+freshness monitoring and hardening (Phase 2D), subject to source evidence.
+Phase 3 is water quality. Public hosting still requires the
 deployment controls described in SECURITY.md; there is no hosted endpoint yet.
