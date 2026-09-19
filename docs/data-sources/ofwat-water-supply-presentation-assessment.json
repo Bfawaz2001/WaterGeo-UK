@@ -1,0 +1,1218 @@
+{
+  "assessed_at": "2026-09-18T20:41:30.017508+00:00",
+  "assessment_version": "ofwat-water-supply-wgs84-assessment-v1",
+  "baseline_summary": {
+    "area_count": 1141,
+    "largest_geometry_bytes": 7126794,
+    "ordered_rows_sha256": "bbb99734b7c4e17876bb6963039d84cc630d199c20467fde76ccacf0774ad60b",
+    "status_counts": {
+      "available": 1137,
+      "invalid": 4
+    }
+  },
+  "canonical_rows_sha256_after": "529e2105187a4d366a4f83f82a1e08eef63bb65a7215ec7ba0aadc74dd1d3801",
+  "canonical_rows_sha256_before": "529e2105187a4d366a4f83f82a1e08eef63bb65a7215ec7ba0aadc74dd1d3801",
+  "failed_source_ids": [
+    3,
+    4,
+    16,
+    21
+  ],
+  "features": [
+    {
+      "candidates": [
+        {
+          "candidate": "direct",
+          "canonical": {
+            "area_m2": 3713920541.9820395,
+            "holes": 41,
+            "parts": 2,
+            "perimeter_m": 666399.5649728201,
+            "points": 13541,
+            "wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f"
+          },
+          "output": {
+            "area_delta_m2": 4.87982177734375,
+            "area_delta_untrusted_m2": 4.87982177734375,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001016381090371206,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 0,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "f77f1368d975787dfd3914c8b0c7d52486fb2275f997731505f120e246c0fd5c",
+            "geometry_bytes": 525738,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 41,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "f067b4f0d81dd213a4ba3204058efffe0fe57e0f4314f73df937190a43b96b16",
+            "part_count_delta": 0,
+            "parts": 2,
+            "points": 13541,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 438.728327423873,
+            "validity_reason": "Self-intersection[-0.157983458542987 52.0802595587615]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_100m",
+          "canonical": {
+            "area_m2": 3713920541.9820395,
+            "holes": 41,
+            "parts": 2,
+            "perimeter_m": 666399.5649728201,
+            "points": 13541,
+            "wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f"
+          },
+          "output": {
+            "area_delta_m2": 4.879806041717529,
+            "area_delta_untrusted_m2": 4.879806041717529,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001016381090371206,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 0,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "46e22f7257a73511f771b3d3fbd4ddc7761ecc4b5a07110703008d8bbd1daf78",
+            "geometry_bytes": 615753,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 41,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "9ea426a92004be841dd5dac1a01f09f80aac4261b255c53f0bd4e2ec9ec3d6d3",
+            "part_count_delta": 0,
+            "parts": 2,
+            "points": 15862,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 438.728329834931,
+            "validity_reason": "Self-intersection[0.393236521611153 52.0320086734652]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_10m",
+          "canonical": {
+            "area_m2": 3713920541.9820395,
+            "holes": 41,
+            "parts": 2,
+            "perimeter_m": 666399.5649728201,
+            "points": 13541,
+            "wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 4.879821300506592,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001016381090371206,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "da90cd36a7018d9201c4372c497886dd2b91346bc11dd88b395fe0f7b63ddd48",
+            "geometry_bytes": 2849979,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 41,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "d79521364e8fbb22e72c635d63f7a5216e34714b7a0c4fdb29c6242b6a6e3069",
+            "part_count_delta": 0,
+            "parts": 2,
+            "points": 73470,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[564227.830078438 239842.278588081]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[0.392617917434033 52.0327186275692]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_1m",
+          "canonical": {
+            "area_m2": 3713920541.9820395,
+            "holes": 41,
+            "parts": 2,
+            "perimeter_m": 666399.5649728201,
+            "points": 13541,
+            "wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 4.879915714263916,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001016381090371206,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "54aa183df70733f89bfd0f9747a6ae4df473c4bdf541c5f895b5db221cb39e9d",
+            "geometry_bytes": 26114738,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 41,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "371d0f933d6ff68c2aa710afedc5db09ffcbebad7980057379f4f2472314d404",
+            "part_count_delta": 0,
+            "parts": 2,
+            "points": 673239,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[564219.762997635 239856.171893922]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[0.392591331275933 52.0327491391114]",
+            "within_api_byte_limit": false
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "linework",
+          "canonical": {
+            "area_m2": 3713920541.9820395,
+            "holes": 41,
+            "parts": 2,
+            "perimeter_m": 666399.5649728201,
+            "points": 13541,
+            "wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f"
+          },
+          "output": {
+            "area_delta_m2": 4.881865501403809,
+            "area_delta_untrusted_m2": 4.881865501403809,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.001016381090371206,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "9a0c4a8b643dbb02746244544bb47e27ed877923fd0d7d4c7ab0f0216ac9001f",
+            "geometry_bytes": 525860,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 41,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "e5ab20faafc2e8bca1b13a596f7f81436345c8ab947fb87001467ecac3f0bd43",
+            "part_count_delta": 1,
+            "parts": 3,
+            "points": 13544,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 438.73057759207165,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_keep",
+          "canonical": {
+            "area_m2": 3713920541.9820395,
+            "holes": 41,
+            "parts": 2,
+            "perimeter_m": 666399.5649728201,
+            "points": 13541,
+            "wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f"
+          },
+          "output": {
+            "area_delta_m2": 4.881865501403809,
+            "area_delta_untrusted_m2": 4.881865501403809,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.001016381090371206,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "859c9536bed336a2c4c7387ed64fb1b12bbfa2f11f09c866fb0a22441cc93fbc",
+            "geometry_bytes": 525856,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 41,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "23f24c8cbf1cb40ceb63c606546b88204adfe86f53f3ace0b4430f640598fdca",
+            "part_count_delta": 1,
+            "parts": 3,
+            "points": 13544,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 438.73057759207165,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_drop",
+          "canonical": {
+            "area_m2": 3713920541.9820395,
+            "holes": 41,
+            "parts": 2,
+            "perimeter_m": 666399.5649728201,
+            "points": 13541,
+            "wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f"
+          },
+          "output": {
+            "area_delta_m2": 4.881865501403809,
+            "area_delta_untrusted_m2": 4.881865501403809,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.001016381090371206,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "859c9536bed336a2c4c7387ed64fb1b12bbfa2f11f09c866fb0a22441cc93fbc",
+            "geometry_bytes": 525856,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 41,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "23f24c8cbf1cb40ceb63c606546b88204adfe86f53f3ace0b4430f640598fdca",
+            "part_count_delta": 1,
+            "parts": 3,
+            "points": 13544,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 438.73057759207165,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        }
+      ],
+      "comparisons": [
+        {
+          "left": "structure_drop",
+          "right": "linework",
+          "roundtrip_boundary_hausdorff_m": 0.0,
+          "roundtrip_symmetric_difference_m2": 0.0,
+          "wgs84_topologically_equal": true
+        },
+        {
+          "left": "structure_drop",
+          "right": "structure_keep",
+          "roundtrip_boundary_hausdorff_m": 0.0,
+          "roundtrip_symmetric_difference_m2": 0.0,
+          "wgs84_topologically_equal": true
+        }
+      ],
+      "source_id": 3
+    },
+    {
+      "candidates": [
+        {
+          "candidate": "direct",
+          "canonical": {
+            "area_m2": 22579666271.029842,
+            "holes": 189,
+            "parts": 607,
+            "perimeter_m": 3350286.964409795,
+            "points": 164730,
+            "wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3"
+          },
+          "output": {
+            "area_delta_m2": 30.56216049194336,
+            "area_delta_untrusted_m2": 30.56216049194336,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.0010352581274362307,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 1,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 1,
+              "canonical_parts_without_candidate_intersection": 1
+            },
+            "empty": false,
+            "geojson_sha256": "1ee01d2ce717adc56c4d4b4e340545082ef083abbc01fe21ee3cb237e711f881",
+            "geometry_bytes": 6303602,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 189,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "c2d99d26d658cdf6f326842a84e8059003f97abc0bb7cc2f8e7f4805fece2d85",
+            "part_count_delta": 0,
+            "parts": 607,
+            "points": 164730,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 2084.500843352932,
+            "validity_reason": "Self-intersection[-0.503902803856801 52.0678051275729]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_100m",
+          "canonical": {
+            "area_m2": 22579666271.029842,
+            "holes": 189,
+            "parts": 607,
+            "perimeter_m": 3350286.964409795,
+            "points": 164730,
+            "wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3"
+          },
+          "output": {
+            "area_delta_m2": 30.56189727783203,
+            "area_delta_untrusted_m2": 30.56189727783203,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0010352581274362307,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 1,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 1,
+              "canonical_parts_without_candidate_intersection": 1
+            },
+            "empty": false,
+            "geojson_sha256": "8ae9fe9267a55690c6061d70778c0d7e57e0e714a2babe28a305843a3c713f38",
+            "geometry_bytes": 6541846,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 189,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "b45799777e0cebc728267e140905cc6c005bd5e4dff98e4f588a8f201345733b",
+            "part_count_delta": 0,
+            "parts": 607,
+            "points": 170891,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 2084.500861076182,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_10m",
+          "canonical": {
+            "area_m2": 22579666271.029842,
+            "holes": 189,
+            "parts": 607,
+            "perimeter_m": 3350286.964409795,
+            "points": 164730,
+            "wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3"
+          },
+          "output": {
+            "area_delta_m2": 30.56237030029297,
+            "area_delta_untrusted_m2": 30.56237030029297,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0010352581274362307,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 1,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 1,
+              "canonical_parts_without_candidate_intersection": 1
+            },
+            "empty": false,
+            "geojson_sha256": "fd4847477257ccbd712a27d35c4d81d7357131d50a8b6249344214293028f5e8",
+            "geometry_bytes": 16071319,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 189,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "70376e9b079d6e16a0445027a5a01edee82b26e07e6a0c273d5b18410675d91f",
+            "part_count_delta": 0,
+            "parts": 607,
+            "points": 418906,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 2084.5008770208474,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": false
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_1m",
+          "canonical": {
+            "area_m2": 22579666271.029842,
+            "holes": 189,
+            "parts": 607,
+            "perimeter_m": 3350286.964409795,
+            "points": 164730,
+            "wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3"
+          },
+          "status": "skipped_vertex_budget"
+        },
+        {
+          "candidate": "linework",
+          "canonical": {
+            "area_m2": 22579666271.029842,
+            "holes": 189,
+            "parts": 607,
+            "perimeter_m": 3350286.964409795,
+            "points": 164730,
+            "wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3"
+          },
+          "output": {
+            "area_delta_m2": 30.56200408935547,
+            "area_delta_untrusted_m2": 30.56200408935547,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0010352581274362307,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 1,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 2,
+              "canonical_parts_without_candidate_intersection": 1
+            },
+            "empty": false,
+            "geojson_sha256": "905a997494bfec2c9ce46b2195cc133c55c5b39609e5d061876a403ad0b0cc24",
+            "geometry_bytes": 6303768,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 189,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "d7922f95177d42841db9d36c3ff054ffbf7d428e7c6587c4f7d83a62700c27dc",
+            "part_count_delta": 1,
+            "parts": 608,
+            "points": 164733,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 2084.5008434887377,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_keep",
+          "canonical": {
+            "area_m2": 22579666271.029842,
+            "holes": 189,
+            "parts": 607,
+            "perimeter_m": 3350286.964409795,
+            "points": 164730,
+            "wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3"
+          },
+          "output": {
+            "area_delta_m2": 30.56200408935547,
+            "area_delta_untrusted_m2": 30.56200408935547,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0010352581274362307,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 1,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 1,
+              "canonical_parts_without_candidate_intersection": 1
+            },
+            "empty": false,
+            "geojson_sha256": "5afb38893fa0b05726acc41d09ef03ab1ac09709be41502db7797e0606ca82bd",
+            "geometry_bytes": 6303601,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 189,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "d5fceacb4f6bd6f8f3322b164ae13a43b182ee3327bbf2b2e857587865346934",
+            "part_count_delta": 0,
+            "parts": 607,
+            "points": 164729,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 2084.5008434887377,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_drop",
+          "canonical": {
+            "area_m2": 22579666271.029842,
+            "holes": 189,
+            "parts": 607,
+            "perimeter_m": 3350286.964409795,
+            "points": 164730,
+            "wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3"
+          },
+          "output": {
+            "area_delta_m2": 30.56200408935547,
+            "area_delta_untrusted_m2": 30.56200408935547,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0010352581274362307,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 1,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 1,
+              "canonical_parts_without_candidate_intersection": 1
+            },
+            "empty": false,
+            "geojson_sha256": "5afb38893fa0b05726acc41d09ef03ab1ac09709be41502db7797e0606ca82bd",
+            "geometry_bytes": 6303601,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 189,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "d5fceacb4f6bd6f8f3322b164ae13a43b182ee3327bbf2b2e857587865346934",
+            "part_count_delta": 0,
+            "parts": 607,
+            "points": 164729,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 2084.5008434887377,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        }
+      ],
+      "comparisons": [
+        {
+          "left": "structure_drop",
+          "right": "linework",
+          "roundtrip_boundary_hausdorff_m": 0.00014021616326974755,
+          "roundtrip_symmetric_difference_m2": 1.4231474885269962e-14,
+          "wgs84_topologically_equal": false
+        },
+        {
+          "left": "structure_drop",
+          "right": "structure_keep",
+          "roundtrip_boundary_hausdorff_m": 0.0,
+          "roundtrip_symmetric_difference_m2": 0.0,
+          "wgs84_topologically_equal": true
+        }
+      ],
+      "source_id": 4
+    },
+    {
+      "candidates": [
+        {
+          "candidate": "direct",
+          "canonical": {
+            "area_m2": 4071078473.6245303,
+            "holes": 47,
+            "parts": 11,
+            "perimeter_m": 626374.1740212182,
+            "points": 14986,
+            "wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2"
+          },
+          "output": {
+            "area_delta_m2": 4.83083963394165,
+            "area_delta_untrusted_m2": 4.83083963394165,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001041710998279296,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 0,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "930b744ff9a3e4ffcbf4540f4e1ca8ae433bbbcb12d390b279ec4397731e653b",
+            "geometry_bytes": 572303,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 47,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "951c90e5b9c6469ba04c5ff449ead04ffaa70829e2d0d36c33d21a948ea7f0d7",
+            "part_count_delta": 0,
+            "parts": 11,
+            "points": 14986,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 421.90771817893284,
+            "validity_reason": "Self-intersection[1.14928586169631 51.2257881042588]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_100m",
+          "canonical": {
+            "area_m2": 4071078473.6245303,
+            "holes": 47,
+            "parts": 11,
+            "perimeter_m": 626374.1740212182,
+            "points": 14986,
+            "wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2"
+          },
+          "output": {
+            "area_delta_m2": 4.8308234214782715,
+            "area_delta_untrusted_m2": 4.8308234214782715,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001041710998279296,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 0,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "9bc8f2850fd1959425158fb68030d3e8fad30a0e1f06b8364d1c24de263868b8",
+            "geometry_bytes": 645664,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 47,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "a7b3baa6813ea4ddb2bcc4466401b5f2560c5401b873bdf99c00ae704e94d025",
+            "part_count_delta": 0,
+            "parts": 11,
+            "points": 16898,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 421.9077156704488,
+            "validity_reason": "Self-intersection[1.14928586165596 51.225788104328]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_10m",
+          "canonical": {
+            "area_m2": 4071078473.6245303,
+            "holes": 47,
+            "parts": 11,
+            "perimeter_m": 626374.1740212182,
+            "points": 14986,
+            "wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 4.830828666687012,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001041710998279296,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "42ac4795bfaab1f82c970557278d765d66bf072bc3e67c7212cda1370f3cd210",
+            "geometry_bytes": 2702273,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 47,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "c2d4533e293d6efcec77252a9ea66fd13645cbcf88dd4601fb8bd99a7f0a5fc7",
+            "part_count_delta": 0,
+            "parts": 11,
+            "points": 70634,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[620029.250392314 152145.903841672]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[1.14928586162295 51.2257881043846]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_1m",
+          "canonical": {
+            "area_m2": 4071078473.6245303,
+            "holes": 47,
+            "parts": 11,
+            "perimeter_m": 626374.1740212182,
+            "points": 14986,
+            "wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 4.83075475692749,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.001041710998279296,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "e28ec2e1b4d23d822de8f8388f142c56d1a6f0bb2d31db2e38ecb6edb44242df",
+            "geometry_bytes": 24260087,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 47,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "a5ffbd2cafc15b452979a979c33fa9d899bfc013198b8be518fb4a186b34f36f",
+            "part_count_delta": 0,
+            "parts": 11,
+            "points": 633978,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[620060.204066439 152171.743430527]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[1.14928586161691 51.225788104395]",
+            "within_api_byte_limit": false
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "linework",
+          "canonical": {
+            "area_m2": 4071078473.6245303,
+            "holes": 47,
+            "parts": 11,
+            "perimeter_m": 626374.1740212182,
+            "points": 14986,
+            "wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2"
+          },
+          "output": {
+            "area_delta_m2": 4.831585884094238,
+            "area_delta_untrusted_m2": 4.831585884094238,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.001041710998279296,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "b27408b5a9d647c024d1e676f7aaef5f96a4a84a39c6118cb175076e278f3ba2",
+            "geometry_bytes": 572423,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 47,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "4415c03cc019d02346bd9258849d3fa4a2077a741b379212ce9ca87d2a87d25b",
+            "part_count_delta": 1,
+            "parts": 12,
+            "points": 14989,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 421.90849269328953,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_keep",
+          "canonical": {
+            "area_m2": 4071078473.6245303,
+            "holes": 47,
+            "parts": 11,
+            "perimeter_m": 626374.1740212182,
+            "points": 14986,
+            "wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2"
+          },
+          "output": {
+            "area_delta_m2": 4.831585884094238,
+            "area_delta_untrusted_m2": 4.831585884094238,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.001041710998279296,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "7ec160dc7ab45af63ab953152af862819b5747e22346a4d14ae63bf47415fa6f",
+            "geometry_bytes": 572424,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 47,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "de3d78dbb97c490f3bb04355e6c445319ccdfc4171622b96ce3a9ba9a07caad1",
+            "part_count_delta": 1,
+            "parts": 12,
+            "points": 14989,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 421.90849269328953,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_drop",
+          "canonical": {
+            "area_m2": 4071078473.6245303,
+            "holes": 47,
+            "parts": 11,
+            "perimeter_m": 626374.1740212182,
+            "points": 14986,
+            "wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2"
+          },
+          "output": {
+            "area_delta_m2": 4.831585884094238,
+            "area_delta_untrusted_m2": 4.831585884094238,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.001041710998279296,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "7ec160dc7ab45af63ab953152af862819b5747e22346a4d14ae63bf47415fa6f",
+            "geometry_bytes": 572424,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 47,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "de3d78dbb97c490f3bb04355e6c445319ccdfc4171622b96ce3a9ba9a07caad1",
+            "part_count_delta": 1,
+            "parts": 12,
+            "points": 14989,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 421.90849269328953,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        }
+      ],
+      "comparisons": [
+        {
+          "left": "structure_drop",
+          "right": "linework",
+          "roundtrip_boundary_hausdorff_m": 0.0,
+          "roundtrip_symmetric_difference_m2": 0.0,
+          "wgs84_topologically_equal": true
+        },
+        {
+          "left": "structure_drop",
+          "right": "structure_keep",
+          "roundtrip_boundary_hausdorff_m": 0.0,
+          "roundtrip_symmetric_difference_m2": 0.0,
+          "wgs84_topologically_equal": true
+        }
+      ],
+      "source_id": 16
+    },
+    {
+      "candidates": [
+        {
+          "candidate": "direct",
+          "canonical": {
+            "area_m2": 10021823.911535209,
+            "holes": 0,
+            "parts": 66,
+            "perimeter_m": 91761.08443961643,
+            "points": 8028,
+            "wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 0.013491710647940636,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.0009944227832817364,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "41f76d17ca78b769e3e9d0a59f4c0636ab76526912906a4c30111751dfb516f0",
+            "geometry_bytes": 313955,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 0,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "cbfbbc531c4cb548679ca029a5fd13508003e52bc8a51429f63073f34ea3b518",
+            "part_count_delta": 0,
+            "parts": 66,
+            "points": 8028,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[447787.097866042 102554.756874491]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[-1.32297492724255 50.8205717634665]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_100m",
+          "canonical": {
+            "area_m2": 10021823.911535209,
+            "holes": 0,
+            "parts": 66,
+            "perimeter_m": 91761.08443961643,
+            "points": 8028,
+            "wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 0.013491945341229439,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.0009944227832817364,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "3c2c7331d1a23b37a6cd98502e7ff3205b57c8a662f2fec63002fa63d4c2e48c",
+            "geometry_bytes": 318979,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 0,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "e7cc955b6781dfb9fc419db3c8b8866f21882c5be0f61c2bb6617d266a3f1edd",
+            "part_count_delta": 0,
+            "parts": 66,
+            "points": 8157,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[447787.097866042 102554.756874491]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[-1.32297492724255 50.8205717634665]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_10m",
+          "canonical": {
+            "area_m2": 10021823.911535209,
+            "holes": 0,
+            "parts": 66,
+            "perimeter_m": 91761.08443961643,
+            "points": 8028,
+            "wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 0.01348993182182312,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.0009944227832817364,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "e1e332ef670dfbbfd6db438ccb05228176d6b7a51f64d3b4bc5aa90b951c6c8e",
+            "geometry_bytes": 523724,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 0,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "d7ab310312de2eb79b82e2ceb24075ea84bf6c3154bd0ad09f692ca9ef15027e",
+            "part_count_delta": 0,
+            "parts": 66,
+            "points": 13392,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[447787.097866043 102554.756874492]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[-1.32297492689548 50.8205717635827]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "segmentize_1m",
+          "canonical": {
+            "area_m2": 10021823.911535209,
+            "holes": 0,
+            "parts": 66,
+            "perimeter_m": 91761.08443961643,
+            "points": 8028,
+            "wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4"
+          },
+          "output": {
+            "area_delta_m2": null,
+            "area_delta_untrusted_m2": 0.013489706441760063,
+            "before_serialization_valid": false,
+            "boundary_hausdorff_m": 0.0009944227832817364,
+            "component_correspondence": null,
+            "empty": false,
+            "geojson_sha256": "780ebd4f38f5a1bd364f97369d0d21a14633aa9ac48d60409ced287c20531b01",
+            "geometry_bytes": 3746662,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 0,
+            "lower_dimension_parts": false,
+            "output_valid": false,
+            "output_wkb_sha256": "afbbe03f9d0ccff8c667ceff60eee12e698e8d4b5f83e0570d9d9a6067062b36",
+            "part_count_delta": 0,
+            "parts": 66,
+            "points": 95841,
+            "roundtrip_valid": false,
+            "roundtrip_validity_reason": "Self-intersection[447787.097866042 102554.756874492]",
+            "symmetric_difference_m2": null,
+            "validity_reason": "Self-intersection[-1.32297492688569 50.820571763586]",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "linework",
+          "canonical": {
+            "area_m2": 10021823.911535209,
+            "holes": 0,
+            "parts": 66,
+            "perimeter_m": 91761.08443961643,
+            "points": 8028,
+            "wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4"
+          },
+          "output": {
+            "area_delta_m2": 0.013250589370727539,
+            "area_delta_untrusted_m2": 0.013250589370727539,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0009944227832817364,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "5a5d7d78a090395de33f4886055048bc33fb88001396a476a035d62a77e906eb",
+            "geometry_bytes": 314084,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 0,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "231261bc27e5c7db5eabd4007f404f5763ae009a78ff0f551dc167c3408ecc6a",
+            "part_count_delta": 1,
+            "parts": 67,
+            "points": 8031,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 57.04521845502641,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_keep",
+          "canonical": {
+            "area_m2": 10021823.911535209,
+            "holes": 0,
+            "parts": 66,
+            "perimeter_m": 91761.08443961643,
+            "points": 8028,
+            "wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4"
+          },
+          "output": {
+            "area_delta_m2": 0.013250589370727539,
+            "area_delta_untrusted_m2": 0.013250589370727539,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0009944227832817364,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "36103aa15aa03246d1d085f1bb9de65cdf00d7c690179ae8f5f6164310c4a1cb",
+            "geometry_bytes": 314076,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 0,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "8c0c93092223aa33d753a434e3626b47bda1b2d66b6f6564fabe8e88b59877bd",
+            "part_count_delta": 1,
+            "parts": 67,
+            "points": 8031,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 57.04521845502641,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        },
+        {
+          "candidate": "structure_drop",
+          "canonical": {
+            "area_m2": 10021823.911535209,
+            "holes": 0,
+            "parts": 66,
+            "perimeter_m": 91761.08443961643,
+            "points": 8028,
+            "wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4"
+          },
+          "output": {
+            "area_delta_m2": 0.013250589370727539,
+            "area_delta_untrusted_m2": 0.013250589370727539,
+            "before_serialization_valid": true,
+            "boundary_hausdorff_m": 0.0009944227832817364,
+            "component_correspondence": {
+              "candidate_parts_intersecting_multiple_canonical": 0,
+              "candidate_parts_without_canonical_intersection": 1,
+              "canonical_parts_intersecting_multiple_candidates": 0,
+              "canonical_parts_without_candidate_intersection": 0
+            },
+            "empty": false,
+            "geojson_sha256": "36103aa15aa03246d1d085f1bb9de65cdf00d7c690179ae8f5f6164310c4a1cb",
+            "geometry_bytes": 314076,
+            "geometry_type": "ST_MultiPolygon",
+            "hole_count_delta": 0,
+            "holes": 0,
+            "lower_dimension_parts": false,
+            "output_valid": true,
+            "output_wkb_sha256": "8c0c93092223aa33d753a434e3626b47bda1b2d66b6f6564fabe8e88b59877bd",
+            "part_count_delta": 1,
+            "parts": 67,
+            "points": 8031,
+            "roundtrip_valid": true,
+            "roundtrip_validity_reason": "Valid Geometry",
+            "symmetric_difference_m2": 57.04521845502641,
+            "validity_reason": "Valid Geometry",
+            "within_api_byte_limit": true
+          },
+          "status": "measured"
+        }
+      ],
+      "comparisons": [
+        {
+          "left": "structure_drop",
+          "right": "linework",
+          "roundtrip_boundary_hausdorff_m": 0.0,
+          "roundtrip_symmetric_difference_m2": 0.0,
+          "wgs84_topologically_equal": true
+        },
+        {
+          "left": "structure_drop",
+          "right": "structure_keep",
+          "roundtrip_boundary_hausdorff_m": 0.0,
+          "roundtrip_symmetric_difference_m2": 0.0,
+          "wgs84_topologically_equal": true
+        }
+      ],
+      "source_id": 21
+    }
+  ],
+  "geometry_hash_encoding": "Little-endian 2D WKB, no SRID, no normalization",
+  "hausdorff_method": "Symmetric discrete boundary Hausdorff at existing vertices",
+  "max_candidate_points": 1000000,
+  "max_geometry_bytes": 8388608,
+  "repeated_run_verification": {
+    "all_candidate_geojson_hashes_identical": true,
+    "all_candidate_geometry_hashes_identical": true,
+    "comparison_assessed_at": "2026-09-18T20:38:58.856806+00:00"
+  },
+  "runtime": {
+    "geos": "3.11.1-CAPI-1.17.1",
+    "postgis": "3.6.4",
+    "postgres": "17.11 (Debian 17.11-1.pgdg12+2)",
+    "proj": "9.8.1 NETWORK_ENABLED=OFF URL_ENDPOINT=https://cdn.proj.org USER_WRITABLE_DIRECTORY=/var/lib/postgresql/.local/share/proj DATABASE_PATH=/usr/share/proj/proj.db",
+    "shapely": "2.1.2",
+    "shapely_geos": "3.13.1",
+    "statement_timeout": "1min",
+    "transaction_read_only": "on"
+  },
+  "snapshot_id": "e2ba27a7-11ed-41e7-9861-b0865b5b9eee",
+  "source_provenance": {
+    "distributor": "House of Commons Library",
+    "licence_name": "Open Government Licence",
+    "licence_version": null,
+    "notice": "Derived diagnostic evidence; source licence and publisher caveats still apply.",
+    "publisher": "Water Services Regulation Authority / Ofwat",
+    "review": "docs/adr/0004-ofwat-v1_5-canonical-transformation.md",
+    "source_url": "https://data.parliament.uk/resources/constituencystatistics/water/WaterSupplyAreas_incNAVsv1_5.zip"
+  },
+  "source_sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
+  "status": "diagnostic_only_not_approved",
+  "transformation_version": "ofwat-water-supply-v1_5-structure-v1"
+}

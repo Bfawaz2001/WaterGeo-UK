@@ -7,6 +7,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
+from watergeo.core.presentation import (
+    REVIEWED_WGS84_GEOMETRIES,
+    WGS84_PRESENTATION_REVIEW,
+    WGS84_PRESENTATION_VERSION,
+)
+
 
 def decimal_integer(value: object) -> object:
     """Reject decimal/exponent notation and signs in HTTP integer parameters."""
@@ -55,6 +61,9 @@ class DatasetMetadata(BaseModel):
     licence_url: str
     attribution: str
     transformation_version: str
+    presentation_version: str = WGS84_PRESENTATION_VERSION
+    presentation_review_reference: str = WGS84_PRESENTATION_REVIEW
+    presentation_exception_source_ids: tuple[int, ...] = tuple(REVIEWED_WGS84_GEOMETRIES)
     area_count: int
     transformed_area_count: int
     stored_crs: Literal["EPSG:27700"] = "EPSG:27700"
@@ -119,8 +128,23 @@ class MultiPolygon(BaseModel):
     coordinates: list[list[list[tuple[float, float]]]]
 
 
+class PresentationMetadata(BaseModel):
+    policy_version: str = WGS84_PRESENTATION_VERSION
+    review_reference: str = WGS84_PRESENTATION_REVIEW
+    method: Literal["reprojection", "post_transform_structure"]
+    canonical_geometry_changed: Literal[False] = False
+    canonical_wkb_sha256: str | None
+    geometry_geojson_sha256: str
+    hash_encoding: str = (
+        "SHA-256 of PostGIS 15-decimal GeoJSON UTF-8 text before HTTP serialization"
+    )
+    output_crs: Literal["EPSG:4326"] = "EPSG:4326"
+    decimal_places: Literal[15] = 15
+
+
 class AreaFeature(BaseModel):
     type: Literal["Feature"] = "Feature"
     id: int
     properties: AreaDetail
     geometry: MultiPolygon
+    presentation: PresentationMetadata

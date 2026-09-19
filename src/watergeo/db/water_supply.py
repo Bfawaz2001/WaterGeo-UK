@@ -1,5 +1,6 @@
 """Bounded, parameterised queries for one explicitly published dataset identity."""
 
+import json
 from uuid import UUID
 
 from sqlalchemy import Connection, Engine, text
@@ -11,9 +12,11 @@ from watergeo.api.water_supply_models import (
     AreaSummary,
     DatasetMetadata,
     MultiPolygon,
+    PresentationMetadata,
     TransformationMetadata,
 )
 from watergeo.core.datasets import OFWAT_WATER_SUPPLY_SHA256, OFWAT_WATER_SUPPLY_TRANSFORMATION
+from watergeo.core.presentation import REVIEWED_WGS84_GEOMETRIES
 
 MAX_GEOMETRY_BYTES = 8 * 1024 * 1024
 
@@ -92,17 +95,47 @@ DETAIL_SQL = text(
     + " WHERE a.snapshot_id = :snapshot_id AND a.source_id = :source_id"
 )
 GEOMETRY_SQL = text("""
-    WITH output AS MATERIALIZED (
+    WITH source AS MATERIALIZED (
+        SELECT a.geom, p.geojson_sha256 AS expected_sha256,
+               p.canonical_wkb_sha256 AS canonical_sha256,
+               (p.source_id IS NOT NULL) AS presentation_expected,
+               COALESCE(p.canonical_wkb_sha256 =
+                   encode(sha256(public.ST_AsBinary(a.geom, 'NDR')), 'hex'), false)
+                   AND s.source_sha256 = :published_sha256
+                   AND s.transformation_version = :canonical_version
+                   AS presentation_contract_matches
+        FROM watergeo.water_supply_area a
+        JOIN watergeo.water_supply_snapshot s ON s.id = a.snapshot_id
+        LEFT JOIN jsonb_to_recordset(CAST(:presentation_contract AS jsonb))
+            AS p(source_id bigint, canonical_wkb_sha256 text, geojson_sha256 text)
+            ON p.source_id = a.source_id
+        WHERE a.snapshot_id = :snapshot_id AND a.source_id = :source_id
+    ), contracted AS MATERIALIZED (
+        SELECT *, presentation_expected AND presentation_contract_matches AS presentation_applied
+        FROM source
+    ), projected AS MATERIALIZED (
+        SELECT *, CASE WHEN presentation_applied
+            THEN public.ST_MakeValid(public.ST_Transform(geom, 4326),
+                                     'method=structure keepcollapsed=false')
+            WHEN NOT presentation_expected THEN public.ST_Transform(geom, 4326)
+            ELSE NULL END AS output_geom FROM contracted
+    ), output AS MATERIALIZED (
         SELECT public.ST_AsGeoJSON(
-            public.ST_ForcePolygonCCW(public.ST_Transform(geom, 4326)), 15, 0
-        ) AS geojson
-        FROM watergeo.water_supply_area
-        WHERE snapshot_id = :snapshot_id AND source_id = :source_id
+            public.ST_ForcePolygonCCW(output_geom), 15, 0
+        ) AS geojson, presentation_expected, presentation_contract_matches,
+          presentation_applied, canonical_sha256, expected_sha256
+        FROM projected
     )
     SELECT octet_length(geojson) AS byte_count,
+           presentation_expected, presentation_contract_matches, presentation_applied,
+           CASE WHEN presentation_applied THEN canonical_sha256 END AS canonical_sha256,
+           encode(sha256(convert_to(geojson, 'UTF8')), 'hex') AS geojson_sha256,
            CASE WHEN octet_length(geojson) <= :max_bytes THEN geojson END AS geojson,
            CASE WHEN octet_length(geojson) <= :max_bytes
                 THEN public.ST_IsValid(public.ST_GeomFromGeoJSON(geojson), 0)
+                     AND (NOT presentation_expected OR
+                          (presentation_contract_matches AND presentation_applied AND
+                           encode(sha256(convert_to(geojson, 'UTF8')), 'hex') = expected_sha256))
                 ELSE false END AS valid
     FROM output
 """)
@@ -211,12 +244,24 @@ class WaterSupplyQueries:
                     "snapshot_id": snapshot_id,
                     "source_id": source_id,
                     "max_bytes": MAX_GEOMETRY_BYTES,
+                    "published_sha256": OFWAT_WATER_SUPPLY_SHA256,
+                    "canonical_version": OFWAT_WATER_SUPPLY_TRANSFORMATION,
+                    "presentation_contract": json.dumps(
+                        [
+                            {
+                                "source_id": identifier,
+                                "canonical_wkb_sha256": hashes[0],
+                                "geojson_sha256": hashes[1],
+                            }
+                            for identifier, hashes in REVIEWED_WGS84_GEOMETRIES.items()
+                        ]
+                    ),
                 },
             )
             .mappings()
             .one()
         )
-        if row["byte_count"] > MAX_GEOMETRY_BYTES:
+        if row["byte_count"] is not None and row["byte_count"] > MAX_GEOMETRY_BYTES:
             raise GeometryTooLarge
         if not row["valid"]:
             raise DatasetUnavailable
@@ -224,4 +269,11 @@ class WaterSupplyQueries:
             id=source_id,
             properties=properties,
             geometry=MultiPolygon.model_validate_json(row["geojson"]),
+            presentation=PresentationMetadata(
+                method="post_transform_structure"
+                if row["presentation_applied"]
+                else "reprojection",
+                canonical_wkb_sha256=row["canonical_sha256"],
+                geometry_geojson_sha256=row["geojson_sha256"],
+            ),
         )

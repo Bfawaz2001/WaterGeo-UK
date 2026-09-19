@@ -11,6 +11,9 @@ paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
 longitude/latitude. This is a local development service; a hosted API and visual
 explorer come later.
 
+Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
+for setup, loading, querying, exporting GeoJSON and diagnosing failures.
+
 ## Independence and licensing
 
 WaterGeo UK is a personal, independent open-source project. It is not an official
@@ -163,15 +166,30 @@ coordinates outside the conservative GB processing extent (-9..3 longitude,
 GeoJSON uses `application/geo+json`, longitude/latitude order, and query-time
 reprojection from the stored EPSG:27700 geometry. Output rings follow the right-hand
 rule. No simplification is applied; geometry above 8 MiB returns 413, and an invalid
-serialized representation returns 503. Transform accuracy depends on installed
-PROJ grids and is not a legal or centimetre-accuracy guarantee. Bbox filtering is
+serialized representation or reviewed output hash mismatch returns 503. Transform
+accuracy depends on installed PROJ grids and is not a legal or centimetre-accuracy
+guarantee. Bbox filtering is
 not implemented; unknown parameters, including `bbox`, return 422.
 
-**Known GeoJSON limitation:** local verification found that reprojection makes
-areas **3, 4, 16 and 21** self-intersecting. Their geometry routes return 503 in
-that environment; metadata and point lookup remain available. Increasing decimal
-precision did not resolve this. A separately reviewed output transformation is
-needed before claiming complete WGS84 geometry availability.
+**Reviewed WGS84 presentation:** plain reprojection makes areas **3, 4, 16 and 21**
+self-intersecting in the assessed runtime. [ADR 0006](docs/adr/0006-water-supply-wgs84-presentation.md)
+defines a presentation-only structure repair for those exact source IDs and
+canonical geometry hashes. Each repaired output must match its reviewed GeoJSON
+hash and pass the final validity check; all other areas use plain reprojection.
+All **1,141 HTTP GeoJSON outputs** were verified valid in the reviewed environment,
+with canonical rows unchanged. Different library/grid outputs fail closed with
+503 and require another review. Dataset `presentation_version` and each Feature's
+`presentation` member keep output provenance separate from canonical ingestion.
+
+To reproduce the baseline and candidate evidence without changing database data:
+
+```bash
+uv run --locked python scripts/assess_water_supply_presentation.py
+```
+
+The offline diagnostic writes a new report under ignored `data/validation/` and
+uses a bounded 60-second statement timeout; the API retains its three-second
+timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
@@ -227,7 +245,7 @@ scripts/                 Source retrieval, validation, assessment and canonical 
 src/watergeo/
   api/                   Operational routes, water-supply routes and public models
   core/                  Validated configuration and JSON application logs
-  db/                    Connection pool, readiness and parameterised water-supply queries
+  db/                    Connection pool, queries and offline presentation assessment
   ingestion/             Verified Ofwat retrieval, decoding, reviewed transforms and atomic load
 tests/                   Configuration and HTTP behaviour tests
   integration/           Opt-in PostGIS and migration tests
@@ -243,7 +261,8 @@ See the [Phase 0 architecture](docs/architecture/phase-0.md),
 [foundation decision record](docs/adr/0001-engineering-foundation.md),
 [water-supply schema decision](docs/adr/0002-water-supply-snapshots.md),
 [canonical transformation](docs/adr/0004-ofwat-v1_5-canonical-transformation.md), and
-[public API decision](docs/adr/0005-water-supply-api.md) for rationale,
+[public API decision](docs/adr/0005-water-supply-api.md) and
+[WGS84 presentation review](docs/adr/0006-water-supply-wgs84-presentation.md) for rationale,
 trade-offs, and known limits. Contribution and vulnerability-reporting guidance are
 in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
@@ -254,7 +273,7 @@ the reviewed canonical ingestion path; the versioned API exposes its provenance
 and analytical boundaries. Historical ADRs describe decisions at their acceptance
 dates; consult later ADRs for subsequent source-specific decisions.
 
-**Next milestone:** address the four observed WGS84 output failures through a
-reviewed presentation policy, then finish the end-to-end developer walkthrough,
-operational guidance and usability fixes before starting Environment
-Agency Phase 2. Public hosting still requires the controls described in SECURITY.md.
+**Next milestone:** finish Phase 1 operational and developer-usability review before
+starting Environment Agency Phase 2. The local ingestion-to-API walkthrough and
+reviewed WGS84 output policy are now implemented. Public hosting still requires
+the deployment controls described in SECURITY.md; there is no hosted endpoint yet.
