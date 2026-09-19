@@ -1,6 +1,6 @@
 # 0006: Exact reviewed WGS84 presentation for four water-supply areas
 
-- Status: proposed for maintainer review in PR #13
+- Status: accepted
 - Date: 2026-09-18
 - Builds on: ADR 0004 and ADR 0005
 - Scope: presentation only; canonical ingestion and point queries are unchanged
@@ -97,8 +97,10 @@ canonical little-endian WKB SHA-256 match the four-entry contract in
 ST_MakeValid(ST_Transform(geom, 4326), 'method=structure keepcollapsed=false')
 ```
 
-All other inputs follow plain `ST_Transform`. Both paths then orient polygon
-rings, serialize at 15 decimal places, enforce the 8 MiB bound and reparse/validate
+Only unreviewed IDs follow plain `ST_Transform`. For reviewed exception IDs,
+failure to match the exact canonical hash or dataset identity is an error: return
+the generic 503 without falling back to ordinary reprojection. Both paths then
+orient polygon rings, serialize at 15 decimal places, enforce the 8 MiB bound and reparse/validate
 the representation. A repaired output must also match its **exact reviewed
 GeoJSON SHA-256**. A mismatch returns the existing generic 503; there is no fallback
 repair, precision reduction, filtering, simplification or new tolerance.

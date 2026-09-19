@@ -1,5 +1,6 @@
 """Diagnostic-only PostGIS assessment on a complete, invented snapshot."""
 
+import json
 from uuid import uuid4
 
 import pytest
@@ -11,6 +12,7 @@ from sqlalchemy import text
 from watergeo.api.app import create_app, get_database
 from watergeo.core.config import MigrationSettings, Settings
 from watergeo.core.datasets import OFWAT_WATER_SUPPLY_SHA256, OFWAT_WATER_SUPPLY_TRANSFORMATION
+from watergeo.core.presentation import REVIEWED_WGS84_GEOMETRIES
 from watergeo.db.engine import create_database_engine
 from watergeo.db.presentation_assessment import (
     PresentationAssessmentError,
@@ -18,6 +20,7 @@ from watergeo.db.presentation_assessment import (
     canonical_digest,
     inspect_candidate,
 )
+from watergeo.db.water_supply import GEOMETRY_SQL, MAX_GEOMETRY_BYTES
 
 # Invented hole touching an exterior edge at one point. Valid in BNG; its
 # separately transformed point can cross the transformed straight exterior edge.
@@ -124,6 +127,54 @@ def test_missing_reviewed_snapshot_fails_without_falling_back(dataset, monkeypat
     monkeypatch.setattr("watergeo.db.presentation_assessment.OFWAT_WATER_SUPPLY_SHA256", "f" * 64)
     with pytest.raises(PresentationAssessmentError, match="not loaded"):
         assess_presentation(runtime)
+
+
+def test_reviewed_id_with_valid_plain_projection_still_rejects_canonical_mismatch(dataset):
+    runtime, snapshot = dataset
+    # ID 4 is an ordinary invented square, not its reviewed canonical geometry.
+    with runtime.connect() as connection:
+        baseline = inspect_candidate(connection, snapshot, 4, "direct")
+    assert baseline["output"]["output_valid"] is True
+    assert baseline["output"]["geometry_type"] == "ST_MultiPolygon"
+    assert baseline["output"]["within_api_byte_limit"] is True
+    assert baseline["canonical"]["wkb_sha256"] != REVIEWED_WGS84_GEOMETRIES[4][0]
+    app = create_app()
+    app.dependency_overrides[get_database] = lambda: runtime
+    with TestClient(app) as client:
+        response = client.get("/v1/water-supply/areas/4/geometry")
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Water-supply dataset unavailable"}
+
+
+@pytest.mark.parametrize("mismatch", ["published_sha256", "canonical_version"])
+def test_reviewed_dataset_identity_mismatch_never_projects(dataset, mismatch):
+    runtime, snapshot = dataset
+    with runtime.connect() as connection:
+        candidate = inspect_candidate(connection, snapshot, 4, "structure_drop")
+        parameters = {
+            "snapshot_id": snapshot,
+            "source_id": 4,
+            "max_bytes": MAX_GEOMETRY_BYTES,
+            "published_sha256": OFWAT_WATER_SUPPLY_SHA256,
+            "canonical_version": OFWAT_WATER_SUPPLY_TRANSFORMATION,
+            "presentation_contract": json.dumps(
+                [
+                    {
+                        "source_id": 4,
+                        "canonical_wkb_sha256": candidate["canonical"]["wkb_sha256"],
+                        "geojson_sha256": candidate["output"]["geojson_sha256"],
+                    }
+                ]
+            ),
+        }
+        parameters[mismatch] = "unreviewed"
+        row = connection.execute(GEOMETRY_SQL, parameters).mappings().one()
+    assert row["presentation_expected"] is True
+    assert row["presentation_contract_matches"] is False
+    assert row["presentation_applied"] is False
+    assert row["valid"] is False
+    assert row["geojson"] is None
+    assert row["byte_count"] is None
 
 
 @pytest.mark.parametrize("mismatch", [None, "canonical", "output"])

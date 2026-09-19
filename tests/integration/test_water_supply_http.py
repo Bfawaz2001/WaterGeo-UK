@@ -170,8 +170,17 @@ def test_detail_preserves_notices_and_review_provenance(api):
     assert client.get(PREFIX + "/areas/99/geometry").status_code == 404
 
 
-def test_geojson_is_valid_wgs84_and_does_not_mutate_canonical_geometry(api):
+def test_geojson_is_valid_wgs84_and_does_not_mutate_canonical_geometry(api, monkeypatch):
+    from watergeo.db.presentation_assessment import inspect_candidate
+
     client, runtime, snapshot = api
+    # This invented ID 4 needs its own test contract; production ID 4 is reviewed.
+    with runtime.connect() as connection:
+        candidate = inspect_candidate(connection, snapshot, 4, "structure_drop")
+    monkeypatch.setattr(
+        "watergeo.db.water_supply.REVIEWED_WGS84_GEOMETRIES",
+        {4: (candidate["canonical"]["wkb_sha256"], candidate["output"]["geojson_sha256"])},
+    )
     query = text("""
         SELECT ST_AsEWKB(geom) wkb, ST_SRID(geom) srid,
                ST_Area(geom) area FROM watergeo.water_supply_area
