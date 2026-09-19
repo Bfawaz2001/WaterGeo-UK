@@ -69,3 +69,50 @@ reading and from numeric zero. Preserve the OGL v3 attribution when redistributi
 
 CI uses synthetic source responses and disposable PostGIS only. The real source
 verification is a separate manual operation; do not add live downloads to CI.
+
+## Retrieve bounded historical observations
+
+Historical observations are a separate evidence product from the latest-observation
+snapshot. One retrieval covers exactly one reviewed measure identity and an inclusive
+timezone-aware window of at most 31 days.
+
+```bash
+uv run --locked python scripts/fetch_ea_hydrology_history.py \
+  MEASURE_ID \
+  --from 2026-09-19T00:00:00Z \
+  --to 2026-09-19T20:15:00Z
+```
+
+The command writes an ignored evidence bundle beneath
+`data/raw/environment-agency/hydrology-history/`. Each source page retains its exact
+request URL, response hash, request timing and selected response headers. An
+incomplete retrieval has no valid completion manifest and cannot be loaded.
+
+Load the printed evidence directory:
+
+```bash
+uv run --locked python scripts/load_ea_hydrology_history.py \
+  data/raw/environment-agency/hydrology-history/REPLACE_WITH_DIRECTORY_ID
+```
+
+The measure identity must already have appeared in an accepted hydrology metadata
+snapshot. The loader is append-only. Exact evidence retries verify the actual stored
+observation rows before returning `existing`; changed source evidence creates a new
+retrieval instead of modifying the earlier one.
+
+Query one explicit stored retrieval:
+
+```bash
+curl --fail \
+  "http://127.0.0.1:8000/v1/hydrology/history/RETRIEVAL_ID?limit=100"
+```
+
+Use `next_after` as the cursor for the following request. `null` means the final page.
+The API deliberately requires a retrieval identity: it does not silently choose
+between overlapping retrievals or merge observations from different evidence runs.
+
+Historical numeric zero is a real value. A missing numeric value is accepted only
+when the publisher quality is exactly `Missing`; its original omission remains in
+`source_fields`. Duplicate timestamps within one retrieval, malformed/non-finite
+values, observation times outside the requested window, changed provenance metadata
+or unexpected pagination fail closed.

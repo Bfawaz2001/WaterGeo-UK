@@ -388,3 +388,312 @@ def test_retry_rejects_stored_child_corruption(
             params,
         ).one()
         assert tuple(counts) == (3, 3, 3)
+
+
+def test_history_insert_retry_and_stored_corruption_detection(
+    engines: tuple[Engine, Engine, Engine],
+    tmp_path: Path,
+    loaded: dict[str, Any],
+) -> None:
+    from datetime import UTC, datetime
+
+    import httpx2 as httpx
+
+    from watergeo.db.hydrology_history_ingestion import load_history
+    from watergeo.ingestion.hydrology import LICENCE, HydrologyError
+    from watergeo.ingestion.hydrology_history_client import fetch_history
+
+    with engines[1].connect() as connection:
+        measure_id = connection.execute(
+            text("""
+                SELECT measure_id
+                FROM watergeo.hydrology_measure
+                WHERE snapshot_id = :snapshot_id
+                ORDER BY measure_id COLLATE "C"
+                LIMIT 1
+            """),
+            {"snapshot_id": loaded["snapshot_id"]},
+        ).scalar_one()
+
+    measure_uri = "http://environment.data.gov.uk/hydrology/id/measures/" + measure_id
+
+    rows = [
+        {
+            "measure": {"@id": measure_uri},
+            "date": "2026-09-19",
+            "dateTime": "2026-09-19T00:00:00",
+            "value": 0,
+            "quality": "Unchecked",
+        },
+        {
+            "measure": {"@id": measure_uri},
+            "date": "2026-09-19",
+            "dateTime": "2026-09-19T00:15:00",
+            "quality": "Missing",
+        },
+    ]
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "meta": {
+                    "publisher": "Environment Agency",
+                    "license": LICENCE,
+                    "licenseName": "OGL 3",
+                    "version": "2.1.1",
+                    "limit": 5000,
+                },
+                "items": rows,
+            },
+            headers={"content-type": "application/json"},
+        )
+
+    bundle = fetch_history(
+        measure_id,
+        datetime(2026, 9, 19, 0, 0, tzinfo=UTC),
+        datetime(2026, 9, 19, 1, 0, tzinfo=UTC),
+        root=tmp_path,
+        transport=httpx.MockTransport(respond),
+    )
+
+    inserted = load_history(engines[0], bundle)
+
+    assert inserted["status"] == "inserted"
+    assert inserted["record_count"] == 2
+
+    existing = load_history(engines[0], bundle)
+
+    assert existing == {
+        **inserted,
+        "status": "existing",
+    }
+
+    params = {"id": inserted["retrieval_id"]}
+
+    with engines[2].begin() as connection:
+        assert (
+            connection.execute(
+                text("""
+                    UPDATE watergeo.hydrology_historical_observation
+                    SET value = 123
+                    WHERE retrieval_id = :id
+                      AND observed_at = '2026-09-19T00:00:00Z'
+                """),
+                params,
+            ).rowcount
+            == 1
+        )
+
+    with pytest.raises(
+        HydrologyError,
+        match="stored content mismatch",
+    ):
+        load_history(engines[0], bundle)
+
+    with engines[2].begin() as connection:
+        connection.execute(
+            text("""
+                DELETE FROM watergeo.hydrology_historical_observation
+                WHERE retrieval_id = :id
+            """),
+            params,
+        )
+        connection.execute(
+            text("""
+                DELETE FROM watergeo.hydrology_history_retrieval
+                WHERE id = :id
+            """),
+            params,
+        )
+
+
+def test_history_unknown_measure_fails_closed(
+    engines: tuple[Engine, Engine, Engine],
+    tmp_path: Path,
+) -> None:
+    from datetime import UTC, datetime
+
+    import httpx2 as httpx
+
+    from watergeo.db.hydrology_history_ingestion import load_history
+    from watergeo.ingestion.hydrology import LICENCE, HydrologyError
+    from watergeo.ingestion.hydrology_history_client import fetch_history
+
+    measure_id = "unknown-level-i-900-m-qualified"
+    measure_uri = "http://environment.data.gov.uk/hydrology/id/measures/" + measure_id
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "meta": {
+                    "publisher": "Environment Agency",
+                    "license": LICENCE,
+                    "licenseName": "OGL 3",
+                    "version": "2.1.1",
+                    "limit": 5000,
+                },
+                "items": [
+                    {
+                        "measure": {"@id": measure_uri},
+                        "date": "2026-09-19",
+                        "dateTime": "2026-09-19T00:00:00",
+                        "value": 1,
+                        "quality": "Unchecked",
+                    }
+                ],
+            },
+            headers={"content-type": "application/json"},
+        )
+
+    bundle = fetch_history(
+        measure_id,
+        datetime(2026, 9, 19, 0, 0, tzinfo=UTC),
+        datetime(2026, 9, 19, 1, 0, tzinfo=UTC),
+        root=tmp_path,
+        transport=httpx.MockTransport(respond),
+    )
+
+    with pytest.raises(
+        HydrologyError,
+        match="unknown measure",
+    ):
+        load_history(engines[0], bundle)
+
+
+def test_history_http_explicit_retrieval_pagination(
+    engines: tuple[Engine, Engine, Engine],
+    tmp_path: Path,
+    loaded: dict[str, Any],
+) -> None:
+    from datetime import UTC, datetime
+
+    import httpx2 as httpx
+
+    from watergeo.db.hydrology_history_ingestion import load_history
+    from watergeo.ingestion.hydrology import LICENCE
+    from watergeo.ingestion.hydrology_history_client import fetch_history
+
+    with engines[1].connect() as connection:
+        measure_id = connection.execute(
+            text("""
+                SELECT measure_id
+                FROM watergeo.hydrology_measure
+                WHERE snapshot_id = :snapshot_id
+                ORDER BY measure_id COLLATE "C"
+                LIMIT 1
+            """),
+            {"snapshot_id": loaded["snapshot_id"]},
+        ).scalar_one()
+
+    measure_uri = "http://environment.data.gov.uk/hydrology/id/measures/" + measure_id
+
+    rows = [
+        {
+            "measure": {"@id": measure_uri},
+            "date": "2026-09-19",
+            "dateTime": "2026-09-19T00:00:00",
+            "value": 0,
+            "quality": "Unchecked",
+        },
+        {
+            "measure": {"@id": measure_uri},
+            "date": "2026-09-19",
+            "dateTime": "2026-09-19T00:15:00",
+            "value": 1,
+            "quality": "Unchecked",
+        },
+        {
+            "measure": {"@id": measure_uri},
+            "date": "2026-09-19",
+            "dateTime": "2026-09-19T00:30:00",
+            "quality": "Missing",
+        },
+    ]
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "meta": {
+                    "publisher": "Environment Agency",
+                    "license": LICENCE,
+                    "licenseName": "OGL 3",
+                    "version": "2.1.1",
+                    "limit": 5000,
+                },
+                "items": rows,
+            },
+            headers={"content-type": "application/json"},
+        )
+
+    bundle = fetch_history(
+        measure_id,
+        datetime(2026, 9, 19, 0, 0, tzinfo=UTC),
+        datetime(2026, 9, 19, 1, 0, tzinfo=UTC),
+        root=tmp_path,
+        transport=httpx.MockTransport(respond),
+    )
+
+    history = load_history(engines[0], bundle)
+
+    try:
+        with TestClient(create_app()) as client:
+            first = client.get(
+                f"/v1/hydrology/history/{history['retrieval_id']}",
+                params={"limit": 2},
+            )
+
+            assert first.status_code == 200
+            body = first.json()
+
+            assert body["record_count"] == 3
+            assert body["measure_id"] == measure_id
+            assert len(body["observations"]) == 2
+            assert body["observations"][0]["value"] == 0
+            assert body["next_after"] is not None
+            assert first.headers["cache-control"] == "no-store"
+
+            second = client.get(
+                f"/v1/hydrology/history/{history['retrieval_id']}",
+                params={
+                    "limit": 2,
+                    "after": body["next_after"],
+                },
+            )
+
+            assert second.status_code == 200
+            second_body = second.json()
+
+            assert len(second_body["observations"]) == 1
+            assert second_body["observations"][0]["value"] is None
+            assert second_body["next_after"] is None
+
+            missing = client.get("/v1/hydrology/history/00000000-0000-0000-0000-000000000000")
+            assert missing.status_code == 404
+
+            naive = client.get(
+                f"/v1/hydrology/history/{history['retrieval_id']}",
+                params={"after": "2026-09-19T00:00:00"},
+            )
+            assert naive.status_code == 422
+
+    finally:
+        params = {"id": history["retrieval_id"]}
+
+        with engines[2].begin() as connection:
+            connection.execute(
+                text("""
+                    DELETE FROM watergeo.hydrology_historical_observation
+                    WHERE retrieval_id = :id
+                """),
+                params,
+            )
+            connection.execute(
+                text("""
+                    DELETE FROM watergeo.hydrology_history_retrieval
+                    WHERE id = :id
+                """),
+                params,
+            )

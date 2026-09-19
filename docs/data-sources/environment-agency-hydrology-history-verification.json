@@ -1,0 +1,27 @@
+{
+  "status": "reviewed_manual_verification",
+  "review_date": "2026-09-19",
+  "publisher": "Environment Agency",
+  "api_version": "2.1.1",
+  "normalization_version": "ea-hydrology-history-v1",
+  "measure_id": "c7e13884-4a02-4df3-b184-09aea28cf8e8-level-i-900-m-qualified",
+  "requested_from": "2026-09-19T00:00:00Z",
+  "requested_to": "2026-09-19T20:15:00Z",
+  "record_count": 81,
+  "content_sha256": "ce681863a2f9866b149d7e906f38fba5f997f065dd54fb9c9a0ed3864c218c13",
+  "verified_behaviour": [
+    "Timezone-aware Z bounds were accepted by the official historical endpoint.",
+    "Inclusive date-time filtering returned the exact boundary observation in a reviewed probe.",
+    "_sort=dateTime with _limit and _offset produced non-overlapping ascending pages.",
+    "The first page may omit meta.offset while later pages report it.",
+    "The real evidence bundle loaded atomically.",
+    "An exact-content retry returned the same stored retrieval only after child-row integrity verification.",
+    "The public explicit-retrieval endpoint returned stored observations with keyset pagination.",
+    "The public response included Cache-Control: no-store."
+  ],
+  "limitations": [
+    "This is a dated verification of one level measure and one bounded window, not evidence that all measures have identical cadence or completeness.",
+    "Publisher readings may be corrected later; measure plus timestamp is not treated as globally immutable.",
+    "The local database retrieval UUID is intentionally not part of this portable source-verification record."
+  ]
+}
