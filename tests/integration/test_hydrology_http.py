@@ -305,3 +305,86 @@ def test_spatial_completeness_degradation_requires_review(
             ).scalar_one()
             == 1
         )
+
+
+@pytest.mark.parametrize(
+    "mutation,inspection,expected",
+    [
+        (
+            "UPDATE watergeo.hydrology_station SET labels='[\"changed\"]' "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            "SELECT labels FROM watergeo.hydrology_station "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            ["changed"],
+        ),
+        (
+            "UPDATE watergeo.hydrology_measure SET unit_name='changed' "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            "SELECT unit_name FROM watergeo.hydrology_measure "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            "changed",
+        ),
+        (
+            "UPDATE watergeo.hydrology_latest_observation SET value=123 "
+            "WHERE snapshot_id=:id AND measure_id='a-flow-i-900-m3s-qualified'",
+            "SELECT value FROM watergeo.hydrology_latest_observation "
+            "WHERE snapshot_id=:id AND measure_id='a-flow-i-900-m3s-qualified'",
+            123,
+        ),
+        (
+            "UPDATE watergeo.hydrology_station SET source_fields='{}' "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            "SELECT source_fields FROM watergeo.hydrology_station "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            {},
+        ),
+        (
+            "UPDATE watergeo.hydrology_measure SET source_fields='{}' "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            "SELECT source_fields FROM watergeo.hydrology_measure "
+            "WHERE snapshot_id=:id AND station_id='a'",
+            {},
+        ),
+        (
+            "UPDATE watergeo.hydrology_latest_observation SET source_fields='{}' "
+            "WHERE snapshot_id=:id AND measure_id='a-flow-i-900-m3s-qualified'",
+            "SELECT source_fields FROM watergeo.hydrology_latest_observation "
+            "WHERE snapshot_id=:id AND measure_id='a-flow-i-900-m3s-qualified'",
+            {},
+        ),
+    ],
+)
+def test_retry_rejects_stored_child_corruption(
+    engines: tuple[Engine, Engine, Engine],
+    bundle: Path,
+    loaded: dict[str, Any],
+    mutation: str,
+    inspection: str,
+    expected: Any,
+) -> None:
+    from watergeo.ingestion.hydrology import HydrologyError
+
+    assert load_snapshot(engines[0], bundle)["status"] == "existing"
+    params = {"id": loaded["snapshot_id"]}
+    with engines[2].begin() as connection:
+        assert connection.execute(text(mutation), params).rowcount == 1
+    with pytest.raises(HydrologyError, match="stored content mismatch"):
+        load_snapshot(engines[0], bundle)
+    with engines[1].connect() as connection:
+        assert connection.execute(text(inspection), params).scalar_one() == expected
+        assert (
+            connection.execute(
+                text("SELECT count(*) FROM watergeo.hydrology_snapshot")
+            ).scalar_one()
+            == 1
+        )
+        counts = connection.execute(
+            text("""
+            SELECT (SELECT count(*) FROM watergeo.hydrology_station WHERE snapshot_id=:id),
+                   (SELECT count(*) FROM watergeo.hydrology_measure WHERE snapshot_id=:id),
+                   (SELECT count(*) FROM watergeo.hydrology_latest_observation
+                    WHERE snapshot_id=:id)
+        """),
+            params,
+        ).one()
+        assert tuple(counts) == (3, 3, 3)

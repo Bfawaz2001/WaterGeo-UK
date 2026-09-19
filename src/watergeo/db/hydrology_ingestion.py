@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from sqlalchemy import Engine, text
 
+from watergeo.db.hydrology_integrity import verify_stored_content
 from watergeo.ingestion.hydrology import VERSION, HydrologyError
 from watergeo.ingestion.hydrology_client import read_snapshot
 
@@ -42,6 +43,7 @@ def load_snapshot(engine: Engine, directory: Path) -> dict[str, Any]:
             ).one()
             if tuple(actual) != (len(data.stations), len(data.measures), len(data.observations)):
                 raise HydrologyError("Existing snapshot is incomplete")
+            verify_stored_content(connection, existing["id"], data)
             return {"status": "existing", "snapshot_id": str(existing["id"]), **counts}
         previous = connection.execute(
             text("""

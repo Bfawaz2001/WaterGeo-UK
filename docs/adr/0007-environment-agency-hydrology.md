@@ -69,7 +69,15 @@ hashes, pagination and source contracts before any database insertion.
 A complete snapshot is inserted in one transaction under the SELECT/INSERT-only
 ingestion role. Failure rolls everything back. An advisory transaction lock
 serializes publication/retry decisions. The same exact content and normalization
-version returns the existing snapshot after normalized-hash and row-count checks;
+version returns the existing snapshot only after normalized-hash, row-count and
+actual stored child-content verification. A separate recomputed digest covers every
+normalized station/measure/observation field, preserved source_fields, labels and
+fixed-little-endian EWKB geometry including SRID. Rows use C-collated publisher ID
+order; queryable float8 values use exact binary representations, timestamps use UTC
+microseconds, and JSONB is parsed with exact decimal numbers and canonical key/value
+ordering (numeric scale is immaterial; booleans remain distinct). This verification
+digest does not change snapshot identity, content_sha256 or normalization version.
+A mismatch raises HydrologyError without replacing or repairing any stored row;
 it does not advance its retrieval time. Source corrections produce another snapshot.
 Newest retrieval completion time, then UUID, selects the default compatible snapshot.
 Independent source pages are not an immutable or publisher-atomic release.
