@@ -1,7 +1,10 @@
 # Data source acceptance
 
-No source is integrated or approved for redistribution yet. Public availability is not permission to
-redistribute. For each proposed integration, record the following from current
+The reviewed Ofwat water-supply source is integrated; its source assessment and
+ADRs define the accepted scope. Environment Agency river level/flow hydrology
+is also integrated under its separate source assessment and ADR 0007. Public
+availability alone is not permission to redistribute.
+For each proposed integration, record the following from current
 official documentation and actual sample responses before implementation:
 
 1. Publisher, dataset title, official source URL, and documentation/API links.
