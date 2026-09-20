@@ -77,6 +77,16 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /v1/hydrology/stations/near` | Nearby located stations using WGS84 geography distance. |
 | `GET /v1/hydrology/stations/{station_id}` | Station, measures and latest available observations. |
 | `GET /v1/hydrology/history/{retrieval_id}` | One explicit bounded historical retrieval with cursor pagination. |
+| `GET /v1/catchments/dataset` | Current reviewed Catchment Data Explorer Cycle 3 snapshot metadata and hierarchy counts. |
+| `GET /v1/catchments/river-basin-districts` | Snapshot-pinned paginated River Basin District summaries. |
+| `GET /v1/catchments/river-basin-districts/{entity_id}` | One River Basin District with publisher provenance. |
+| `GET /v1/catchments/management-catchments` | Snapshot-pinned paginated Management Catchments. |
+| `GET /v1/catchments/management-catchments/{entity_id}` | One Management Catchment and its River Basin District identity. |
+| `GET /v1/catchments/operational-catchments` | Snapshot-pinned paginated Operational Catchments. |
+| `GET /v1/catchments/operational-catchments/{entity_id}` | One Operational Catchment with its publisher hierarchy. |
+| `GET /v1/catchments/water-bodies` | Snapshot-pinned paginated Water Body summaries. |
+| `GET /v1/catchments/water-bodies/{entity_id}` | One Water Body with full publisher hierarchy identities. |
+| `GET /v1/catchments/water-bodies/{entity_id}/geometry` | Publisher Water Body geometry features as WGS84 GeoJSON. |
 
 The database and API ports bind only to loopback. If port 5432 is occupied, change
 `WATERGEO_DB_PORT` in `.env`; Compose and host-based Python tools use the same value.
@@ -202,6 +212,25 @@ is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
 infrastructure and migration head (`0006`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
+## Query the Catchment Data Explorer hierarchy
+
+After loading a reviewed Cycle 3 snapshot with `scripts/load_ea_catchments.py`, the public API exposes publisher hierarchy entities without inventing a Hydrology station-to-catchment relationship.
+
+Example requests:
+
+    curl --fail http://127.0.0.1:8000/v1/catchments/dataset
+    curl --fail 'http://127.0.0.1:8000/v1/catchments/river-basin-districts?limit=10'
+    curl --fail http://127.0.0.1:8000/v1/catchments/river-basin-districts/4
+    curl --fail http://127.0.0.1:8000/v1/catchments/management-catchments/3101
+    curl --fail http://127.0.0.1:8000/v1/catchments/operational-catchments/3471
+    curl --fail 'http://127.0.0.1:8000/v1/catchments/water-bodies?limit=10'
+    curl --fail http://127.0.0.1:8000/v1/catchments/water-bodies/GB104028047290
+    curl --fail http://127.0.0.1:8000/v1/catchments/water-bodies/GB104028047290/geometry
+
+List endpoints use keyset pagination. Pass both `snapshot_id` and `next_after_id` from the previous response to remain pinned to the same accepted snapshot. Page size is limited to 100, and malformed identifiers or unexpected query parameters return 422.
+
+Water Body geometry responses use `application/geo+json` and preserve separate publisher features such as `Catchment` and `RiverLine`; they are not dissolved into a WaterGeo-created parent polygon. Geometry responses above 8 MiB return 413. Missing entities return 404 only after a compatible snapshot is available; source/database contract failures return a generic 503.
+
 ## Checks
 
 The default tests need no database or `.env`; integration tests are explicitly skipped.
@@ -249,10 +278,10 @@ docs/data-sources/       Source acceptance and provenance requirements
 migrations/              Alembic revisions through Catchment Data Explorer hierarchy (0006)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
-  api/                   Operational routes, water-supply routes and public models
+  api/                   Operational, water-supply, hydrology and catchment public routes
   core/                  Validated configuration and JSON application logs
   db/                    Connection pool, queries and offline presentation assessment
-  ingestion/             Verified Ofwat retrieval, decoding, reviewed transforms and atomic load
+  ingestion/             Verified public-source retrieval, normalization and atomic load
 tests/                   Configuration and HTTP behaviour tests
   integration/           Opt-in PostGIS and migration tests
 Dockerfile               Non-root application image

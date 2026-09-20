@@ -9,8 +9,10 @@ import httpx2 as httpx
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, event, text
 
+from watergeo.api.app import create_app, get_database
 from watergeo.core.config import IngestionSettings, MigrationSettings, Settings
 from watergeo.db.catchment_ingestion import load_snapshot
 from watergeo.db.engine import create_database_engine
@@ -511,3 +513,154 @@ def test_exact_role_privileges(
                     ).scalar_one()
 
                     assert actual is allowed
+
+
+@pytest.fixture
+def catchment_api(
+    engines: tuple[Engine, Engine, Engine],
+    loaded: dict[str, Any],
+) -> Iterator[TestClient]:
+    assert loaded["status"] == "inserted"
+
+    app = create_app(Settings())
+    app.dependency_overrides[get_database] = lambda: engines[1]
+
+    with TestClient(app) as client:
+        yield client
+
+
+def test_public_catchment_dataset_contract(
+    catchment_api: TestClient,
+    loaded: dict[str, Any],
+) -> None:
+    response = catchment_api.get("/v1/catchments/dataset")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+
+    body = response.json()
+
+    assert body["snapshot_id"] == loaded["snapshot_id"]
+    assert body["plan_version"] == "c3-plan"
+    assert body["normalization_version"] == "ea-cde-c3-plan-v1"
+    assert body["river_basin_district_count"] == 1
+    assert body["management_catchment_count"] == 1
+    assert body["operational_catchment_count"] == 1
+    assert body["water_body_count"] == 2
+    assert body["geometry_feature_count"] == 4
+
+    assert body["hierarchy"] == (
+        "River Basin District -> Management Catchment -> Operational Catchment -> Water Body"
+    )
+
+    assert "station-to-catchment" in body["relationship_caveat"]
+
+
+def test_public_catchment_hierarchy_navigation(
+    catchment_api: TestClient,
+) -> None:
+    rbd = catchment_api.get("/v1/catchments/river-basin-districts/4")
+    assert rbd.status_code == 200
+    assert rbd.json()["river_basin_district_id"] == "4"
+    assert rbd.json()["name"] == "Synthetic RBD"
+
+    management = catchment_api.get("/v1/catchments/management-catchments/3101")
+    assert management.status_code == 200
+    assert management.json()["river_basin_district_id"] == "4"
+
+    operational = catchment_api.get("/v1/catchments/operational-catchments/3471")
+    assert operational.status_code == 200
+    assert operational.json()["management_catchment_id"] == "3101"
+    assert operational.json()["river_basin_district_id"] == "4"
+
+    water_body = catchment_api.get("/v1/catchments/water-bodies/GBTEST001")
+    assert water_body.status_code == 200
+
+    body = water_body.json()
+
+    assert body["water_body_id"] == "GBTEST001"
+    assert body["operational_catchment_id"] == "3471"
+    assert body["management_catchment_id"] == "3101"
+    assert body["river_basin_district_id"] == "4"
+    assert body["water_body_type"] == "River"
+    assert body["geometry_url"] == ("/v1/catchments/water-bodies/GBTEST001/geometry")
+
+
+def test_public_water_body_pagination_is_snapshot_pinned(
+    catchment_api: TestClient,
+) -> None:
+    first = catchment_api.get(
+        "/v1/catchments/water-bodies",
+        params={"limit": 1},
+    )
+
+    assert first.status_code == 200
+
+    first_body = first.json()
+
+    assert [item["water_body_id"] for item in first_body["items"]] == ["GBTEST001"]
+    assert first_body["next_after_id"] == "GBTEST001"
+
+    second = catchment_api.get(
+        "/v1/catchments/water-bodies",
+        params={
+            "limit": 1,
+            "after_id": first_body["next_after_id"],
+            "snapshot_id": first_body["dataset"]["snapshot_id"],
+        },
+    )
+
+    assert second.status_code == 200
+
+    second_body = second.json()
+
+    assert [item["water_body_id"] for item in second_body["items"]] == ["GBTEST002"]
+    assert second_body["next_after_id"] is None
+    assert second_body["dataset"]["snapshot_id"] == first_body["dataset"]["snapshot_id"]
+
+
+def test_public_water_body_geometry_preserves_publisher_features(
+    catchment_api: TestClient,
+) -> None:
+    response = catchment_api.get("/v1/catchments/water-bodies/GBTEST001/geometry")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/geo+json")
+    assert response.headers["cache-control"] == "no-store"
+
+    body = response.json()
+
+    assert body["type"] == "FeatureCollection"
+    assert body["water_body_id"] == "GBTEST001"
+    assert len(body["features"]) == 2
+
+    assert [feature["properties"]["geometry_kind"] for feature in body["features"]] == [
+        "Catchment",
+        "RiverLine",
+    ]
+
+    assert [feature["geometry"]["type"] for feature in body["features"]] == [
+        "Polygon",
+        "LineString",
+    ]
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/v1/catchments/river-basin-districts/999",
+        "/v1/catchments/management-catchments/999",
+        "/v1/catchments/operational-catchments/999",
+        "/v1/catchments/water-bodies/GBMISSING",
+        "/v1/catchments/water-bodies/GBMISSING/geometry",
+    ],
+)
+def test_public_missing_catchment_entities_return_404(
+    catchment_api: TestClient,
+    path: str,
+) -> None:
+    response = catchment_api.get(path)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Catchment entity not found"}
+    assert response.headers["cache-control"] == "no-store"
