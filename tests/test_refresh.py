@@ -1,6 +1,7 @@
 import json
 import logging
 import multiprocessing
+import signal
 import time
 from contextlib import nullcontext
 from unittest.mock import MagicMock, patch
@@ -9,6 +10,70 @@ import pytest
 
 from watergeo.core.logging import JsonFormatter
 from watergeo.operations import refresh as jobs
+
+
+@pytest.mark.parametrize("body_fails", [False, True])
+def test_source_lock_explicit_unlock_then_disposal(body_fails):
+    engine = MagicMock()
+    connection = engine.connect.return_value
+    connection.execution_options.return_value = connection
+    connection.execute.return_value.scalar_one.return_value = True
+    failure = ValueError("body failure")
+    try:
+        with jobs.source_lock(engine, "hydrology"):
+            if body_fails:
+                raise failure
+    except ValueError as error:
+        assert body_fails and error is failure
+    calls = connection.execute.call_args_list
+    assert len(calls) == 2
+    assert str(calls[1].args[0]) == "SELECT pg_advisory_unlock(:namespace, :source)"
+    assert calls[1].args[1] == {"namespace": jobs.LOCK_NAMESPACE, "source": 2}
+    names = [call[0] for call in connection.mock_calls]
+    connection.detach.assert_not_called()
+    assert names.index("invalidate") > max(i for i, name in enumerate(names) if name == "execute")
+    assert names.index("close") > names.index("invalidate")
+
+
+@pytest.mark.parametrize("failure_at", ["unlock", "invalidate", "close"])
+@pytest.mark.parametrize("body_fails", [False, True])
+def test_source_lock_cleanup_failure_preserves_body_error(failure_at, body_fails):
+    engine = MagicMock()
+    connection = engine.connect.return_value
+    connection.execution_options.return_value = connection
+    connection.execute.return_value.scalar_one.return_value = True
+    cleanup_error = RuntimeError("cleanup failure")
+    if failure_at == "unlock":
+        connection.execute.side_effect = [connection.execute.return_value, cleanup_error]
+    else:
+        getattr(connection, failure_at).side_effect = cleanup_error
+    original = jobs.RefreshCancelled()
+    with pytest.raises(BaseException) as caught, jobs.source_lock(engine, "hydrology"):
+        if body_fails:
+            raise original
+    assert caught.value is (original if body_fails else cleanup_error)
+    if failure_at == "invalidate":
+        connection.detach.assert_called_once()
+        names = [call[0] for call in connection.mock_calls]
+        assert names.index("invalidate") < names.index("detach") < names.index("close")
+    else:
+        connection.detach.assert_not_called()
+    connection.invalidate.assert_called_once()
+    connection.close.assert_called_once()
+
+
+def test_source_lock_unconfirmed_unlock_fails_closed():
+    engine = MagicMock()
+    connection = engine.connect.return_value
+    connection.execution_options.return_value = connection
+    connection.execute.return_value.scalar_one.side_effect = [True, False]
+    with (
+        pytest.raises(RuntimeError, match="release not confirmed"),
+        jobs.source_lock(engine, "hydrology"),
+    ):
+        pass
+    connection.invalidate.assert_called_once()
+    connection.close.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -73,6 +138,34 @@ def test_interrupt_reaps_worker():
     process.is_alive.side_effect = [True, True, False]
     assert jobs.supervise(process, jobs.RefreshRequest("hydrology"), "run", 60) == 5
     process.terminate.assert_called_once()
+
+
+@pytest.mark.parametrize("second_signal", [signal.SIGINT, signal.SIGTERM])
+def test_repeated_interrupt_during_cleanup_still_reaps_and_restores_handlers(second_signal):
+    process = MagicMock()
+    process.is_alive.side_effect = [True, True, False]
+    joins = 0
+
+    def interrupt_again(**kwargs):
+        nonlocal joins
+        joins += 1
+        if joins == 1:
+            raise KeyboardInterrupt()
+        signal.raise_signal(second_signal)
+
+    process.join.side_effect = interrupt_again
+    # Safe handlers also make the pre-fix SIGTERM regression non-fatal to pytest.
+    previous_term = signal.signal(signal.SIGTERM, jobs._cancel)
+    previous_int = signal.getsignal(signal.SIGINT)
+    try:
+        assert jobs.supervise(process, jobs.RefreshRequest("hydrology"), "run", 60) == 5
+        process.terminate.assert_called_once()
+        process.close.assert_called_once()
+        assert signal.getsignal(signal.SIGINT) == previous_int
+        assert signal.getsignal(signal.SIGTERM) == jobs._cancel
+    finally:
+        signal.signal(signal.SIGINT, previous_int)
+        signal.signal(signal.SIGTERM, previous_term)
 
 
 def test_validation_precedes_publication_and_preserves_evidence(tmp_path):

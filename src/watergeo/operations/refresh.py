@@ -57,18 +57,48 @@ def event(name: str, request: RefreshRequest, run_id: str, **fields: Any) -> Non
 def source_lock(engine: Engine, source: SourceName) -> Iterator[Connection]:
     # The worker owns the lock, so supervisor death cannot release it while that
     # worker continues. A crashed worker's DB socket closes and releases the lock.
-    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
+    connection = engine.connect()
+    acquired = False
+    body_failed = False
+    try:
+        connection = connection.execution_options(isolation_level="AUTOCOMMIT")
+        acquired = connection.execute(
+            text("SELECT pg_try_advisory_lock(:namespace, :source)"),
+            {"namespace": LOCK_NAMESPACE, "source": SOURCE_KEYS[source]},
+        ).scalar_one()
+        if not acquired:
+            raise RefreshBusy()
+        yield connection
+    except BaseException:
+        body_failed = True
+        raise
+    finally:
         try:
-            acquired = connection.execute(
-                text("SELECT pg_try_advisory_lock(:namespace, :source)"),
-                {"namespace": LOCK_NAMESPACE, "source": SOURCE_KEYS[source]},
-            ).scalar_one()
-            if not acquired:
-                raise RefreshBusy()
-            yield connection
-        finally:
-            # Never return a session-level lock to a connection pool, even on failure.
-            connection.invalidate()
+            try:
+                if acquired:
+                    released = connection.execute(
+                        text("SELECT pg_advisory_unlock(:namespace, :source)"),
+                        {"namespace": LOCK_NAMESPACE, "source": SOURCE_KEYS[source]},
+                    ).scalar_one()
+                    if released is not True:
+                        raise RuntimeError("Refresh lock release not confirmed")
+            finally:
+                # Explicit unlock never replaces physical session disposal.
+                try:
+                    connection.invalidate()
+                except BaseException:
+                    # Failed invalidation must not let close return a locked
+                    # session to the pool; detached close disposes it instead.
+                    connection.detach()
+                    raise
+                finally:
+                    connection.close()
+        except BaseException as error:
+            if not body_failed:
+                raise
+            logger.warning(
+                "refresh_lock_cleanup_failed", extra={"error_type": type(error).__name__}
+            )
 
 
 def assert_lock(connection: Connection, source: SourceName) -> None:
@@ -192,14 +222,21 @@ def supervise(
         event("refresh_failed", request, run_id, error_type=type(error).__name__)
         return 1
     finally:
-        if process.pid is not None:
-            if process.is_alive():
-                process.terminate()
-                process.join(timeout=5)
-            if process.is_alive():
-                process.kill()
-                process.join(timeout=5)
-            process.close()
+        # A second interrupt must not skip termination/reaping of the worker.
+        previous_int = signal.signal(signal.SIGINT, signal.SIG_IGN)
+        previous_term = signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        try:
+            if process.pid is not None:
+                if process.is_alive():
+                    process.terminate()
+                    process.join(timeout=5)
+                if process.is_alive():
+                    process.kill()
+                    process.join(timeout=5)
+                process.close()
+        finally:
+            signal.signal(signal.SIGINT, previous_int)
+            signal.signal(signal.SIGTERM, previous_term)
 
 
 class SafeParser(argparse.ArgumentParser):
