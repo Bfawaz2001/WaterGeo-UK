@@ -130,6 +130,11 @@ Termination near commit can have an uncertain outcome: retry the same retained e
 
 ## Schedule externally
 
+For the supplied hourly/manual GitHub Actions job, see
+[scheduled Hydrology refresh](scheduled-hydrology-refresh.md). Configure network access,
+environment/secrets and TLS trust, manually dispatch and verify a refresh, then enable
+hourly scheduling. Manual dispatch does not require the schedule-enable variable.
+
 Use cron, a container job or another scheduler with a fixed working directory, a
 configured Python/uv PATH, private credential injection and retained stdout/stderr.
 For example, after choosing an hourly Hydrology retrieval policy:
@@ -145,7 +150,7 @@ ingestion permissions intentionally do not include the API's migration-table che
 Do not schedule full CDE/static reloads at observation frequency. Preserve evidence
 under an explicit operator retention policy; no automatic deletion is implemented.
 
-There is no durable failed-run table, dashboard, automatic cadence, notification
-delivery or publisher revision discovery yet. Source status cannot tell whether the
+There is no durable failed-run table, dashboard, external notification integration
+or publisher revision discovery yet. Source status cannot tell whether the
 last attempted refresh failed. Scheduler monitoring and logs fill that gap for now.
 See [ADR 0010](../adr/0010-source-freshness-refresh-operations.md).

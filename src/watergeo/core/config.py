@@ -1,8 +1,8 @@
 """Validated configuration; credentials never live in a connection string setting."""
 
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -21,6 +21,14 @@ class DatabaseSettings(BaseSettings):
     db_name: str = Field(default="watergeo", min_length=1)
     db_user: str = Field(default="watergeo_app", min_length=1)
     db_password: SecretStr = Field(min_length=16)
+    db_sslmode: Literal["verify-full"] | None = None
+    db_sslrootcert: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def require_verification_for_ca(self) -> Self:
+        if self.db_sslrootcert and self.db_sslmode != "verify-full":
+            raise ValueError("A database CA requires verify-full TLS mode")
+        return self
 
     @property
     def database_url(self) -> URL:
@@ -31,6 +39,14 @@ class DatabaseSettings(BaseSettings):
             host=self.db_host,
             port=self.db_port,
             database=self.db_name,
+            query=(
+                {
+                    "sslmode": self.db_sslmode,
+                    **({"sslrootcert": self.db_sslrootcert} if self.db_sslrootcert else {}),
+                }
+                if self.db_sslmode
+                else {}
+            ),
         )
 
 
