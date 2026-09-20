@@ -5,7 +5,7 @@ for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
 **Status: Phase 1 complete for the reviewed April 2024 Ofwat dataset;
-Phase 2 — Environment Agency hydrology and catchment hierarchy — in progress.** The
+Phase 2 — Environment Agency hydrology, catchment hierarchy and refresh operations — complete.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -22,6 +22,11 @@ uses explicit operator-configured limits. Run
 See the [source operations guide](docs/guides/source-operations.md) for all sources,
 offline retries, exit codes and external scheduling, and
 [ADR 0010](docs/adr/0010-source-freshness-refresh-operations.md) for the design.
+
+The opt-in [scheduled Hydrology workflow](docs/guides/scheduled-hydrology-refresh.md)
+provides hourly/manual refresh, retained operational logs and GitHub failure summaries.
+It requires a reachable PostgreSQL database and configured ingestion/TLS secrets;
+no hosted deployment is claimed.
 
 ## Independence and licensing
 
@@ -332,6 +337,9 @@ Phase 2C now includes the reviewed Catchment Data Explorer Cycle 3 hierarchy:
 River Basin District, Management Catchment, Operational Catchment and Water Body
 relationships, plus publisher Water Body geometry features. No Hydrology
 station-to-catchment assignment is asserted by the publisher or inferred by this
-phase. Phase 2D is scheduling, freshness monitoring and hardening.
+phase. Phase 2D provides freshness monitoring, hardened bounded refresh jobs and an
+opt-in GitHub Actions schedule for Hydrology latest. Phase 2 now covers
+ingestion → validation → storage → API → freshness → refresh scheduling.
+Deployment-specific notification integrations remain future operational work.
 Phase 3 is water quality. Public hosting still requires the
 deployment controls described in SECURITY.md; there is no hosted endpoint yet.

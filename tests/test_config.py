@@ -1,7 +1,7 @@
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from watergeo.core.config import MigrationSettings, Settings
+from watergeo.core.config import IngestionSettings, MigrationSettings, Settings
 
 
 @pytest.fixture(autouse=True)
@@ -52,3 +52,42 @@ def test_migrations_require_separate_credentials(monkeypatch: pytest.MonkeyPatch
     settings = MigrationSettings(_env_file=None)
     assert settings.db_user == "watergeo_migrator"
     assert settings.db_password.get_secret_value() == "migration-password-long"
+
+
+def test_local_database_connection_options_are_unchanged():
+    settings = Settings(_env_file=None, db_password=SecretStr("synthetic-password"))
+    assert dict(settings.database_url.query) == {}
+
+
+def test_ingestion_tls_environment_contract(monkeypatch, tmp_path):
+    monkeypatch.setenv("WATERGEO_INGESTION_PASSWORD", "synthetic-password")
+    monkeypatch.setenv("WATERGEO_DB_SSLMODE", "verify-full")
+    monkeypatch.setenv("WATERGEO_DB_SSLROOTCERT", str(tmp_path / "ca.pem"))
+    settings = IngestionSettings(_env_file=None)
+    assert dict(settings.database_url.query) == {
+        "sslmode": "verify-full",
+        "sslrootcert": str(tmp_path / "ca.pem"),
+    }
+    assert settings.db_user == "watergeo_ingest"
+    from watergeo.db.engine import create_database_engine
+
+    engine = create_database_engine(settings)
+    try:
+        _, parameters = engine.dialect.create_connect_args(engine.url)
+        assert parameters["sslmode"] == "verify-full"
+        assert parameters["sslrootcert"] == str(tmp_path / "ca.pem")
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("mode", ["disable", "allow", "prefer", "require", "verify-ca"])
+def test_explicit_tls_cannot_disable_certificate_and_hostname_verification(mode):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, db_password=SecretStr("synthetic-password"), db_sslmode=mode)
+
+
+def test_ca_cannot_silently_be_ignored():
+    with pytest.raises(ValidationError, match="requires verify-full"):
+        Settings(
+            _env_file=None, db_password=SecretStr("synthetic-password"), db_sslrootcert="ca.pem"
+        )

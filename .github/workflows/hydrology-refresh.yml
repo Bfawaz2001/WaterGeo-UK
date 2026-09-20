@@ -1,0 +1,111 @@
+name: Hydrology latest refresh
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hydrology-latest-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh Hydrology latest
+    if: >-
+      github.repository == 'Bfawaz2001/WaterGeo-UK' &&
+      github.ref == 'refs/heads/main' &&
+      vars.WATERGEO_HYDROLOGY_SCHEDULE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment: hydrology-refresh
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Initialize operational log
+        run: |
+          mkdir -p "$RUNNER_TEMP/hydrology-logs"
+          printf '%s\n' '{"event":"scheduled_refresh_setup","source":"hydrology"}' > "$RUNNER_TEMP/hydrology-logs/refresh.jsonl"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.13"
+          python-version: "3.12"
+          enable-cache: false
+      - run: uv sync --locked
+      - name: Refresh accepted Hydrology latest
+        id: refresh
+        env:
+          WATERGEO_DB_HOST: ${{ secrets.WATERGEO_DB_HOST }}
+          WATERGEO_DB_PORT: ${{ secrets.WATERGEO_DB_PORT }}
+          WATERGEO_DB_NAME: ${{ secrets.WATERGEO_DB_NAME }}
+          WATERGEO_INGESTION_USER: ${{ secrets.WATERGEO_INGESTION_USER }}
+          WATERGEO_INGESTION_PASSWORD: ${{ secrets.WATERGEO_INGESTION_PASSWORD }}
+          WATERGEO_DB_CA_PEM: ${{ secrets.WATERGEO_DB_CA_PEM }}
+          WATERGEO_DB_SSLMODE: verify-full
+          WATERGEO_DB_SSLROOTCERT: ${{ runner.temp }}/watergeo-db-ca.pem
+        run: |
+          set +e
+          {
+            python - <<'PY'
+          import os
+          from pathlib import Path
+          required = (
+              "WATERGEO_DB_HOST", "WATERGEO_DB_PORT", "WATERGEO_DB_NAME",
+              "WATERGEO_INGESTION_USER", "WATERGEO_INGESTION_PASSWORD", "WATERGEO_DB_CA_PEM",
+          )
+          if any(not os.environ.get(key) for key in required):
+              print('{"event":"scheduled_refresh_configuration_missing","source":"hydrology"}')
+              raise SystemExit(2)
+          try:
+              path = Path(os.environ["WATERGEO_DB_SSLROOTCERT"])
+              path.touch(mode=0o600, exist_ok=False)
+              path.write_text(os.environ["WATERGEO_DB_CA_PEM"])
+          except OSError:
+              print('{"event":"scheduled_refresh_ca_setup_failed","source":"hydrology"}')
+              raise SystemExit(2) from None
+          PY
+            prepared=$?
+            if [ "$prepared" -ne 0 ]; then exit "$prepared"; fi
+            unset WATERGEO_DB_CA_PEM
+            uv run --locked python scripts/refresh_sources.py hydrology --timeout-seconds 1800 2>/dev/null
+          } | tee -a "$RUNNER_TEMP/hydrology-logs/refresh.jsonl"
+          statuses=("${PIPESTATUS[@]}")
+          printf 'exit_code=%s\n' "${statuses[0]}" >> "$GITHUB_OUTPUT"
+          if [ "${statuses[1]}" -ne 0 ]; then exit 1; fi
+          exit "${statuses[0]}"
+      - name: Retain operational log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hydrology-refresh-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hydrology-logs/refresh.jsonl
+          retention-days: 14
+          if-no-files-found: error
+          include-hidden-files: false
+      - name: Summarize refresh outcome
+        if: always()
+        env:
+          REFRESH_EXIT_CODE: ${{ steps.refresh.outputs.exit_code }}
+          REFRESH_OUTCOME: ${{ steps.refresh.outcome }}
+        run: |
+          python - <<'PY'
+          import os
+          code = os.environ.get("REFRESH_EXIT_CODE") or "not available (setup failed or interrupted)"
+          outcome = os.environ.get("REFRESH_OUTCOME") or "not run"
+          succeeded = code == "0" and outcome == "success"
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("## Hydrology latest refresh\n\n")
+              summary.write(f"- Source: hydrology\n- Workflow run ID: {os.environ['GITHUB_RUN_ID']}\n")
+              summary.write(f"- Refresh outcome: {outcome}\n- Exit code: {code}\n")
+              summary.write(f"- Refresh succeeded: {'yes' if succeeded else 'no'}\n")
+              summary.write(f"- Log artifact: hydrology-refresh-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}\n")
+              summary.write("\nFreshness thresholds are separate operator policy; a successful refresh does not guarantee recent observations.\n")
+              summary.write("Artifact upload failure can fail the job even when refresh succeeded.\n")
+          PY
