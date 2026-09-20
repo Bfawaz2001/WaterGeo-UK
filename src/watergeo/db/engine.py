@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from watergeo.core.config import DatabaseSettings
 
 logger = logging.getLogger(__name__)
-SCHEMA_REVISION = "0005"
+SCHEMA_REVISION = "0006"
 
 
 def create_database_engine(

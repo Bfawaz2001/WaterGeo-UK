@@ -5,7 +5,7 @@ for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
 **Status: Phase 1 complete for the reviewed April 2024 Ofwat dataset;
-Phase 2 — Environment Agency hydrology — in progress.** The
+Phase 2 — Environment Agency hydrology and catchment hierarchy — in progress.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -77,6 +77,16 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /v1/hydrology/stations/near` | Nearby located stations using WGS84 geography distance. |
 | `GET /v1/hydrology/stations/{station_id}` | Station, measures and latest available observations. |
 | `GET /v1/hydrology/history/{retrieval_id}` | One explicit bounded historical retrieval with cursor pagination. |
+| `GET /v1/catchments/dataset` | Current reviewed Catchment Data Explorer Cycle 3 snapshot metadata and hierarchy counts. |
+| `GET /v1/catchments/river-basin-districts` | Snapshot-pinned paginated River Basin District summaries. |
+| `GET /v1/catchments/river-basin-districts/{entity_id}` | One River Basin District with publisher provenance. |
+| `GET /v1/catchments/management-catchments` | Snapshot-pinned paginated Management Catchments. |
+| `GET /v1/catchments/management-catchments/{entity_id}` | One Management Catchment and its River Basin District identity. |
+| `GET /v1/catchments/operational-catchments` | Snapshot-pinned paginated Operational Catchments. |
+| `GET /v1/catchments/operational-catchments/{entity_id}` | One Operational Catchment with its publisher hierarchy. |
+| `GET /v1/catchments/water-bodies` | Snapshot-pinned paginated Water Body summaries. |
+| `GET /v1/catchments/water-bodies/{entity_id}` | One Water Body with full publisher hierarchy identities. |
+| `GET /v1/catchments/water-bodies/{entity_id}/geometry` | Publisher Water Body geometry features as WGS84 GeoJSON. |
 
 The database and API ports bind only to loopback. If port 5432 is occupied, change
 `WATERGEO_DB_PORT` in `.env`; Compose and host-based Python tools use the same value.
@@ -128,7 +138,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0005`), run these from the repository root:
+With the database at migration head (`0006`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -199,8 +209,27 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0005`), not dataset availability. See the
+infrastructure and migration head (`0006`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
+
+## Query the Catchment Data Explorer hierarchy
+
+After loading a reviewed Cycle 3 snapshot with `scripts/load_ea_catchments.py`, the public API exposes publisher hierarchy entities without inventing a Hydrology station-to-catchment relationship.
+
+Example requests:
+
+    curl --fail http://127.0.0.1:8000/v1/catchments/dataset
+    curl --fail 'http://127.0.0.1:8000/v1/catchments/river-basin-districts?limit=10'
+    curl --fail http://127.0.0.1:8000/v1/catchments/river-basin-districts/4
+    curl --fail http://127.0.0.1:8000/v1/catchments/management-catchments/3101
+    curl --fail http://127.0.0.1:8000/v1/catchments/operational-catchments/3471
+    curl --fail 'http://127.0.0.1:8000/v1/catchments/water-bodies?limit=10'
+    curl --fail http://127.0.0.1:8000/v1/catchments/water-bodies/GB104028047290
+    curl --fail http://127.0.0.1:8000/v1/catchments/water-bodies/GB104028047290/geometry
+
+List endpoints use keyset pagination. Pass both `snapshot_id` and `next_after_id` from the previous response to remain pinned to the same accepted snapshot. Page size is limited to 100, and malformed identifiers or unexpected query parameters return 422.
+
+Water Body geometry responses use `application/geo+json` and preserve separate publisher features such as `Catchment` and `RiverLine`; they are not dissolved into a WaterGeo-created parent polygon. Geometry responses above 8 MiB return 413. Missing entities return 404 only after a compatible snapshot is available; source/database contract failures return a generic 503.
 
 ## Checks
 
@@ -246,13 +275,13 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through bounded hydrology history (0005)
+migrations/              Alembic revisions through Catchment Data Explorer hierarchy (0006)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
-  api/                   Operational routes, water-supply routes and public models
+  api/                   Operational, water-supply, hydrology and catchment public routes
   core/                  Validated configuration and JSON application logs
   db/                    Connection pool, queries and offline presentation assessment
-  ingestion/             Verified Ofwat retrieval, decoding, reviewed transforms and atomic load
+  ingestion/             Verified public-source retrieval, normalization and atomic load
 tests/                   Configuration and HTTP behaviour tests
   integration/           Opt-in PostGIS and migration tests
 Dockerfile               Non-root application image
@@ -290,7 +319,10 @@ remain available by identity; nearby search reports its spatial coverage limitat
 Historical retrievals are explicit immutable evidence products: WaterGeo does not
 silently stitch overlapping windows or pretend publisher readings are globally immutable.
 
-Proposed follow-ups are catchment relationships (Phase 2C), then scheduling,
-freshness monitoring and hardening (Phase 2D), subject to source evidence.
+Phase 2C now includes the reviewed Catchment Data Explorer Cycle 3 hierarchy:
+River Basin District, Management Catchment, Operational Catchment and Water Body
+relationships, plus publisher Water Body geometry features. No Hydrology
+station-to-catchment assignment is asserted by the publisher or inferred by this
+phase. Phase 2D is scheduling, freshness monitoring and hardening.
 Phase 3 is water quality. Public hosting still requires the
 deployment controls described in SECURITY.md; there is no hosted endpoint yet.

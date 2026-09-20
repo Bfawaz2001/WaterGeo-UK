@@ -71,7 +71,7 @@ def test_readiness_rejects_wrong_schema_revision(client, database) -> None:
     assert client.get("/ready").status_code == 503
 
 
-def test_openapi_documents_operational_and_water_supply_endpoints(client: TestClient) -> None:
+def test_openapi_documents_public_endpoints(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
     assert set(paths) == {
         "/health",
@@ -82,6 +82,16 @@ def test_openapi_documents_operational_and_water_supply_endpoints(client: TestCl
         "/v1/hydrology/stations/near",
         "/v1/hydrology/stations/{station_id}",
         "/v1/hydrology/history/{retrieval_id}",
+        "/v1/catchments/dataset",
+        "/v1/catchments/river-basin-districts",
+        "/v1/catchments/river-basin-districts/{entity_id}",
+        "/v1/catchments/management-catchments",
+        "/v1/catchments/management-catchments/{entity_id}",
+        "/v1/catchments/operational-catchments",
+        "/v1/catchments/operational-catchments/{entity_id}",
+        "/v1/catchments/water-bodies",
+        "/v1/catchments/water-bodies/{entity_id}",
+        "/v1/catchments/water-bodies/{entity_id}/geometry",
         "/v1/water-supply/areas",
         "/v1/water-supply/areas/at-point",
         "/v1/water-supply/areas/{source_id}",

@@ -34,3 +34,9 @@ synthetic or verify and record their redistribution rights.
   geometries. Includes measured schema,
   quality findings, and comparisons with OpenPostcodes and MOSL; no integration
   implemented. Missing bespoke attribution alone does not require publisher contact.
+
+- [Environment Agency Catchment Data Explorer Cycle 3](environment-agency-catchment-data-explorer-verification.json),
+  reviewed 20 September 2026: authoritative Cycle 3 hierarchy verified as
+  10 River Basin Districts, 117 Management Catchments, 750 Operational Catchments
+  and 4,929 Water Bodies, with 8,701 publisher Water Body geometry features.
+  Phase 2C does not assert or infer a Hydrology station-to-catchment relationship.
