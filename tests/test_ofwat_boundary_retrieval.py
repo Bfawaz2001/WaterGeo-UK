@@ -7,6 +7,7 @@ import io
 import zipfile
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 import httpx2
 import pytest
@@ -16,6 +17,17 @@ from watergeo.ingestion.ofwat_boundaries import (
     BoundarySource,
     fetch_boundary_source,
 )
+
+
+def test_owned_client_disables_proxy_inheritance(tmp_path):
+    payload = _zip_bytes()
+    with (
+        _client(payload) as client,
+        patch("watergeo.ingestion.ofwat_boundaries.httpx2.Client", return_value=client) as factory,
+    ):
+        fetch_boundary_source(_source(payload), raw_root=tmp_path)
+        assert factory.call_args.kwargs["trust_env"] is False
+        assert factory.call_args.kwargs["follow_redirects"] is False
 
 
 def _zip_bytes(

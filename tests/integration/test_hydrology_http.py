@@ -640,6 +640,16 @@ def test_history_http_explicit_retrieval_pagination(
 
     try:
         with TestClient(create_app()) as client:
+            status = client.get("/v1/sources/status")
+            assert status.status_code == 200
+            item = next(
+                item for item in status.json()["sources"] if item["source"] == "hydrology-history"
+            )
+            assert item["snapshot_id"] == str(history["retrieval_id"])
+            assert item["measure_id"] == measure_id
+            assert item["observation_count"] == 3
+            assert item["requested_from"].startswith("2026-09-19T00:00:00")
+            assert item["observation_freshness"] == "not_applicable"
             first = client.get(
                 f"/v1/hydrology/history/{history['retrieval_id']}",
                 params={"limit": 2},

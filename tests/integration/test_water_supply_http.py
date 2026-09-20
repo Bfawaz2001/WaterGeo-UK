@@ -123,6 +123,19 @@ def api():
         runtime.dispose()
 
 
+def test_source_status_selects_reviewed_static_release(api):
+    client, _, snapshot = api
+    response = client.get("/v1/sources/status")
+    assert response.status_code == 200
+    item = next(item for item in response.json()["sources"] if item["source"] == "ofwat")
+    assert item["snapshot_id"] == str(snapshot)
+    assert item["content_sha256"] == OFWAT_WATER_SUPPLY_SHA256
+    assert item["normalization_version"] == OFWAT_WATER_SUPPLY_TRANSFORMATION
+    assert item["retrieval_freshness"] == "not_applicable"
+    assert item["observation_newest_at"] is None
+    assert item["retrieval_started_at"] is None
+
+
 def test_dataset_provenance_and_explicit_snapshot_selection(api):
     client, _, snapshot = api
     response = client.get(PREFIX + "/dataset")

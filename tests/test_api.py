@@ -76,6 +76,7 @@ def test_openapi_documents_public_endpoints(client: TestClient) -> None:
     assert set(paths) == {
         "/health",
         "/ready",
+        "/v1/sources/status",
         "/v1/water-supply/dataset",
         "/v1/hydrology/dataset",
         "/v1/hydrology/stations",
