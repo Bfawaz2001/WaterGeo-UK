@@ -15,6 +15,14 @@ explorer come later.
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
 
+Phase 2D now includes source status and bounded refresh commands. Query
+`GET /v1/sources/status` for accepted retrieval and observation ages; dynamic freshness
+uses explicit operator-configured limits. Run
+`uv run --locked python scripts/refresh_sources.py hydrology` for one refresh job.
+See the [source operations guide](docs/guides/source-operations.md) for all sources,
+offline retries, exit codes and external scheduling, and
+[ADR 0010](docs/adr/0010-source-freshness-refresh-operations.md) for the design.
+
 ## Independence and licensing
 
 WaterGeo UK is a personal, independent open-source project. It is not an official
@@ -68,6 +76,7 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /health` | HTTP 200: the application can respond, independent of database health. |
 | `GET /ready` | HTTP 200: PostGIS is available and the migration revision matches; otherwise HTTP 503 with a generic response. |
 | `GET /v1/water-supply/dataset` | Release, source identity, attribution, licence, counts and caveats. |
+| `GET /v1/sources/status` | Accepted source availability, retrieval/observation ages and explicit freshness policy. |
 | `GET /v1/water-supply/areas` | Paginated area summaries without geometry. |
 | `GET /v1/water-supply/areas/at-point?lon=-2&lat=52` | All covering areas, including boundary matches, with pagination. |
 | `GET /v1/water-supply/areas/{source_id}` | Area labels, publisher notices and reviewed transformation provenance. |

@@ -266,6 +266,7 @@ def fetch_boundary_source(
 
     http_client = client or httpx2.Client(
         timeout=timeout,
+        trust_env=False,
         follow_redirects=False,
         headers={
             "Accept": "*/*",

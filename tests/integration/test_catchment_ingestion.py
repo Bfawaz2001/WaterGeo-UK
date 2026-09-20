@@ -529,6 +529,17 @@ def catchment_api(
         yield client
 
 
+def test_source_status_versioned_catchments(catchment_api, loaded):
+    response = catchment_api.get("/v1/sources/status")
+    assert response.status_code == 200
+    item = next(item for item in response.json()["sources"] if item["source"] == "catchments")
+    assert item["snapshot_id"] == loaded["snapshot_id"]
+    assert item["source_version"] == "c3-plan"
+    assert item["retrieval_freshness"] == "not_applicable"
+    assert item["retrieval_started_at"] is not None
+    assert item["observation_newest_at"] is None
+
+
 def test_public_catchment_dataset_contract(
     catchment_api: TestClient,
     loaded: dict[str, Any],

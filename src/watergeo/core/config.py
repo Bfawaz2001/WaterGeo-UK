@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -36,6 +36,17 @@ class DatabaseSettings(BaseSettings):
 
 class Settings(DatabaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    hydrology_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
+    hydrology_observation_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
+
+    @field_validator(
+        "hydrology_retrieval_max_age_seconds",
+        "hydrology_observation_max_age_seconds",
+        mode="before",
+    )
+    @classmethod
+    def optional_age_limit(cls, value: object) -> object:
+        return None if value == "" else value
 
 
 class MigrationSettings(DatabaseSettings):
