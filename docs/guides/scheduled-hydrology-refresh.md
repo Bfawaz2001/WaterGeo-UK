@@ -53,14 +53,17 @@ status command. Use `/v1/sources/status` for the accepted-data view.
    | `WATERGEO_INGESTION_PASSWORD` | Its password, at least 16 characters |
    | `WATERGEO_DB_CA_PEM` | Trusted CA certificate/bundle in PEM form, obtained through a trusted channel |
 
-5. Set the **repository Actions variable** `WATERGEO_HYDROLOGY_SCHEDULE_ENABLED` to
-   exactly `true`. It must be a repository variable: job-level conditions are evaluated
-   before environment variables become available. Missing/false skips the job without
-   connecting to a database. Both manual and scheduled jobs use this switch.
-6. After merging the workflow separately, open Actions → **Hydrology latest refresh**
+5. After configuring the environment/secrets and merging the workflow separately,
+   open Actions → **Hydrology latest refresh**
    → Run workflow, select **main**, and inspect the first run, summary and artifact.
+   Manual dispatch works independently of `WATERGEO_HYDROLOGY_SCHEDULE_ENABLED`.
    There are no dispatch inputs. Repository and `refs/heads/main` guards prevent this
    workflow's job from running on forks or manually selected feature branches.
+6. Only after verifying a successful manual refresh, set the **repository Actions
+   variable** `WATERGEO_HYDROLOGY_SCHEDULE_ENABLED` to exactly `true` to enable hourly
+   scheduling. It must be a repository variable: job-level conditions are evaluated
+   before environment variables become available. Missing/false skips scheduled jobs
+   without connecting to a database; manual dispatch remains available.
 
 The token has only `contents: read`; checkout does not persist credentials. No PR or
 push event starts this workflow. All actions are pinned to full commit SHAs. Protect
@@ -113,7 +116,7 @@ The workflow attempts artifact upload and job summary on success and failure:
 - No raw evidence, manifests, `.env`, CA file, database dumps or entire directories
   are uploaded. Treat artifacts in this public repository as publicly readable.
 
-An unconfigured, explicitly enabled job fails instead of silently falling back to a
+An unconfigured manual or enabled scheduled job fails instead of silently falling back to a
 local database. Setup failures show an unavailable exit code/skipped refresh in the
 summary. Upload failures also fail the job, even when the refresh itself succeeded.
 Hard runner loss, platform cancellation or the job timeout may prevent summary/artifact
@@ -128,10 +131,12 @@ External delivery and deployment-specific alert routing remain future operationa
 
 ## Disable and troubleshoot
 
-Set `WATERGEO_HYDROLOGY_SCHEDULE_ENABLED=false` to skip both scheduled and manual jobs.
+Set `WATERGEO_HYDROLOGY_SCHEDULE_ENABLED=false` to skip scheduled jobs while retaining
+manual dispatch independently of that variable.
 This does not stop an already running job. To stop timer triggers entirely, disable
 the workflow in Actions (also disables dispatch), or remove the schedule stanza via
-review while retaining dispatch. Re-enable the repository variable for manual operation.
+review while retaining dispatch. Environment protections and required secrets still
+apply to manual runs.
 
 For a failed run, first inspect the step outcome, summary and artifact. Check secret
 presence, network reachability, trusted CA/hostname, schema and ingestion grants without

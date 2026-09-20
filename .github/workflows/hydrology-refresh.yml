@@ -18,7 +18,13 @@ jobs:
     if: >-
       github.repository == 'Bfawaz2001/WaterGeo-UK' &&
       github.ref == 'refs/heads/main' &&
-      vars.WATERGEO_HYDROLOGY_SCHEDULE_ENABLED == 'true'
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'schedule' &&
+          vars.WATERGEO_HYDROLOGY_SCHEDULE_ENABLED == 'true'
+        )
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     environment: hydrology-refresh

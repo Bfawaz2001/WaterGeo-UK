@@ -1,5 +1,6 @@
 """Semantic workflow checks plus execution of its actual shell with a stub CLI."""
 
+import ast
 import json
 import os
 import re
@@ -34,6 +35,42 @@ def test_triggers_and_execution_boundary(workflow):
         "group": "hydrology-latest-refresh",
         "cancel-in-progress": "false",
     }
+
+
+@pytest.mark.parametrize("repository", ["Bfawaz2001/WaterGeo-UK", "fork/WaterGeo-UK"])
+@pytest.mark.parametrize("ref", ["refs/heads/main", "refs/heads/feature"])
+@pytest.mark.parametrize("event", ["workflow_dispatch", "schedule", "push"])
+@pytest.mark.parametrize("enabled", ["true", "false", ""])
+def test_job_condition_truth_table(workflow, repository, ref, event, enabled):
+    expression = " ".join(workflow["jobs"]["refresh"]["if"].split())
+    for name, value in {
+        "github.repository": repository,
+        "github.ref": ref,
+        "github.event_name": event,
+        "vars.WATERGEO_HYDROLOGY_SCHEDULE_ENABLED": enabled,
+    }.items():
+        expression = expression.replace(name, repr(value))
+    expression = expression.replace("&&", "and").replace("||", "or")
+
+    def evaluate(node):
+        # Interpret only this condition's boolean/equality grammar, never execute code.
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.BoolOp):
+            values = [evaluate(value) for value in node.values]
+            assert isinstance(node.op, (ast.And, ast.Or))
+            return all(values) if isinstance(node.op, ast.And) else any(values)
+        assert isinstance(node, ast.Compare) and len(node.ops) == 1
+        assert isinstance(node.ops[0], ast.Eq)
+        return evaluate(node.left) == evaluate(node.comparators[0])
+
+    actual = evaluate(ast.parse(expression, mode="eval").body)
+    expected = (
+        repository == "Bfawaz2001/WaterGeo-UK"
+        and ref == "refs/heads/main"
+        and (event == "workflow_dispatch" or (event == "schedule" and enabled == "true"))
+    )
+    assert actual == expected
 
 
 def test_permissions_pins_and_no_shell_expressions(workflow):

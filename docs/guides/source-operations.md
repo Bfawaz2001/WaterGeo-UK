@@ -131,8 +131,9 @@ Termination near commit can have an uncertain outcome: retry the same retained e
 ## Schedule externally
 
 For the supplied hourly/manual GitHub Actions job, see
-[scheduled Hydrology refresh](scheduled-hydrology-refresh.md). It is disabled until
-the operator enables it and supplies network access, ingestion credentials and TLS trust.
+[scheduled Hydrology refresh](scheduled-hydrology-refresh.md). Configure network access,
+environment/secrets and TLS trust, manually dispatch and verify a refresh, then enable
+hourly scheduling. Manual dispatch does not require the schedule-enable variable.
 
 Use cron, a container job or another scheduler with a fixed working directory, a
 configured Python/uv PATH, private credential injection and retained stdout/stderr.
