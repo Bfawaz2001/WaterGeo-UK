@@ -1,0 +1,68 @@
+{
+  "status": "reviewed_real_source_verification",
+  "review_date": "2026-09-20",
+  "publisher": "Environment Agency",
+  "source": "https://environment.data.gov.uk/catchment-planning",
+  "plan_version": "c3-plan",
+  "coverage": "England",
+  "licence": "Open Government Licence",
+  "attribution": "© Environment Agency copyright and/or database right 2026. All rights reserved.",
+  "normalization_version": "ea-cde-c3-plan-v1",
+  "content_sha256": "2c9b9b1b64da999da1f422fc06ae765218ef645b9d3db7a9ea6550ad87e822c7",
+  "normalized_sha256": "dba65d6305a5bc19057d34effafae21418275346da8142d7958d0274fe4b70ad",
+  "retrieval_started_at": "2026-09-19T23:28:20.293673+00:00",
+  "retrieval_completed_at": "2026-09-19T23:43:40.059529+00:00",
+  "retrieval_duration_seconds": 919.765856,
+  "request_count": 888,
+  "evidence_file_count": 889,
+  "counts": {
+    "river_basin_district_count": 10,
+    "management_catchment_count": 117,
+    "operational_catchment_count": 750,
+    "water_body_count": 4929,
+    "geometry_feature_count": 8701
+  },
+  "verified_behaviour": [
+    "The official Cycle 3 hierarchy resolved as River Basin District -> Management Catchment -> Operational Catchment -> Water Body.",
+    "The complete reviewed hierarchy contained 10 River Basin Districts, 117 Management Catchments, 750 Operational Catchments and 4929 Water Bodies.",
+    "River Basin District GeoJSON supplied 8701 constituent Water Body geometry features for the reviewed snapshot.",
+    "Publisher hierarchy relationships were taken from source links rather than inferred spatially.",
+    "The complete raw evidence bundle was re-read and normalized successfully before database publication.",
+    "The real evidence bundle loaded atomically into a disposable PostGIS database.",
+    "An exact-content retry returned the same stored snapshot only after stored child-row and geometry integrity verification.",
+    "Stored child counts exactly matched the normalized snapshot counts."
+  ],
+  "geometry_policy": {
+    "stored_scope": "Water Body geometry features only",
+    "publisher_geometry_kinds": [
+      "Catchment",
+      "RiverLine"
+    ],
+    "observed_geojson_types": [
+      "Polygon",
+      "MultiPolygon",
+      "LineString",
+      "MultiLineString"
+    ],
+    "parent_geometry_note": "River Basin District, Management Catchment and Operational Catchment GeoJSON responses contain constituent Water Body features and are not represented as publisher-authored single canonical parent polygons."
+  },
+  "rate_policy": {
+    "documented_automated_service_limit_requests_per_minute": 200,
+    "documented_web_bot_limit_requests_per_minute": 10,
+    "watergeo_reviewed_interval_seconds": 1.0,
+    "watergeo_effective_maximum_requests_per_minute": 60,
+    "throttling_policy": "HTTP 403 or 429 is treated as retrieval failure after bounded retries and is never interpreted as an empty hierarchy."
+  },
+  "ingestion": {
+    "atomic_load": "passed",
+    "exact_content_retry": "verified_noop",
+    "database": "disposable PostGIS only",
+    "stored_snapshot_id_intentionally_omitted": true
+  },
+  "limitations": [
+    "This is a dated verification of the Cycle 3 public source and does not establish that future publisher inventories or geometry remain unchanged.",
+    "WaterGeo does not claim a publisher-supplied Hydrology station-to-catchment relationship.",
+    "Any future spatial station-to-catchment relationship must be explicitly labelled as WaterGeo-derived rather than publisher-authored.",
+    "Classification, objectives, measures, RNAGS, protected areas and other Catchment Data Explorer datasets are outside this Phase 2C scope."
+  ]
+}

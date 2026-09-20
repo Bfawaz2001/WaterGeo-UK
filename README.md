@@ -5,7 +5,7 @@ for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
 **Status: Phase 1 complete for the reviewed April 2024 Ofwat dataset;
-Phase 2 — Environment Agency hydrology — in progress.** The
+Phase 2 — Environment Agency hydrology and catchment hierarchy — in progress.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -128,7 +128,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0005`), run these from the repository root:
+With the database at migration head (`0006`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -199,7 +199,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0005`), not dataset availability. See the
+infrastructure and migration head (`0006`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Checks
@@ -246,7 +246,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through bounded hydrology history (0005)
+migrations/              Alembic revisions through Catchment Data Explorer hierarchy (0006)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational routes, water-supply routes and public models
@@ -290,7 +290,10 @@ remain available by identity; nearby search reports its spatial coverage limitat
 Historical retrievals are explicit immutable evidence products: WaterGeo does not
 silently stitch overlapping windows or pretend publisher readings are globally immutable.
 
-Proposed follow-ups are catchment relationships (Phase 2C), then scheduling,
-freshness monitoring and hardening (Phase 2D), subject to source evidence.
+Phase 2C now includes the reviewed Catchment Data Explorer Cycle 3 hierarchy:
+River Basin District, Management Catchment, Operational Catchment and Water Body
+relationships, plus publisher Water Body geometry features. No Hydrology
+station-to-catchment assignment is asserted by the publisher or inferred by this
+phase. Phase 2D is scheduling, freshness monitoring and hardening.
 Phase 3 is water quality. Public hosting still requires the
 deployment controls described in SECURITY.md; there is no hosted endpoint yet.
