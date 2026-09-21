@@ -152,7 +152,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0006`), run these from the repository root:
+With the database at migration head (`0007`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -223,7 +223,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0006`), not dataset availability. See the
+infrastructure and migration head (`0007`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Query the Catchment Data Explorer hierarchy
@@ -289,7 +289,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through Catchment Data Explorer hierarchy (0006)
+migrations/              Alembic revisions through Water Quality sampling points (0007)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational, water-supply, hydrology and catchment public routes
