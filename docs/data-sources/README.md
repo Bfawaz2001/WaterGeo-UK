@@ -27,6 +27,12 @@ synthetic or verify and record their redistribution rights.
 
 ## Assessments
 
+- [Environment Agency Water Quality sampling points](environment-agency-water-quality.md)
+  and [bounded observations](environment-agency-water-quality-observations.md), reviewed
+  22 September 2026: 66,300 retained sampling points; a one-day AN-CORBY/0085
+  observation retrieval verified through publication, retry and HTTP. ADRs 0011/0012
+  define the accepted metadata and observation contracts and limitations.
+
 - [Ofwat water-company boundaries](ofwat-company-boundaries.md), reviewed
   17 September 2026: publisher OGL declaration confirmed; exact edition remains
   unverified. Empty schema and synthetic geometry tests implemented, with real-data

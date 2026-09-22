@@ -86,6 +86,7 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /v1/water-quality/sampling-points` | Snapshot-pinned keyset listing of sampling points. |
 | `GET /v1/water-quality/sampling-points/near` | Bounded WGS84 geography search, ordered by distance and identity. |
 | `GET /v1/water-quality/sampling-points/{sampling_point_id}` | Sampling-point detail; opaque spaces and slash IDs are preserved. |
+| `GET /v1/water-quality/observations/{retrieval_id}` | Pinned bounded observations with determinand, unit, result qualifiers and sample provenance. |
 | `GET /v1/water-supply/areas` | Paginated area summaries without geometry. |
 | `GET /v1/water-supply/areas/at-point?lon=-2&lat=52` | All covering areas, including boundary matches, with pagination. |
 | `GET /v1/water-supply/areas/{source_id}` | Area labels, publisher notices and reviewed transformation provenance. |
@@ -105,6 +106,9 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /v1/catchments/water-bodies` | Snapshot-pinned paginated Water Body summaries. |
 | `GET /v1/catchments/water-bodies/{entity_id}` | One Water Body with full publisher hierarchy identities. |
 | `GET /v1/catchments/water-bodies/{entity_id}/geometry` | Publisher Water Body geometry features as WGS84 GeoJSON. |
+
+See the [Water Quality walkthrough](docs/guides/water-quality-walkthrough.md) for
+metadata and bounded observation refresh, pinned reads and evidence retries.
 
 The database and API ports bind only to loopback. If port 5432 is occupied, change
 `WATERGEO_DB_PORT` in `.env`; Compose and host-based Python tools use the same value.
@@ -156,7 +160,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0007`), run these from the repository root:
+With the database at migration head (`0008`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -227,7 +231,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0007`), not dataset availability. See the
+infrastructure and migration head (`0008`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Query the Catchment Data Explorer hierarchy
@@ -293,7 +297,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through Water Quality sampling points (0007)
+migrations/              Alembic revisions through bounded Water Quality observations (0008)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational, water-supply, hydrology and catchment public routes
@@ -345,5 +349,12 @@ phase. Phase 2D provides freshness monitoring, hardened bounded refresh jobs and
 opt-in GitHub Actions schedule for Hydrology latest. Phase 2 now covers
 ingestion → validation → storage → API → freshness → refresh scheduling.
 Deployment-specific notification integrations remain future operational work.
-Phase 3 is water quality. Public hosting still requires the
+Phase 3 adds Water Quality sampling-point metadata, nearby search, source status,
+refresh operations and bounded historical observations with determinand/unit evidence.
+See the [walkthrough](docs/guides/water-quality-walkthrough.md) and
+[ADR 0012](docs/adr/0012-bounded-water-quality-observations.md). Observation retrievals
+preserve publisher sample relationships, censored results and unspecified timezones;
+they do not claim a complete or publisher-atomic archive. Water Quality scheduling,
+unit conversion and cross-source geographic assignments remain deferred.
+Public hosting still requires the
 deployment controls described in SECURITY.md; there is no hosted endpoint yet.

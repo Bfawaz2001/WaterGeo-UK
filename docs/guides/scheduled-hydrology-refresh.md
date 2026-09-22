@@ -146,4 +146,5 @@ uncertain outcome; inspect accepted metadata before rerunning. For a local diagn
 use the CLI command above with privately configured ingestion credentials and TLS.
 
 The Phase 2 implementation is complete; live deployment verification awaits real
-infrastructure. Phase 3 starts with public water-quality source/licence assessment.
+infrastructure. Phase 3 Water Quality operations are documented separately in the
+[Water Quality walkthrough](water-quality-walkthrough.md); this schedule remains Hydrology-only.

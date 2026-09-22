@@ -6,7 +6,14 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-SourceName = Literal["ofwat", "hydrology", "hydrology-history", "catchments", "water-quality"]
+SourceName = Literal[
+    "ofwat",
+    "hydrology",
+    "hydrology-history",
+    "catchments",
+    "water-quality",
+    "water-quality-observations",
+]
 Freshness = Literal["current", "stale", "unknown", "not_applicable"]
 
 

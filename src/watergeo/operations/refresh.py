@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from multiprocessing.process import BaseProcess
 from pathlib import Path
 from typing import Any, Never, cast
@@ -27,6 +27,7 @@ from watergeo.db import (
     water_quality_ingestion,
 )
 from watergeo.db.engine import create_database_engine
+from watergeo.db.water_quality_observation_ingestion import load_observations
 from watergeo.ingestion import (
     catchment_client,
     hydrology_client,
@@ -36,6 +37,11 @@ from watergeo.ingestion import (
 from watergeo.ingestion.hydrology import ID_PATTERN
 from watergeo.ingestion.ofwat_boundaries import fetch_boundary_source
 from watergeo.ingestion.ofwat_canonical import decode_reviewed_water_supply, load_canonical_snapshot
+from watergeo.ingestion.water_quality_observation_client import (
+    fetch_observations,
+    read_observations,
+)
+from watergeo.ingestion.water_quality_observations import Scope
 
 logger = logging.getLogger(__name__)
 LOCK_NAMESPACE = 1464296784  # Distinct from loaders' publication transaction locks.
@@ -45,6 +51,7 @@ SOURCE_KEYS = {
     "hydrology-history": 3,
     "catchments": 4,
     "water-quality": 5,
+    "water-quality-observations": 6,
 }
 
 
@@ -63,6 +70,10 @@ class RefreshRequest:
     measure_id: str | None = None
     requested_from: datetime | None = None
     requested_to: datetime | None = None
+    sampling_point_id: str | None = None
+    determinand: str | None = None
+    date_from: date | None = None
+    date_to: date | None = None
 
 
 def event(name: str, request: RefreshRequest, run_id: str, **fields: Any) -> None:
@@ -146,6 +157,23 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
                 directory = catchment_client.fetch_snapshot(root)
             elif request.source == "water-quality":
                 directory = water_quality_client.fetch_snapshot(root)
+            elif request.source == "water-quality-observations":
+                if (
+                    request.sampling_point_id is None
+                    or request.determinand is None
+                    or request.date_from is None
+                    or request.date_to is None
+                ):
+                    raise ValueError("Observation refresh requires explicit scope")
+                directory = fetch_observations(
+                    Scope(
+                        request.sampling_point_id,
+                        request.determinand,
+                        request.date_from,
+                        request.date_to,
+                    ),
+                    root,
+                )
             else:
                 if not request.measure_id or not request.requested_from or not request.requested_to:
                     raise ValueError("History refresh requires an explicit measure and window")
@@ -162,6 +190,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
             catchment_client.read_snapshot(directory)
         elif request.source == "water-quality":
             water_quality_client.read_snapshot(directory)
+        elif request.source == "water-quality-observations":
+            read_observations(directory)
         else:
             hydrology_history_client.read_history(directory)
         # Long network retrieval must not continue to publication after losing its lock.
@@ -178,6 +208,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
             loaded = catchment_ingestion.load_snapshot(engine, directory)
         elif request.source == "water-quality":
             loaded = water_quality_ingestion.load_snapshot(engine, directory)
+        elif request.source == "water-quality-observations":
+            loaded = load_observations(engine, directory)
         else:
             loaded = hydrology_history_ingestion.load_history(engine, directory)
         return {
@@ -274,21 +306,39 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("source", choices=tuple(SOURCE_KEYS))
     parser.add_argument("--evidence-dir", type=Path)
     parser.add_argument("--measure-id")
+    parser.add_argument("--sampling-point-id")
+    parser.add_argument("--determinand")
     parser.add_argument("--from", dest="requested_from")
     parser.add_argument("--to", dest="requested_to")
     parser.add_argument("--timeout-seconds", type=int, default=3600)
     args = parser.parse_args(argv)
     start = end = None
+    scope = None
     try:
         if not 30 <= args.timeout_seconds <= 86400:
             raise ValueError()
         history_args = (args.measure_id, args.requested_from, args.requested_to)
+        if (args.source != "water-quality-observations" or args.evidence_dir is not None) and (
+            args.sampling_point_id or args.determinand
+        ):
+            raise ValueError()
         if args.source == "hydrology-history" and args.evidence_dir is None:
             if not all(history_args) or not re.fullmatch(ID_PATTERN, args.measure_id):
                 raise ValueError()
             start, end = hydrology_history_client.validate_window(
                 datetime.fromisoformat(args.requested_from),
                 datetime.fromisoformat(args.requested_to),
+            )
+        elif args.source == "water-quality-observations" and args.evidence_dir is None:
+            if args.measure_id or not all(
+                (args.sampling_point_id, args.determinand, args.requested_from, args.requested_to)
+            ):
+                raise ValueError()
+            scope = Scope(
+                args.sampling_point_id,
+                args.determinand,
+                date.fromisoformat(args.requested_from),
+                date.fromisoformat(args.requested_to),
             )
         elif any(history_args):
             raise ValueError()
@@ -297,7 +347,15 @@ def main(argv: list[str] | None = None) -> int:
     except (ValueError, TypeError, OSError):
         parser.error("Invalid request")
     request = RefreshRequest(
-        cast(SourceName, args.source), args.evidence_dir, args.measure_id, start, end
+        cast(SourceName, args.source),
+        args.evidence_dir,
+        args.measure_id,
+        start,
+        end,
+        scope.sampling_point_id if scope else None,
+        scope.determinand if scope else None,
+        scope.date_from if scope else None,
+        scope.date_to if scope else None,
     )
     run_id = str(uuid4())
     event("refresh_started", request, run_id)
