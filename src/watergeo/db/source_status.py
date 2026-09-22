@@ -12,6 +12,7 @@ from watergeo.ingestion.catchments import PLAN_VERSION
 from watergeo.ingestion.catchments import VERSION as CATCHMENT_VERSION
 from watergeo.ingestion.hydrology import VERSION as HYDROLOGY_VERSION
 from watergeo.ingestion.hydrology_history import VERSION as HISTORY_VERSION
+from watergeo.ingestion.water_quality import VERSION as WATER_QUALITY_VERSION
 
 
 def age(now: datetime, value: datetime | None) -> float | None:
@@ -33,6 +34,13 @@ def describe(
     settings: Settings,
 ) -> SourceStatus:
     contracts: dict[str, tuple[str, str, str | None, str]] = {
+        "water-quality": (
+            "dynamic_snapshot",
+            WATER_QUALITY_VERSION,
+            "API-Version 1",
+            "Mutable sampling-point metadata. Retrieval age is not observation freshness "
+            "or a publisher SLA; pages are not a publisher-atomic snapshot.",
+        ),
         "ofwat": (
             "versioned_release",
             OFWAT_WATER_SUPPLY_TRANSFORMATION,
@@ -88,6 +96,11 @@ def describe(
         ):
             observed = "unknown"
         values.update(observation_freshness=observed)
+    elif source == "water-quality":
+        values["retrieval_max_age_seconds"] = settings.water_quality_retrieval_max_age_seconds
+        values["retrieval_freshness"] = freshness(
+            values["snapshot_age_seconds"], settings.water_quality_retrieval_max_age_seconds
+        )
     else:
         values["retrieval_freshness"] = "not_applicable" if row else "unknown"
     for bound in ("oldest", "newest"):
@@ -97,6 +110,10 @@ def describe(
 
 def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
     queries = {
+        "water-quality": """SELECT id AS snapshot_id, content_sha256, retrieval_started_at,
+            retrieval_completed_at AS retrieved_at FROM watergeo.water_quality_snapshot
+            WHERE normalization_version=:water_quality_version
+            ORDER BY retrieval_completed_at DESC, id DESC LIMIT 1""",
         "ofwat": """SELECT id AS snapshot_id, source_sha256 AS content_sha256,
             retrieved_at FROM watergeo.water_supply_snapshot
             WHERE source_sha256=:ofwat_hash AND transformation_version=:ofwat_version""",
@@ -129,6 +146,7 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
             ORDER BY retrieval_completed_at DESC, id DESC LIMIT 1""",
     }
     parameters = {
+        "water_quality_version": WATER_QUALITY_VERSION,
         "ofwat_hash": OFWAT_WATER_SUPPLY_SHA256,
         "ofwat_version": OFWAT_WATER_SUPPLY_TRANSFORMATION,
         "hydrology_version": HYDROLOGY_VERSION,

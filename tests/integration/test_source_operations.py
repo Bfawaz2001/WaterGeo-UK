@@ -75,10 +75,11 @@ def test_no_compatible_snapshots_are_unavailable(engines, monkeypatch):
         "HYDROLOGY_VERSION",
         "HISTORY_VERSION",
         "CATCHMENT_VERSION",
+        "WATER_QUALITY_VERSION",
     ):
         monkeypatch.setattr("watergeo.db.source_status." + name, "synthetic-unavailable")
     result = source_statuses(engines[1], Settings())
-    assert len(result.sources) == 4
+    assert len(result.sources) == 5
     assert all(item.availability == "unavailable" for item in result.sources)
     assert all(item.snapshot_id is None for item in result.sources)
 

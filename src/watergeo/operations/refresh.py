@@ -20,16 +20,32 @@ from sqlalchemy import Connection, Engine, text
 from watergeo.api.source_models import SourceName
 from watergeo.core.config import IngestionSettings
 from watergeo.core.logging import configure_logging
-from watergeo.db import catchment_ingestion, hydrology_history_ingestion, hydrology_ingestion
+from watergeo.db import (
+    catchment_ingestion,
+    hydrology_history_ingestion,
+    hydrology_ingestion,
+    water_quality_ingestion,
+)
 from watergeo.db.engine import create_database_engine
-from watergeo.ingestion import catchment_client, hydrology_client, hydrology_history_client
+from watergeo.ingestion import (
+    catchment_client,
+    hydrology_client,
+    hydrology_history_client,
+    water_quality_client,
+)
 from watergeo.ingestion.hydrology import ID_PATTERN
 from watergeo.ingestion.ofwat_boundaries import fetch_boundary_source
 from watergeo.ingestion.ofwat_canonical import decode_reviewed_water_supply, load_canonical_snapshot
 
 logger = logging.getLogger(__name__)
 LOCK_NAMESPACE = 1464296784  # Distinct from loaders' publication transaction locks.
-SOURCE_KEYS = {"ofwat": 1, "hydrology": 2, "hydrology-history": 3, "catchments": 4}
+SOURCE_KEYS = {
+    "ofwat": 1,
+    "hydrology": 2,
+    "hydrology-history": 3,
+    "catchments": 4,
+    "water-quality": 5,
+}
 
 
 class RefreshCancelled(BaseException):
@@ -128,6 +144,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
                 directory = hydrology_client.fetch_snapshot(root)
             elif request.source == "catchments":
                 directory = catchment_client.fetch_snapshot(root)
+            elif request.source == "water-quality":
+                directory = water_quality_client.fetch_snapshot(root)
             else:
                 if not request.measure_id or not request.requested_from or not request.requested_to:
                     raise ValueError("History refresh requires an explicit measure and window")
@@ -142,6 +160,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
             hydrology_client.read_snapshot(directory)
         elif request.source == "catchments":
             catchment_client.read_snapshot(directory)
+        elif request.source == "water-quality":
+            water_quality_client.read_snapshot(directory)
         else:
             hydrology_history_client.read_history(directory)
         # Long network retrieval must not continue to publication after losing its lock.
@@ -156,6 +176,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
             loaded = hydrology_ingestion.load_snapshot(engine, directory)
         elif request.source == "catchments":
             loaded = catchment_ingestion.load_snapshot(engine, directory)
+        elif request.source == "water-quality":
+            loaded = water_quality_ingestion.load_snapshot(engine, directory)
         else:
             loaded = hydrology_history_ingestion.load_history(engine, directory)
         return {

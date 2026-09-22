@@ -207,11 +207,28 @@ See
 [verification evidence](environment-agency-water-quality-verification.json)
 and [ADR 0011](../adr/0011-environment-agency-water-quality.md).
 
-## Deferred Phase 3 scope
+## Sampling-point persistence, API and operations
 
-Phase 3A does not yet define persistence or a public WaterGeo water-quality API.
-It also does not ingest samples, samplings, observations, determinands or units.
+Migration `0007` stores append-only snapshots and WGS84 sampling points. Exact-content
+retries verify stored children, and spatial-completeness regressions fail closed.
+The public `/v1/water-quality/dataset`, `/sampling-points`, `/sampling-points/near`
+and `/sampling-points/{sampling_point_id}` routes support explicit `snapshot_id`.
+Listing uses `after_id`, limit 1–100 and C-collated identity ordering. Nearby results
+use geography distance then identity, within at most 100 km, excluding missing locations.
+Pass spaces and slashes URL-encoded; detail routing preserves them exactly.
+Broad lists do not expose raw source fields. Region/area/sub-area are explicitly
+publisher metadata, not WaterGeo geographic identities or company relationships.
 
-Those source contracts will be reviewed independently before being joined to
-sampling points. Publisher relationships will be preserved rather than inferred
-from labels or proximity.
+Refresh with `uv run --locked python scripts/refresh_sources.py water-quality`;
+use `--evidence-dir` for a verified offline retry. The existing deadline, safe logs,
+source lock (refresh key 5 in namespace 1464296784) and atomic loader apply.
+No new scheduled workflow is enabled. Choose metadata cadence through deployment review.
+
+`/v1/sources/status` reports Water Quality retrieval age. Optional
+`WATERGEO_WATER_QUALITY_RETRIEVAL_MAX_AGE_SECONDS` uses an explicit operator limit;
+unset means unknown. Sampling points have no observation-freshness classification.
+The source is mutable metadata, not a static edition or publisher-atomic snapshot.
+
+Actual observation contracts are reviewed separately in the
+[bounded observation assessment](environment-agency-water-quality-observations.md).
+Sampling-point publication alone does not complete Phase 3.

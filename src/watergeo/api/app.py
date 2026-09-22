@@ -14,6 +14,7 @@ from watergeo.api.dependencies import get_database as get_database
 from watergeo.api.hydrology import router as hydrology_router
 from watergeo.api.hydrology_history import router as hydrology_history_router
 from watergeo.api.sources import router as sources_router
+from watergeo.api.water_quality import router as water_quality_router
 from watergeo.api.water_supply import router as water_supply_router
 from watergeo.core.config import Settings
 from watergeo.core.logging import configure_logging
@@ -75,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.state.settings = configuration
     app.include_router(sources_router)
+    app.include_router(water_quality_router)
     app.include_router(catchments_router)
     app.include_router(hydrology_router)
     app.include_router(hydrology_history_router)

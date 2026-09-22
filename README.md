@@ -82,6 +82,10 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /ready` | HTTP 200: PostGIS is available and the migration revision matches; otherwise HTTP 503 with a generic response. |
 | `GET /v1/water-supply/dataset` | Release, source identity, attribution, licence, counts and caveats. |
 | `GET /v1/sources/status` | Accepted source availability, retrieval/observation ages and explicit freshness policy. |
+| `GET /v1/water-quality/dataset` | Compatible sampling-point snapshot, provenance and spatial completeness. |
+| `GET /v1/water-quality/sampling-points` | Snapshot-pinned keyset listing of sampling points. |
+| `GET /v1/water-quality/sampling-points/near` | Bounded WGS84 geography search, ordered by distance and identity. |
+| `GET /v1/water-quality/sampling-points/{sampling_point_id}` | Sampling-point detail; opaque spaces and slash IDs are preserved. |
 | `GET /v1/water-supply/areas` | Paginated area summaries without geometry. |
 | `GET /v1/water-supply/areas/at-point?lon=-2&lat=52` | All covering areas, including boundary matches, with pagination. |
 | `GET /v1/water-supply/areas/{source_id}` | Area labels, publisher notices and reviewed transformation provenance. |

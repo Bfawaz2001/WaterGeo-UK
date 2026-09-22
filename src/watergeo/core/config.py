@@ -54,10 +54,12 @@ class Settings(DatabaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     hydrology_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
     hydrology_observation_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
+    water_quality_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
 
     @field_validator(
         "hydrology_retrieval_max_age_seconds",
         "hydrology_observation_max_age_seconds",
+        "water_quality_retrieval_max_age_seconds",
         mode="before",
     )
     @classmethod
