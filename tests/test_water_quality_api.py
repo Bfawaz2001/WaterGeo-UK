@@ -17,6 +17,7 @@ from watergeo.core.config import Settings
         "sampling-points",
         "sampling-points/MD-GWW20%2F01",
         "sampling-points/near?lon=0&lat=0",
+        "observations/00000000-0000-0000-0000-000000000000",
     ],
 )
 def test_water_quality_database_failure_is_sanitized(path, capsys):

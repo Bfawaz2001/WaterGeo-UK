@@ -39,8 +39,13 @@ The codelists expose notation, prefLabel, altLabel and source blank-node identit
 
 ## Accepted implementation scope
 
-One explicit sampling-point notation and determinand, inclusive date-only bounds of
-at most 31 calendar days. No full archive, arbitrary upstream URL, inferred identities,
+One explicit sampling-point notation and determinand, start-inclusive/end-exclusive
+date-only bounds spanning 1–31 calendar days. A follow-up same-day `2020-01-23`/`2020-01-23`
+probe returned zero rows; `2020-01-23`/`2020-01-24` returned the 11:51 observation.
+Thus dateTo must not be presented as an inclusive whole day. WaterGeo rejects returned
+timestamps outside its half-open window, including any exact upper-bound midnight row;
+the publisher's precise equality behavior at midnight was not established by these probes.
+No full archive, arbitrary upstream URL, inferred identities,
 unit conversions or UTC assignment. Preserve original timestamp text, result text,
 numeric value and lower/upper bounds separately, along with exact observation, sample
 and sampling IDs. Retrieve the scoped determinand and referenced units as immutable
@@ -52,3 +57,42 @@ exact evidence retries must verify stored metadata and children. Empty scoped
 retrievals are valid evidence, not a claim that the sampling point has no history.
 
 Licensing and independence follow the [sampling-point source assessment](environment-agency-water-quality.md).
+
+## Retained end-to-end verification
+
+On 2026-09-22, the accepted AN-CORBY / 0085 scope `[2020-01-23, 2020-01-24)`
+produced one observation, one determinand response and one unit response: three
+responses totaling 3,252 bytes. Retained bundle:
+`data/raw/refresh/water-quality-observations/79ae1843-520b-41b5-adb9-b7d964f863ea/0a81a9a7-f122-470e-896e-d6ad90feca8c`.
+
+- Content SHA-256: `affaf9eff0271e2650b46dd6fcd36fdd585a446ea5e846e3579a3bdaedad2607`.
+- Normalized SHA-256: `e0a39b8bfb55b11c111d5c87872b9964c0ea2e8edd8afa34e77817184636a3bb`.
+- Normalization version: `ea-water-quality-observations-v1`.
+
+The disposable database first required the retained 66,300-point metadata snapshot.
+Offline publication then inserted the observation; retry returned verified `existing`.
+The application-role HTTP endpoint returned 200, one row, `<0.98`, upper bound 0.98
+and null numeric value. Test database UUIDs are ephemeral, not portable evidence IDs.
+The diagnostic zero-length date probe is retained locally but is outside the accepted
+1–31-day contract and cannot be published by the final implementation.
+
+## Operational and semantic limits
+
+At most 250 observations per page, 20 observation pages, 5,000 observations,
+20 referenced units, 16 MiB per response and 64 MiB combined response bytes.
+Requests have bounded retries and timeouts; the refresh supervisor imposes a total
+deadline. Offline reads recheck request scope, response headers, sizes, hashes and
+normalized content. Missing values remain null; contradictory result/bound text or
+unreviewed timestamp and relationship shapes fail closed. No value interpolation,
+unit conversion or water-safety judgment is derived.
+
+The source can change during pagination, and consistent totals cannot prove that no
+replacement occurred. Evidence therefore describes the bounded retrieval, not a
+publisher-atomic archive edition. New evidence can coexist as a later correction;
+exact retries verify stored observation and codelist content before returning a no-op.
+Retrieval timestamps are timezone-aware operational facts; original phenomenonTime
+has no assumed timezone. Sample material and sampling purpose remain publisher
+metadata in the preserved Sample/Sampling chain rather than inferred classifications.
+
+See [ADR 0012](../adr/0012-bounded-water-quality-observations.md) and the
+[developer walkthrough](../guides/water-quality-walkthrough.md).

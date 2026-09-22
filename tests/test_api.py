@@ -78,6 +78,7 @@ def test_openapi_documents_public_endpoints(client: TestClient) -> None:
         "/ready",
         "/v1/sources/status",
         "/v1/water-quality/dataset",
+        "/v1/water-quality/observations/{retrieval_id}",
         "/v1/water-quality/sampling-points",
         "/v1/water-quality/sampling-points/near",
         "/v1/water-quality/sampling-points/{sampling_point_id}",
