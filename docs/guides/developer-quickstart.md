@@ -50,9 +50,9 @@ with WaterGeoClient("http://127.0.0.1:8000") as client:
     )
 ```
 
-Iterators request the maximum normal page size, automatically reuse the first page's
-snapshot, reject non-advancing cursors, and stop at 1,000 pages or 100,000 records by
-default:
+Iterators automatically reuse the first page's snapshot, or accept `snapshot_id` to
+select it from the first request. They reject a changed snapshot or non-advancing
+cursor and stop at 1,000 pages or 100,000 records by default:
 
 ```python
 with WaterGeoClient("http://127.0.0.1:8000") as client:

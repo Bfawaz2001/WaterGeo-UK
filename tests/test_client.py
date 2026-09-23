@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 from uuid import UUID
@@ -183,7 +184,8 @@ def test_station_iterator_pins_first_snapshot_and_advances_cursor() -> None:
     assert requests[1].url.params["after_id"] == "A"
 
 
-def test_station_iterator_rejects_changed_snapshot() -> None:
+@pytest.mark.parametrize("snapshot_id", [None, UUID(SNAPSHOT)])
+def test_station_iterator_rejects_changed_snapshot(snapshot_id: UUID | None) -> None:
     calls = 0
 
     def responder(request: httpx.Request) -> httpx.Response:
@@ -198,7 +200,81 @@ def test_station_iterator_rejects_changed_snapshot() -> None:
         client(responder) as api,
         pytest.raises(WaterGeoResponseError, match="changed snapshot"),
     ):
-        list(api.iter_hydrology_stations(page_size=1))
+        list(api.iter_hydrology_stations(page_size=1, snapshot_id=snapshot_id))
+
+
+@pytest.mark.parametrize(
+    "iterator_name,fetch_name,positional,next_field,next_cursor",
+    [
+        ("iter_hydrology_stations", "hydrology_stations", (), "next_after_id", "A"),
+        (
+            "iter_management_catchments",
+            "management_catchments",
+            (),
+            "next_after_id",
+            "A",
+        ),
+        (
+            "iter_water_quality_sampling_points",
+            "water_quality_sampling_points",
+            (),
+            "next_after_id",
+            "A",
+        ),
+        ("iter_reservoirs", "reservoirs", (), "next_after_id", "A"),
+        (
+            "iter_reservoir_readings",
+            "reservoir_readings",
+            ("1",),
+            "next_after",
+            datetime(2026, 1, 1, tzinfo=UTC),
+        ),
+    ],
+)
+def test_supplied_snapshot_is_used_and_remains_pinned(
+    iterator_name: str,
+    fetch_name: str,
+    positional: tuple[str, ...],
+    next_field: str,
+    next_cursor: str | datetime,
+) -> None:
+    selected = UUID(SNAPSHOT)
+    page_one = SimpleNamespace(
+        dataset=SimpleNamespace(snapshot_id=selected),
+        items=["one"],
+        **{next_field: next_cursor},
+    )
+    page_two = SimpleNamespace(
+        dataset=SimpleNamespace(snapshot_id=selected),
+        items=["two"],
+        **{next_field: None},
+    )
+    api = client(lambda _: pytest.fail("iterator fetch method must be mocked"))
+    fetch = MagicMock(side_effect=[page_one, page_two])
+    setattr(api, fetch_name, fetch)
+
+    results = list(getattr(api, iterator_name)(*positional, page_size=1, snapshot_id=selected))
+
+    assert results == ["one", "two"]
+    assert fetch.call_args_list[0].kwargs["snapshot_id"] == selected
+    assert fetch.call_args_list[1].kwargs["snapshot_id"] == selected
+    api.close()
+
+
+def test_supplied_snapshot_rejects_first_mismatched_page() -> None:
+    requested = UUID(SNAPSHOT)
+    returned = "00000000-0000-4000-8000-000000000002"
+
+    def responder(request: httpx.Request) -> httpx.Response:
+        body = station_page(["A"], None)
+        body["dataset"]["snapshot_id"] = returned
+        return httpx.Response(200, json=body)
+
+    with (
+        client(responder) as api,
+        pytest.raises(WaterGeoResponseError, match="changed snapshot"),
+    ):
+        list(api.iter_hydrology_stations(snapshot_id=requested))
 
 
 def test_iterator_rejects_repeated_cursor_and_enforces_bounds() -> None:

@@ -61,21 +61,22 @@ def _set_action(parser: argparse.ArgumentParser, action: Action) -> None:
 
 
 def _pagination(parser: argparse.ArgumentParser, *, all_mode: bool = True) -> None:
-    parser.add_argument("--limit", type=int, default=50)
+    parser.add_argument("--limit", type=int)
     parser.add_argument("--after-id")
     parser.add_argument("--snapshot-id")
     if all_mode:
         parser.add_argument("--all", action="store_true", dest="all_pages")
-        parser.add_argument("--max-pages", type=int, default=1000)
-        parser.add_argument("--max-records", type=int, default=100000)
+        parser.add_argument("--max-pages", type=int)
+        parser.add_argument("--max-records", type=int)
 
 
-def _near(parser: argparse.ArgumentParser, default_radius: float) -> None:
+def _near(parser: argparse.ArgumentParser, default_radius: float, *, snapshot: bool = True) -> None:
     parser.add_argument("--lon", type=float, required=True)
     parser.add_argument("--lat", type=float, required=True)
     parser.add_argument("--radius-m", type=float, default=default_radius)
     parser.add_argument("--limit", type=int, default=50)
-    parser.add_argument("--snapshot-id")
+    if snapshot:
+        parser.add_argument("--snapshot-id")
 
 
 def _detail(parser: argparse.ArgumentParser, identity: str) -> None:
@@ -86,20 +87,88 @@ def _detail(parser: argparse.ArgumentParser, identity: str) -> None:
 def _collection_action(page: Callable[..., object], iterator: Callable[..., object]) -> Action:
     def action(client: WaterGeoClient, args: argparse.Namespace) -> object:
         if args.all_pages:
+            if args.after_id is not None:
+                raise WaterGeoConfigurationError("--after-id cannot be combined with --all")
             return iterator(
                 client,
-                page_size=args.limit,
-                max_pages=args.max_pages,
-                max_records=args.max_records,
+                page_size=args.limit if args.limit is not None else 50,
+                snapshot_id=_uuid(args.snapshot_id),
+                max_pages=args.max_pages if args.max_pages is not None else 1000,
+                max_records=args.max_records if args.max_records is not None else 100000,
             )
+        if args.max_pages is not None or args.max_records is not None:
+            raise WaterGeoConfigurationError("--max-pages and --max-records require --all")
         return page(
             client,
-            limit=args.limit,
+            limit=args.limit if args.limit is not None else 50,
             after_id=args.after_id,
             snapshot_id=_uuid(args.snapshot_id),
         )
 
     return action
+
+
+def _water_supply_areas_action(client: WaterGeoClient, args: argparse.Namespace) -> object:
+    limit = args.limit if args.limit is not None else 50
+    if args.all_pages:
+        if args.after_id is not None:
+            raise WaterGeoConfigurationError("--after-id cannot be combined with --all")
+        return client.iter_water_supply_areas(
+            page_size=limit,
+            max_pages=args.max_pages if args.max_pages is not None else 1000,
+            max_records=args.max_records if args.max_records is not None else 100000,
+        )
+    if args.max_pages is not None or args.max_records is not None:
+        raise WaterGeoConfigurationError("--max-pages and --max-records require --all")
+    return client.water_supply_areas(limit=limit, after_id=args.after_id or 0)
+
+
+def _history_action(
+    client: WaterGeoClient,
+    args: argparse.Namespace,
+    *,
+    iterator: Callable[..., object],
+    page: Callable[..., object],
+    cursor_name: str,
+    cursor: object,
+) -> object:
+    limit = args.limit if args.limit is not None else 100
+    if args.all_pages:
+        if cursor is not None:
+            raise WaterGeoConfigurationError(f"--{cursor_name} cannot be combined with --all")
+        keywords = {
+            "page_size": limit,
+            "max_pages": args.max_pages if args.max_pages is not None else 1000,
+            "max_records": args.max_records if args.max_records is not None else 100000,
+        }
+        if hasattr(args, "snapshot_id"):
+            keywords["snapshot_id"] = _uuid(args.snapshot_id)
+        return iterator(client, args.retrieval_id, **keywords)
+    if args.max_pages is not None or args.max_records is not None:
+        raise WaterGeoConfigurationError("--max-pages and --max-records require --all")
+    return page(client, args.retrieval_id, limit=limit, **{cursor_name.replace("-", "_"): cursor})
+
+
+def _reservoir_readings_action(client: WaterGeoClient, args: argparse.Namespace) -> object:
+    limit = args.limit if args.limit is not None else 100
+    if args.all_pages:
+        if args.after is not None:
+            raise WaterGeoConfigurationError("--after cannot be combined with --all")
+        return client.iter_reservoir_readings(
+            args.reservoir_id,
+            page_size=limit,
+            snapshot_id=_uuid(args.snapshot_id),
+            max_pages=args.max_pages if args.max_pages is not None else 1000,
+            max_records=args.max_records if args.max_records is not None else 100000,
+        )
+    if args.max_pages is not None or args.max_records is not None:
+        raise WaterGeoConfigurationError("--max-pages and --max-records require --all")
+    return client.reservoir_readings(
+        args.reservoir_id,
+        limit=limit,
+        after=_datetime(args.after),
+        snapshot_id=_uuid(args.snapshot_id),
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -127,21 +196,12 @@ def build_parser() -> argparse.ArgumentParser:
     dataset = ws.add_parser("dataset")
     _set_action(dataset, lambda client, _: client.water_supply_dataset())
     areas = ws.add_parser("areas")
-    areas.add_argument("--limit", type=int, default=50)
-    areas.add_argument("--after-id", type=int, default=0)
+    areas.add_argument("--limit", type=int)
+    areas.add_argument("--after-id", type=int)
     areas.add_argument("--all", action="store_true", dest="all_pages")
-    areas.add_argument("--max-pages", type=int, default=1000)
-    areas.add_argument("--max-records", type=int, default=100000)
-    _set_action(
-        areas,
-        lambda client, args: (
-            client.iter_water_supply_areas(
-                page_size=args.limit, max_pages=args.max_pages, max_records=args.max_records
-            )
-            if args.all_pages
-            else client.water_supply_areas(limit=args.limit, after_id=args.after_id)
-        ),
-    )
+    areas.add_argument("--max-pages", type=int)
+    areas.add_argument("--max-records", type=int)
+    _set_action(areas, _water_supply_areas_action)
     at_point = ws.add_parser("at-point")
     at_point.add_argument("--lon", type=float, required=True)
     at_point.add_argument("--lat", type=float, required=True)
@@ -174,7 +234,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     near = hy.add_parser("near")
-    _near(near, 10_000)
+    _near(near, 10_000, snapshot=False)
     _set_action(
         near,
         lambda client, args: client.hydrology_stations_near(
@@ -186,24 +246,20 @@ def build_parser() -> argparse.ArgumentParser:
     _set_action(station, lambda client, args: client.hydrology_station(args.station_id))
     history = hy.add_parser("history")
     history.add_argument("retrieval_id")
-    history.add_argument("--limit", type=int, default=100)
+    history.add_argument("--limit", type=int)
     history.add_argument("--after")
     history.add_argument("--all", action="store_true", dest="all_pages")
-    history.add_argument("--max-pages", type=int, default=1000)
-    history.add_argument("--max-records", type=int, default=100000)
+    history.add_argument("--max-pages", type=int)
+    history.add_argument("--max-records", type=int)
     _set_action(
         history,
-        lambda client, args: (
-            client.iter_hydrology_history(
-                args.retrieval_id,
-                page_size=args.limit,
-                max_pages=args.max_pages,
-                max_records=args.max_records,
-            )
-            if args.all_pages
-            else client.hydrology_history(
-                args.retrieval_id, limit=args.limit, after=_datetime(args.after)
-            )
+        lambda client, args: _history_action(
+            client,
+            args,
+            iterator=WaterGeoClient.iter_hydrology_history,
+            page=WaterGeoClient.hydrology_history,
+            cursor_name="after",
+            cursor=_datetime(args.after),
         ),
     )
 
@@ -213,24 +269,24 @@ def build_parser() -> argparse.ArgumentParser:
     _set_action(dataset, lambda client, _: client.catchment_dataset())
     resources = {
         "river-basin-districts": (
-            WaterGeoClient.river_basin_districts,
-            WaterGeoClient.iter_river_basin_districts,
-            WaterGeoClient.river_basin_district,
+            "river_basin_districts",
+            "iter_river_basin_districts",
+            "river_basin_district",
         ),
         "management-catchments": (
-            WaterGeoClient.management_catchments,
-            WaterGeoClient.iter_management_catchments,
-            WaterGeoClient.management_catchment,
+            "management_catchments",
+            "iter_management_catchments",
+            "management_catchment",
         ),
         "operational-catchments": (
-            WaterGeoClient.operational_catchments,
-            WaterGeoClient.iter_operational_catchments,
-            WaterGeoClient.operational_catchment,
+            "operational_catchments",
+            "iter_operational_catchments",
+            "operational_catchment",
         ),
         "water-bodies": (
-            WaterGeoClient.water_bodies,
-            WaterGeoClient.iter_water_bodies,
-            WaterGeoClient.water_body,
+            "water_bodies",
+            "iter_water_bodies",
+            "water_body",
         ),
     }
     for name, (page_method, iterator_method, detail_method) in resources.items():
@@ -242,24 +298,29 @@ def build_parser() -> argparse.ArgumentParser:
             client: WaterGeoClient,
             args: argparse.Namespace,
             *,
-            page_method: Callable[..., object] = page_method,
-            iterator_method: Callable[..., object] = iterator_method,
-            detail_method: Callable[..., object] = detail_method,
+            page_method: str = page_method,
+            iterator_method: str = iterator_method,
+            detail_method: str = detail_method,
         ) -> object:
             if args.entity_id:
-                return detail_method(client, args.entity_id)
-            if args.all_pages:
-                return iterator_method(
-                    client,
-                    page_size=args.limit,
-                    max_pages=args.max_pages,
-                    max_records=args.max_records,
-                )
-            return page_method(
+                if (
+                    args.limit is not None
+                    or args.after_id is not None
+                    or args.snapshot_id is not None
+                    or args.all_pages
+                    or args.max_pages is not None
+                    or args.max_records is not None
+                ):
+                    raise WaterGeoConfigurationError(
+                        "--id cannot be combined with list pagination options"
+                    )
+                return getattr(client, detail_method)(args.entity_id)
+            return _collection_action(
+                lambda selected, **keywords: getattr(selected, page_method)(**keywords),
+                lambda selected, **keywords: getattr(selected, iterator_method)(**keywords),
+            )(
                 client,
-                limit=args.limit,
-                after_id=args.after_id,
-                snapshot_id=_uuid(args.snapshot_id),
+                args,
             )
 
         _set_action(command, catchment_action)
@@ -306,24 +367,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     observations = wq.add_parser("observations")
     observations.add_argument("retrieval_id")
-    observations.add_argument("--limit", type=int, default=100)
+    observations.add_argument("--limit", type=int)
     observations.add_argument("--after-id")
     observations.add_argument("--all", action="store_true", dest="all_pages")
-    observations.add_argument("--max-pages", type=int, default=1000)
-    observations.add_argument("--max-records", type=int, default=100000)
+    observations.add_argument("--max-pages", type=int)
+    observations.add_argument("--max-records", type=int)
     _set_action(
         observations,
-        lambda client, args: (
-            client.iter_water_quality_observations(
-                args.retrieval_id,
-                page_size=args.limit,
-                max_pages=args.max_pages,
-                max_records=args.max_records,
-            )
-            if args.all_pages
-            else client.water_quality_observations(
-                args.retrieval_id, limit=args.limit, after_id=args.after_id
-            )
+        lambda client, args: _history_action(
+            client,
+            args,
+            iterator=WaterGeoClient.iter_water_quality_observations,
+            page=WaterGeoClient.water_quality_observations,
+            cursor_name="after-id",
+            cursor=args.after_id,
         ),
     )
 
@@ -366,30 +423,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     readings = st.add_parser("readings")
     readings.add_argument("reservoir_id")
-    readings.add_argument("--limit", type=int, default=100)
+    readings.add_argument("--limit", type=int)
     readings.add_argument("--after")
     readings.add_argument("--snapshot-id")
     readings.add_argument("--all", action="store_true", dest="all_pages")
-    readings.add_argument("--max-pages", type=int, default=1000)
-    readings.add_argument("--max-records", type=int, default=100000)
-    _set_action(
-        readings,
-        lambda client, args: (
-            client.iter_reservoir_readings(
-                args.reservoir_id,
-                page_size=args.limit,
-                max_pages=args.max_pages,
-                max_records=args.max_records,
-            )
-            if args.all_pages
-            else client.reservoir_readings(
-                args.reservoir_id,
-                limit=args.limit,
-                after=_datetime(args.after),
-                snapshot_id=_uuid(args.snapshot_id),
-            )
-        ),
-    )
+    readings.add_argument("--max-pages", type=int)
+    readings.add_argument("--max-records", type=int)
+    _set_action(readings, _reservoir_readings_action)
     return parser
 
 

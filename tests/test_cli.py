@@ -2,6 +2,8 @@
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
+from uuid import UUID
 
 import pytest
 
@@ -129,3 +131,123 @@ def test_documented_command_surface_parses(arguments: list[str]) -> None:
 def test_console_entry_point_is_packaged() -> None:
     pyproject = Path("pyproject.toml").read_text()
     assert 'watergeo = "watergeo.cli:main"' in pyproject
+
+
+@pytest.mark.parametrize(
+    "arguments,method",
+    [
+        (["hydrology", "stations"], "iter_hydrology_stations"),
+        (["catchments", "management-catchments"], "iter_management_catchments"),
+        (["water-quality", "sampling-points"], "iter_water_quality_sampling_points"),
+        (["severn-trent", "reservoirs"], "iter_reservoirs"),
+        (["severn-trent", "readings", "1"], "iter_reservoir_readings"),
+    ],
+)
+def test_all_mode_passes_snapshot_to_iterator(arguments: list[str], method: str) -> None:
+    snapshot = "00000000-0000-4000-8000-000000000001"
+    parsed = cli.build_parser().parse_args(
+        [
+            "--base-url",
+            "http://127.0.0.1:8000",
+            *arguments,
+            "--all",
+            "--snapshot-id",
+            snapshot,
+        ]
+    )
+    client = MagicMock()
+    getattr(client, method).return_value = iter(())
+
+    parsed.action(client, parsed)
+
+    assert getattr(client, method).call_args.kwargs["snapshot_id"] == UUID(snapshot)
+
+
+@pytest.mark.parametrize(
+    "arguments,expected",
+    [
+        (["hydrology", "stations", "--all", "--after-id", "A"], "--after-id"),
+        (
+            [
+                "hydrology",
+                "history",
+                "00000000-0000-4000-8000-000000000001",
+                "--all",
+                "--after",
+                "2026-01-01T00:00:00Z",
+            ],
+            "--after",
+        ),
+        (
+            [
+                "water-quality",
+                "observations",
+                "00000000-0000-4000-8000-000000000001",
+                "--all",
+                "--after-id",
+                "A",
+            ],
+            "--after-id",
+        ),
+        (["severn-trent", "readings", "1", "--all", "--after", "2026-01-01T00:00:00Z"], "--after"),
+        (["water-supply", "areas", "--all", "--after-id", "1"], "--after-id"),
+    ],
+)
+def test_all_mode_rejects_manual_cursor(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    arguments: list[str],
+    expected: str,
+) -> None:
+    install_fake(monkeypatch, FakeClient())
+    result = cli.main(["--base-url", "http://127.0.0.1:8000", *arguments])
+    captured = capsys.readouterr()
+    assert result == cli.EXIT_RESPONSE
+    assert expected in captured.err
+    assert captured.out == ""
+
+
+@pytest.mark.parametrize(
+    "option",
+    [["--snapshot-id", "00000000-0000-4000-8000-000000000001"], ["--after-id", "A"], ["--all"]],
+)
+def test_catchment_detail_rejects_list_options(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    option: list[str],
+) -> None:
+    install_fake(monkeypatch, FakeClient())
+    result = cli.main(
+        [
+            "--base-url",
+            "http://127.0.0.1:8000",
+            "catchments",
+            "management-catchments",
+            "--id",
+            "1",
+            *option,
+        ]
+    )
+    captured = capsys.readouterr()
+    assert result == cli.EXIT_RESPONSE
+    assert "--id cannot be combined" in captured.err
+    assert captured.out == ""
+
+
+def test_page_bounds_require_all(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    install_fake(monkeypatch, FakeClient())
+    result = cli.main(
+        [
+            "--base-url",
+            "http://127.0.0.1:8000",
+            "hydrology",
+            "stations",
+            "--max-pages",
+            "2",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert result == cli.EXIT_RESPONSE
+    assert "require --all" in captured.err

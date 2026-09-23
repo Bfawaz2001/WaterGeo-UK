@@ -277,10 +277,11 @@ class WaterGeoClient:
         self,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[Station]:
-        snapshot: list[UUID | None] = [None]
+        snapshot: list[UUID | None] = [snapshot_id]
 
         def page(cursor: str | None) -> tuple[list[Station], str | None]:
             result = self.hydrology_stations(
@@ -398,9 +399,15 @@ class WaterGeoClient:
         )
 
     def _iter_catchments(
-        self, fetch: Callable[..., Any], *, page_size: int, max_pages: int, max_records: int
+        self,
+        fetch: Callable[..., Any],
+        *,
+        page_size: int,
+        snapshot_id: UUID | None,
+        max_pages: int,
+        max_records: int,
     ) -> Iterator[Any]:
-        snapshot: list[UUID | None] = [None]
+        snapshot: list[UUID | None] = [snapshot_id]
 
         def page(cursor: str | None) -> tuple[list[Any], str | None]:
             result = fetch(limit=page_size, after_id=cursor, snapshot_id=snapshot[0])
@@ -413,12 +420,14 @@ class WaterGeoClient:
         self,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[RiverBasinDistrict]:
         return self._iter_catchments(
             self.river_basin_districts,
             page_size=page_size,
+            snapshot_id=snapshot_id,
             max_pages=max_pages,
             max_records=max_records,
         )
@@ -427,12 +436,14 @@ class WaterGeoClient:
         self,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[ManagementCatchment]:
         return self._iter_catchments(
             self.management_catchments,
             page_size=page_size,
+            snapshot_id=snapshot_id,
             max_pages=max_pages,
             max_records=max_records,
         )
@@ -441,12 +452,14 @@ class WaterGeoClient:
         self,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[OperationalCatchment]:
         return self._iter_catchments(
             self.operational_catchments,
             page_size=page_size,
+            snapshot_id=snapshot_id,
             max_pages=max_pages,
             max_records=max_records,
         )
@@ -455,12 +468,14 @@ class WaterGeoClient:
         self,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[WaterBody]:
         return self._iter_catchments(
             self.water_bodies,
             page_size=page_size,
+            snapshot_id=snapshot_id,
             max_pages=max_pages,
             max_records=max_records,
         )
@@ -510,10 +525,11 @@ class WaterGeoClient:
         self,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[SamplingPoint]:
-        snapshot: list[UUID | None] = [None]
+        snapshot: list[UUID | None] = [snapshot_id]
 
         def page(cursor: str | None) -> tuple[list[SamplingPoint], str | None]:
             result = self.water_quality_sampling_points(
@@ -600,10 +616,11 @@ class WaterGeoClient:
         self,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[Reservoir]:
-        snapshot: list[UUID | None] = [None]
+        snapshot: list[UUID | None] = [snapshot_id]
 
         def page(cursor: str | None) -> tuple[list[Reservoir], str | None]:
             result = self.reservoirs(limit=page_size, after_id=cursor, snapshot_id=snapshot[0])
@@ -659,10 +676,11 @@ class WaterGeoClient:
         reservoir_id: str,
         *,
         page_size: int = 100,
+        snapshot_id: UUID | None = None,
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[ReservoirReading]:
-        snapshot: list[UUID | None] = [None]
+        snapshot: list[UUID | None] = [snapshot_id]
 
         def page(cursor: datetime | None) -> tuple[list[ReservoirReading], datetime | None]:
             result = self.reservoir_readings(
