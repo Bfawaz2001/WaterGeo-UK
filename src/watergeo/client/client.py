@@ -198,6 +198,13 @@ class WaterGeoClient:
             cursor = next_cursor
         raise WaterGeoResponseError("Pagination page limit exceeded")
 
+    @staticmethod
+    def _verify_snapshot(expected: list[UUID | None], actual: UUID) -> None:
+        if expected[0] is None:
+            expected[0] = actual
+        elif actual != expected[0]:
+            raise WaterGeoResponseError("Server changed snapshot during pagination")
+
     def health(self) -> Health:
         return self._get("health", Health)
 
@@ -220,16 +227,19 @@ class WaterGeoClient:
         max_pages: int = DEFAULT_MAX_PAGES,
         max_records: int = DEFAULT_MAX_RECORDS,
     ) -> Iterator[AreaSummary]:
+        snapshot: list[UUID | None] = [None]
+
+        def page(cursor: int) -> tuple[list[AreaSummary], int | None]:
+            result = self.water_supply_areas(limit=page_size, after_id=cursor)
+            self._verify_snapshot(snapshot, result.snapshot_id)
+            return result.items, result.next_after_id
+
         return self._iterate(
-            lambda: self._area_items(page_size, 0),
-            lambda cursor: self._area_items(page_size, cursor),
+            lambda: page(0),
+            page,
             max_pages=max_pages,
             max_records=max_records,
         )
-
-    def _area_items(self, limit: int, after_id: int) -> tuple[list[AreaSummary], int | None]:
-        page = self.water_supply_areas(limit=limit, after_id=after_id)
-        return page.items, page.next_after_id
 
     def water_supply_areas_at_point(
         self, lon: float, lat: float, *, limit: int = 50, after_id: int = 0
@@ -276,7 +286,7 @@ class WaterGeoClient:
             result = self.hydrology_stations(
                 limit=page_size, after_id=cursor, snapshot_id=snapshot[0]
             )
-            snapshot[0] = result.dataset.snapshot_id
+            self._verify_snapshot(snapshot, result.dataset.snapshot_id)
             return result.items, result.next_after_id
 
         return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)
@@ -316,6 +326,8 @@ class WaterGeoClient:
     ) -> Iterator[HistoricalObservation]:
         def page(cursor: datetime | None) -> tuple[list[HistoricalObservation], datetime | None]:
             result = self.hydrology_history(retrieval_id, limit=page_size, after=cursor)
+            if str(result.retrieval_id) != str(retrieval_id):
+                raise WaterGeoResponseError("Server changed retrieval during pagination")
             next_cursor = datetime.fromisoformat(result.next_after) if result.next_after else None
             return result.observations, next_cursor
 
@@ -392,7 +404,7 @@ class WaterGeoClient:
 
         def page(cursor: str | None) -> tuple[list[Any], str | None]:
             result = fetch(limit=page_size, after_id=cursor, snapshot_id=snapshot[0])
-            snapshot[0] = result.dataset.snapshot_id
+            self._verify_snapshot(snapshot, result.dataset.snapshot_id)
             return result.items, result.next_after_id
 
         return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)
@@ -507,7 +519,7 @@ class WaterGeoClient:
             result = self.water_quality_sampling_points(
                 limit=page_size, after_id=cursor, snapshot_id=snapshot[0]
             )
-            snapshot[0] = result.dataset.snapshot_id
+            self._verify_snapshot(snapshot, result.dataset.snapshot_id)
             return result.items, result.next_after_id
 
         return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)
@@ -560,6 +572,8 @@ class WaterGeoClient:
     ) -> Iterator[WaterQualityObservation]:
         def page(cursor: str | None) -> tuple[list[WaterQualityObservation], str | None]:
             result = self.water_quality_observations(retrieval_id, limit=page_size, after_id=cursor)
+            if str(result.retrieval_id) != str(retrieval_id):
+                raise WaterGeoResponseError("Server changed retrieval during pagination")
             return result.observations, result.next_after_id
 
         return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)
@@ -593,7 +607,7 @@ class WaterGeoClient:
 
         def page(cursor: str | None) -> tuple[list[Reservoir], str | None]:
             result = self.reservoirs(limit=page_size, after_id=cursor, snapshot_id=snapshot[0])
-            snapshot[0] = result.dataset.snapshot_id
+            self._verify_snapshot(snapshot, result.dataset.snapshot_id)
             return result.items, result.next_after_id
 
         return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)
@@ -654,7 +668,7 @@ class WaterGeoClient:
             result = self.reservoir_readings(
                 reservoir_id, limit=page_size, after=cursor, snapshot_id=snapshot[0]
             )
-            snapshot[0] = result.dataset.snapshot_id
+            self._verify_snapshot(snapshot, result.dataset.snapshot_id)
             return result.items, result.next_after
 
         return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)

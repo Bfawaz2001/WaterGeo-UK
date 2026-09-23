@@ -183,6 +183,24 @@ def test_station_iterator_pins_first_snapshot_and_advances_cursor() -> None:
     assert requests[1].url.params["after_id"] == "A"
 
 
+def test_station_iterator_rejects_changed_snapshot() -> None:
+    calls = 0
+
+    def responder(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        body = station_page(["A"], "A" if calls == 1 else None)
+        if calls == 2:
+            body["dataset"]["snapshot_id"] = "00000000-0000-4000-8000-000000000002"
+        return httpx.Response(200, json=body)
+
+    with (
+        client(responder) as api,
+        pytest.raises(WaterGeoResponseError, match="changed snapshot"),
+    ):
+        list(api.iter_hydrology_stations(page_size=1))
+
+
 def test_iterator_rejects_repeated_cursor_and_enforces_bounds() -> None:
     def repeated(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=station_page(["A"], "A"))
