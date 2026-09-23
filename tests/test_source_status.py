@@ -13,7 +13,19 @@ from watergeo.core.config import Settings
 from watergeo.db.source_status import describe
 
 NOW = datetime(2026, 9, 20, tzinfo=UTC)
-SOURCES = ("ofwat", "hydrology", "hydrology-history", "catchments")
+SOURCES = ("ofwat", "hydrology", "hydrology-history", "catchments", "water-quality")
+
+
+@pytest.mark.parametrize("seconds,expected", [(60, "current"), (61, "stale"), (-1, "unknown")])
+def test_water_quality_has_retrieval_policy_without_observation_policy(seconds, expected):
+    result = describe(
+        "water-quality",
+        {"retrieved_at": NOW - timedelta(seconds=seconds)},
+        NOW,
+        settings(water_quality_retrieval_max_age_seconds=60),
+    )
+    assert result.retrieval_freshness == expected
+    assert result.observation_freshness == "not_applicable"
 
 
 def settings(**kwargs):

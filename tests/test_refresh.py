@@ -79,6 +79,19 @@ def test_source_lock_unconfirmed_unlock_fails_closed():
 @pytest.mark.parametrize(
     "args",
     [
+        ["water-quality-observations"],
+        ["hydrology", "--sampling-point-id", "private"],
+        [
+            "water-quality-observations",
+            "--sampling-point-id",
+            "point",
+            "--determinand",
+            "0085",
+            "--from",
+            "2020-01-01",
+            "--to",
+            "2020-03-01",
+        ],
         ["unknown-secret"],
         ["hydrology", "--timeout-seconds", "0"],
         ["hydrology", "--measure-id", "private"],
@@ -210,3 +223,30 @@ def test_log_fields_are_allowlisted():
     output = json.loads(JsonFormatter().format(record))
     assert output["elapsed_seconds"] == 30 and output["source"] == "hydrology"
     assert "password" not in output and "manifest" not in output
+
+
+def test_observation_cli_passes_explicit_calendar_scope():
+    with patch.object(jobs, "supervise", return_value=0) as supervisor:
+        assert (
+            jobs.main(
+                [
+                    "water-quality-observations",
+                    "--sampling-point-id",
+                    "MD-GWW20/01",
+                    "--determinand",
+                    "0085",
+                    "--from",
+                    "2020-01-23",
+                    "--to",
+                    "2020-01-24",
+                ]
+            )
+            == 0
+        )
+    request = supervisor.call_args.args[1]
+    assert request.source == "water-quality-observations"
+    assert request.sampling_point_id == "MD-GWW20/01"
+    assert request.determinand == "0085"
+    assert request.date_from.isoformat() == "2020-01-23"
+    assert request.date_to.isoformat() == "2020-01-24"
+    assert request.requested_from is None

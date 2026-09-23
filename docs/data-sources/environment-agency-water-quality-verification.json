@@ -1,0 +1,143 @@
+{
+  "verified_at": "2026-09-21T00:15:22.334466+00:00",
+  "source": "https://environment.data.gov.uk/water-quality",
+  "endpoint": "/data/sampling-point",
+  "http_method": "POST",
+  "request_body": null,
+  "openapi_version": "3.1.0",
+  "service_title": "Water Quality Archive",
+  "service_version": "1.3.1",
+  "api_version": "1",
+  "licence": "Open Government Licence v3",
+  "response_media_type": "application/ld+json",
+  "response_crs": "http://www.opengis.net/def/crs/EPSG/0/4326",
+  "normalization_version": "ea-water-quality-sampling-points-v1",
+  "content_sha256": "2c5da92d010430a078e4c7aa40318aeb46de4e56a1a15e69fb84859917bc11c1",
+  "normalized_sha256": "21433969c0803233499c76e336af0e03a9335de6fdd28f44b9ebbaaa1b8c2d9f",
+  "retrieval_started_at": "2026-09-21T00:13:05.244589+00:00",
+  "retrieval_completed_at": "2026-09-21T00:15:22.334466+00:00",
+  "retrieval_duration_seconds": 137.089877,
+  "counts": {
+    "sampling_point_count": 66300,
+    "sampling_point_with_location_count": 66300,
+    "sampling_point_without_location_count": 0
+  },
+  "page_count": 266,
+  "page_limit": 250,
+  "raw_page_bytes": 82405025,
+  "manifest_bytes": 166768,
+  "first_page": {
+    "skip": 0,
+    "count": 250,
+    "reported_total": 66300,
+    "bytes": 308188
+  },
+  "last_page": {
+    "skip": 66250,
+    "count": 50,
+    "reported_total": 66300,
+    "bytes": 60364
+  },
+  "header_presence_counts": {
+    "api-version": 266,
+    "content-crs": 266,
+    "content-type": 266,
+    "date": 266,
+    "x-page-limit": 266,
+    "x-page-skip": 266,
+    "x-total-items": 266
+  },
+  "coordinate_bounds": {
+    "longitude": [
+      -6.354,
+      1.7965
+    ],
+    "latitude": [
+      49.8896,
+      56.02
+    ]
+  },
+  "optional_field_missing_or_null_counts": {
+    "pref_label": 0,
+    "status": 0,
+    "sampling_point_type": 0,
+    "region": 0,
+    "area": 0,
+    "sub_area": 0
+  },
+  "source_field_shapes": {
+    "distinct_count": 1,
+    "shape": [
+      "@type",
+      "altLabel",
+      "area",
+      "geometry",
+      "hasObservations",
+      "id",
+      "notation",
+      "prefLabel",
+      "region",
+      "samplingPointStatus",
+      "samplingPointType",
+      "subArea"
+    ],
+    "record_count": 66300
+  },
+  "identity": {
+    "unique_notation_count": 66300,
+    "notations_containing_space": 42,
+    "total_space_characters": 44,
+    "notations_containing_slash": 4,
+    "maximum_observed_notation_length": 11,
+    "reviewed_non_alphanumeric_examples": [
+      "AN-B BOOTH",
+      "AN-CORBY  I",
+      "MD-GWW20/01",
+      "MD-GWW20/02",
+      "MD-GWW20/03",
+      "NW-GWW08/02"
+    ]
+  },
+  "concept_cardinality": {
+    "status": 2,
+    "sampling_point_type": 99,
+    "region": 7,
+    "area": 18,
+    "sub_area": 88
+  },
+  "status_counts": {
+    "O / OPEN": 38881,
+    "C / CLOSED": 27419
+  },
+  "largest_sampling_point_type_counts": {
+    "F6 / FRESHWATER - RIVERS": 18445,
+    "UA / SEWAGE DISCHARGES - FINAL/TREATED EFFLUENT - NOT WATER COMPANY": 7720,
+    "SA / SEWAGE DISCHARGES - FINAL/TREATED EFFLUENT - WATER COMPANY": 5721,
+    "BA / GROUNDWATER - BOREHOLE": 3561,
+    "WZ / WASTE SITE - UNSPECIFIED": 2785,
+    "FZ / FRESHWATER - UNSPECIFIED": 2281,
+    "CE / SALINE WATER - ESTUARINE SITES - NON BATHING/SHELLFISH": 2201,
+    "FA / FRESHWATER - LAKES/PONDS/RESERVOIRS": 1692,
+    "PE / POLLUTION/INVESTIGATION POINTS - ENVIRONMENT": 1361,
+    "SB / SEWAGE DISCHARGES - STW STORM OVERFLOW/STORM TANK - WATER COMPANY": 1356
+  },
+  "region_counts": {
+    "AN / Anglian": 12162,
+    "MD / Midlands": 12120,
+    "SW / SouthWest": 11739,
+    "NE / NorthEast": 9387,
+    "NW / NorthWest": 8200,
+    "TH / Thames": 7389,
+    "SO / Southern": 5303
+  },
+  "validation": {
+    "duplicate_notations": 0,
+    "unlocated_sampling_points": 0,
+    "distinct_source_field_shapes": 1,
+    "re_read_from_completed_evidence": "passed",
+    "validation_failures_after_reviewed_notation_contract": 0
+  },
+  "evidence_directory": "data/raw/environment-agency/water-quality/sampling-points/d362e6ec-19c3-47a7-8e5c-0c9a336dce91",
+  "database_ingestion": "not_yet_implemented",
+  "public_api": "not_yet_implemented"
+}
