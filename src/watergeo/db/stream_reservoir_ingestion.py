@@ -126,7 +126,7 @@ def load_snapshot(engine: Engine, directory: Path) -> dict[str, Any]:
                 "version": VERSION,
                 "reservoirs": len(data.reservoirs),
                 "readings": len(data.readings),
-                "manifest": json.dumps(manifest),
+                "manifest": json.dumps(manifest, allow_nan=False),
             },
         )
         connection.execute(
@@ -149,7 +149,11 @@ def load_snapshot(engine: Engine, directory: Path) -> dict[str, Any]:
                     CAST(:source_fields AS jsonb))
             """),
             [
-                {**row, "snapshot_id": identity, "source_fields": json.dumps(row["source_fields"])}
+                {
+                    **row,
+                    "snapshot_id": identity,
+                    "source_fields": json.dumps(row["source_fields"], allow_nan=False),
+                }
                 for row in data.readings
             ],
         )
