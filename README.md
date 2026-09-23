@@ -4,8 +4,8 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phase 1 complete for the reviewed April 2024 Ofwat dataset;
-Phase 2 — Environment Agency hydrology, catchment hierarchy and refresh operations — complete.** The
+**Status: Phases 1–3 complete; Phase 4 has a reviewed first Stream/company-data
+vertical slice.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -82,6 +82,11 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /ready` | HTTP 200: PostGIS is available and the migration revision matches; otherwise HTTP 503 with a generic response. |
 | `GET /v1/water-supply/dataset` | Release, source identity, attribution, licence, counts and caveats. |
 | `GET /v1/sources/status` | Accepted source availability, retrieval/observation ages and explicit freshness policy. |
+| `GET /v1/severn-trent/reservoir-levels/dataset` | Pinned 2025 company reservoir-level edition and provenance. |
+| `GET /v1/severn-trent/reservoir-levels/reservoirs` | Keyset-paginated reservoir locations and latest edition reading. |
+| `GET /v1/severn-trent/reservoir-levels/reservoirs/near` | Bounded WGS84 distance search over publisher points. |
+| `GET /v1/severn-trent/reservoir-levels/reservoirs/{reservoir_id}` | Reservoir detail with exact publisher identity. |
+| `GET /v1/severn-trent/reservoir-levels/reservoirs/{reservoir_id}/readings` | Pinned timestamp-keyset readings without unit conversion or risk inference. |
 | `GET /v1/water-quality/dataset` | Compatible sampling-point snapshot, provenance and spatial completeness. |
 | `GET /v1/water-quality/sampling-points` | Snapshot-pinned keyset listing of sampling points. |
 | `GET /v1/water-quality/sampling-points/near` | Bounded WGS84 geography search, ordered by distance and identity. |
@@ -160,7 +165,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0008`), run these from the repository root:
+With the database at migration head (`0009`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -231,7 +236,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0008`), not dataset availability. See the
+infrastructure and migration head (`0009`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Query the Catchment Data Explorer hierarchy
@@ -297,7 +302,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through bounded Water Quality observations (0008)
+migrations/              Alembic revisions through Stream reservoir levels (0009)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational, water-supply, hydrology and catchment public routes
@@ -358,3 +363,11 @@ they do not claim a complete or publisher-atomic archive. Water Quality scheduli
 unit conversion and cross-source geographic assignments remain deferred.
 Public hosting still requires the
 deployment controls described in SECURITY.md; there is no hosted endpoint yet.
+
+Phase 4's first company-data slice integrates Severn Trent Water's public 2025
+raw-water reservoir levels from Stream: 14 reservoirs and 728 weekly source readings,
+licensed CC BY 4.0. It preserves exact publisher timestamps, including the reviewed
+summer-time offset discrepancy, and does not derive restriction, safety or supply-risk
+status. See the [source assessment](docs/data-sources/stream-company-source-assessment.md),
+[ADR 0013](docs/adr/0013-severn-trent-reservoir-levels.md) and
+[walkthrough](docs/guides/stream-reservoir-levels-walkthrough.md).

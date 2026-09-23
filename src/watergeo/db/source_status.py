@@ -12,6 +12,8 @@ from watergeo.ingestion.catchments import PLAN_VERSION
 from watergeo.ingestion.catchments import VERSION as CATCHMENT_VERSION
 from watergeo.ingestion.hydrology import VERSION as HYDROLOGY_VERSION
 from watergeo.ingestion.hydrology_history import VERSION as HISTORY_VERSION
+from watergeo.ingestion.stream_reservoirs import EDITION as STREAM_RESERVOIR_EDITION
+from watergeo.ingestion.stream_reservoirs import VERSION as STREAM_RESERVOIR_VERSION
 from watergeo.ingestion.water_quality import VERSION as WATER_QUALITY_VERSION
 
 
@@ -67,6 +69,14 @@ def describe(
             PLAN_VERSION,
             "Reviewed Cycle 3 plan. Retrieval age does not establish publisher revision time "
             "or whether a newer plan exists.",
+        ),
+        "stream-reservoir-levels": (
+            "versioned_release",
+            STREAM_RESERVOIR_VERSION,
+            STREAM_RESERVOIR_EDITION,
+            "Reviewed static 2025 company edition. Retrieval age does not mean current "
+            "reservoir conditions; exact publisher timestamps are preserved and no supply "
+            "restriction, safety or risk status is inferred.",
         ),
     }
     semantics, version, source_version, caveat = contracts[source]
@@ -144,6 +154,17 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
             retrieval_completed_at AS retrieved_at FROM watergeo.catchment_snapshot
             WHERE normalization_version=:catchment_version AND plan_version=:plan
             ORDER BY retrieval_completed_at DESC, id DESC LIMIT 1""",
+        "stream-reservoir-levels": """WITH latest AS (
+            SELECT * FROM watergeo.stream_reservoir_snapshot
+            WHERE normalization_version=:stream_reservoir_version AND edition=:stream_edition
+            ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1)
+            SELECT s.id AS snapshot_id,s.content_sha256,s.retrieval_started_at,
+                s.retrieval_completed_at AS retrieved_at,o.*
+            FROM latest s CROSS JOIN LATERAL (
+                SELECT min(observed_at) AS observation_oldest_at,
+                    max(observed_at) AS observation_newest_at,
+                    count(*) AS observation_count,0 AS missing_value_count
+                FROM watergeo.stream_reservoir_level WHERE snapshot_id=s.id) o""",
     }
     parameters = {
         "water_quality_version": WATER_QUALITY_VERSION,
@@ -153,6 +174,8 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
         "history_version": HISTORY_VERSION,
         "catchment_version": CATCHMENT_VERSION,
         "plan": PLAN_VERSION,
+        "stream_reservoir_version": STREAM_RESERVOIR_VERSION,
+        "stream_edition": STREAM_RESERVOIR_EDITION,
     }
     # Snapshot metadata and observation summaries must describe the same database view.
     with engine.connect().execution_options(isolation_level="REPEATABLE READ") as connection:
