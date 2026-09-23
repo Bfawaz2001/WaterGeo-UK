@@ -81,6 +81,9 @@ def test_ingestion_role_is_least_privilege(
             "water_quality_observation_retrieval",
             "water_quality_observation_unit",
             "water_quality_observation",
+            "stream_reservoir_snapshot",
+            "stream_reservoir",
+            "stream_reservoir_level",
         ):
             assert connection.execute(
                 text("""

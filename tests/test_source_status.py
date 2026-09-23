@@ -13,7 +13,14 @@ from watergeo.core.config import Settings
 from watergeo.db.source_status import describe
 
 NOW = datetime(2026, 9, 20, tzinfo=UTC)
-SOURCES = ("ofwat", "hydrology", "hydrology-history", "catchments", "water-quality")
+SOURCES = (
+    "ofwat",
+    "hydrology",
+    "hydrology-history",
+    "catchments",
+    "water-quality",
+    "stream-reservoir-levels",
+)
 
 
 @pytest.mark.parametrize("seconds,expected", [(60, "current"), (61, "stale"), (-1, "unknown")])
@@ -41,7 +48,9 @@ def test_unavailable(source):
     assert result.retrieval_freshness == "unknown"
 
 
-@pytest.mark.parametrize("source", ("ofwat", "hydrology-history", "catchments"))
+@pytest.mark.parametrize(
+    "source", ("ofwat", "hydrology-history", "catchments", "stream-reservoir-levels")
+)
 def test_versioned_and_bounded_sources_are_not_declared_stale(source):
     result = describe(source, {"retrieved_at": NOW - timedelta(days=1000)}, NOW, settings())
     assert result.availability == "available"

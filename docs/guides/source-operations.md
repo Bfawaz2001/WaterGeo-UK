@@ -1,7 +1,7 @@
 # Source freshness and refresh operations
 
 Run these commands from the repository root after `uv sync --locked`, database setup
-and `uv run --locked alembic upgrade head`. Schema head is `0008`. The API uses
+and `uv run --locked alembic upgrade head`. Schema head is `0009`. The API uses
 the read-only application role; refresh jobs use `WATERGEO_INGESTION_PASSWORD` and the
 existing ingestion role. Jobs do not require administrator or migration credentials.
 
@@ -12,7 +12,7 @@ curl --fail http://127.0.0.1:8000/v1/sources/status
 ```
 
 The endpoint accepts no query parameters. It returns a database `checked_at` timestamp
-and five source entries. Missing compatible data is `availability: unavailable` with
+and six source entries. Missing compatible data is `availability: unavailable` with
 null identity/times. A database failure returns a sanitized 503; unavailable data is
 still a successful 200 status report. Successful and database-error responses are
 `Cache-Control: no-store`. `/health` remains process liveness; `/ready` still checks
@@ -25,6 +25,7 @@ PostGIS and schema compatibility, independent of data age.
 | `hydrology-history` | Latest compatible retrieval across measures, same ordering | One explicit measure and requested window; not coverage of all historical data. |
 | `catchments` | Latest compatible `c3-plan` snapshot, same ordering | Cycle 3 retrieval age, not publisher update time or a newer plan check. |
 | `water-quality` | Latest compatible sampling-point snapshot, same ordering | Metadata retrieval age only; observation freshness is not applicable. |
+| `stream-reservoir-levels` | Latest compatible reviewed 2025 snapshot | Static edition; retrieval age is not current reservoir status. Reading times/counts are descriptive only. |
 
 `snapshot_id` also identifies a historical retrieval. `content_sha256` identifies
 accepted source evidence; `normalization_version` is the source contract version
@@ -69,6 +70,7 @@ sources have unknown retrieval freshness. No endpoint makes a live publisher req
 uv run --locked python scripts/refresh_sources.py hydrology
 uv run --locked python scripts/refresh_sources.py catchments --timeout-seconds 7200
 uv run --locked python scripts/refresh_sources.py ofwat
+uv run --locked python scripts/refresh_sources.py stream-reservoir-levels
 uv run --locked python scripts/refresh_sources.py hydrology-history \
   --measure-id a-flow-i-900-m3s-qualified \
   --from 2026-09-01T00:00:00Z --to 2026-09-02T00:00:00Z
@@ -79,7 +81,9 @@ the station API. History requires timezone-aware bounds of at most 31 days. Othe
 sources reject Hydrology history arguments. Water Quality observations have their own
 point/determinand and date-only scope, described in the
 [Water Quality walkthrough](water-quality-walkthrough.md). No arbitrary source URL is accepted. Ofwat only
-accepts the exact reviewed archive; a changed upstream file requires review.
+accepts the exact reviewed archive; a changed upstream file requires review. Stream
+reservoir refresh accepts only the reviewed item/layer and 2025 contract; it is described
+in the [Stream reservoir walkthrough](stream-reservoir-levels-walkthrough.md).
 
 Jobs log JSON to stdout: `refresh_started`, `refresh_phase` (`fetch`, `validate`,
 `load`), 30-second `refresh_progress`, and `refresh_complete` (`published`, snapshot
@@ -165,3 +169,8 @@ failure, evidence and retry framework. Their explicit retrieval IDs provide prov
 they do not add an aggregate freshness entry to `/v1/sources/status`. There is no
 Water Quality scheduler in this milestone: choose scopes, cadence and operational
 monitoring explicitly before deploying one.
+
+The Stream reservoir source is a static 2025 edition. It has a separate lock key and
+supports verified offline retries, but no freshness threshold or scheduler. A later
+edition needs source review and a new normalization contract rather than silently
+replacing the accepted scope.

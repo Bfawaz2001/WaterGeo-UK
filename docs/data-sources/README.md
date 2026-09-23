@@ -27,6 +27,11 @@ synthetic or verify and record their redistribution rights.
 
 ## Assessments
 
+- [Stream and water-company public sources](stream-company-source-assessment.md),
+  reviewed 23 September 2026: 426 public Stream catalogue items compared using explicit
+  licence/access/identity/quality criteria. Severn Trent Water's CC BY 4.0 2025
+  reservoir-level edition was selected; 14 reservoirs and 728 readings were verified.
+
 - [Environment Agency Water Quality sampling points](environment-agency-water-quality.md)
   and [bounded observations](environment-agency-water-quality-observations.md), reviewed
   22 September 2026: 66,300 retained sampling points; a one-day AN-CORBY/0085
