@@ -91,3 +91,43 @@ def test_ca_cannot_silently_be_ignored():
         Settings(
             _env_file=None, db_password=SecretStr("synthetic-password"), db_sslrootcert="ca.pem"
         )
+
+
+def test_production_requires_trusted_hosts_and_verified_database_tls():
+    with pytest.raises(ValidationError, match="trusted host"):
+        Settings(
+            _env_file=None,
+            db_password=SecretStr("synthetic-password"),
+            service_environment="production",
+        )
+    with pytest.raises(ValidationError, match="verify-full"):
+        Settings(
+            _env_file=None,
+            db_password=SecretStr("synthetic-password"),
+            service_environment="production",
+            trusted_hosts=["api.example.org"],
+        )
+
+
+def test_production_configuration_accepts_explicit_hosts_and_verified_tls():
+    settings = Settings(
+        _env_file=None,
+        db_password=SecretStr("synthetic-password"),
+        service_environment="production",
+        trusted_hosts=["api.example.org", "*.ondigitalocean.app"],
+        db_sslmode="verify-full",
+        db_sslrootcert="/run/secrets/database-ca.pem",
+    )
+    assert settings.trusted_hosts == ["api.example.org", "*.ondigitalocean.app"]
+
+
+@pytest.mark.parametrize(
+    "host", ["*", "https://api.example.org", "api.example.org/path", "api example.org", "bad*host"]
+)
+def test_trusted_hosts_reject_ambiguous_values(host: str):
+    with pytest.raises(ValidationError, match="explicit hostnames"):
+        Settings(
+            _env_file=None,
+            db_password=SecretStr("synthetic-password"),
+            trusted_hosts=[host],
+        )

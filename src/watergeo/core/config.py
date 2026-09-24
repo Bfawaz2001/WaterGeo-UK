@@ -51,6 +51,8 @@ class DatabaseSettings(BaseSettings):
 
 
 class Settings(DatabaseSettings):
+    service_environment: Literal["development", "production"] = "development"
+    trusted_hosts: list[str] = Field(default_factory=list)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     hydrology_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
     hydrology_observation_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
@@ -65,6 +67,31 @@ class Settings(DatabaseSettings):
     @classmethod
     def optional_age_limit(cls, value: object) -> object:
         return None if value == "" else value
+
+    @field_validator("trusted_hosts")
+    @classmethod
+    def valid_trusted_hosts(cls, hosts: list[str]) -> list[str]:
+        for host in hosts:
+            if (
+                not host
+                or host == "*"
+                or any(character.isspace() for character in host)
+                or "://" in host
+                or "/" in host
+                or ("*" in host and not host.startswith("*."))
+            ):
+                raise ValueError("trusted hosts must be explicit hostnames")
+        return hosts
+
+    @model_validator(mode="after")
+    def production_is_fail_closed(self) -> Self:
+        if self.service_environment != "production":
+            return self
+        if not self.trusted_hosts:
+            raise ValueError("production requires at least one trusted host")
+        if self.db_sslmode != "verify-full" or not self.db_sslrootcert:
+            raise ValueError("production requires verify-full database TLS and a trusted CA")
+        return self
 
 
 class MigrationSettings(DatabaseSettings):

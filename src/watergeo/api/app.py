@@ -8,6 +8,7 @@ from typing import Annotated, Literal
 from fastapi import Depends, FastAPI, Response
 from pydantic import BaseModel
 from sqlalchemy import Engine
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from watergeo.api.catchments import router as catchments_router
 from watergeo.api.dependencies import get_database as get_database
@@ -56,6 +57,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ),
         lifespan=lifespan,
     )
+    if configuration.service_environment == "production":
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=configuration.trusted_hosts)
 
     @app.get("/health", tags=["operations"])
     def health(response: Response) -> HealthResponse:
