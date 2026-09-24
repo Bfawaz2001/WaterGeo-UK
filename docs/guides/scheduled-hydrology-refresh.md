@@ -1,5 +1,10 @@
 # Scheduled Hydrology latest refresh
 
+> The workflow retains operational logs, not raw source evidence. The production
+> deployment policy requires durable encrypted evidence before publication, so do
+> not point this schedule at production until that retention gate is implemented
+> and failure-tested. See [production data bootstrap](production-data-bootstrap.md).
+
 Phase 2 is implemented end to end: ingestion → validation → storage → API → freshness
 → refresh scheduling. This is deployable repository infrastructure, not a claim that
 a production database, API or alerting service has been deployed.

@@ -4,12 +4,17 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–5 complete.** The
+**Status: Phases 1–5 complete; Phase 6 deployment foundation is in progress.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
 longitude/latitude. This is a local development service; a hosted API and visual
 explorer come later.
+
+The repository now defines a production architecture, immutable image workflow,
+fail-closed production configuration and deployment smoke checks. No public endpoint
+or external infrastructure exists. See the [production operations runbook](docs/guides/production-operations.md)
+and [hosting assessment](docs/deployment/hosting-assessment-2026-09-24.md).
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
