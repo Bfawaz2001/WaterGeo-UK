@@ -40,6 +40,22 @@ def test_health_does_not_need_database(client: TestClient, database: MagicMock) 
     database.connect.assert_not_called()
 
 
+def test_production_rejects_untrusted_host(database: MagicMock) -> None:
+    settings = Settings(
+        _env_file=None,
+        db_password=SecretStr("test-password-long"),
+        service_environment="production",
+        trusted_hosts=["api.example.org"],
+        db_sslmode="verify-full",
+        db_sslrootcert="/run/secrets/database-ca.pem",
+    )
+    app = create_app(settings)
+    app.dependency_overrides[get_database] = lambda: database
+    with TestClient(app, base_url="https://api.example.org") as test_client:
+        assert test_client.get("/health").status_code == 200
+        assert test_client.get("/health", headers={"host": "attacker.example"}).status_code == 400
+
+
 def test_readiness_success(client: TestClient) -> None:
     response = client.get("/ready")
     assert response.status_code == 200

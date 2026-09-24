@@ -30,7 +30,14 @@ There is no production deployment or response-time guarantee yet.
   third-party Actions are pinned to verified commit SHAs. Dependency auditing,
   Dependabot, and CodeQL are configured.
 
-These controls are a development baseline, not a completed public-hosting design.
+Production mode requires `verify-full` database TLS with a CA file for the API,
+migration and ingestion identities. The API additionally requires exact trusted
+hosts. Container bases are pinned by digest, and the GHCR
+publication job has the only package-write permission; publishing never deploys.
+The production design retains separate API, migration, ingestion and administrator
+identities. See the [production operations runbook](docs/guides/production-operations.md).
+
+These controls are a deployment foundation, not evidence of a public deployment.
 GitHub secret scanning/push protection, private reporting, and branch protections
 are repository settings and must be enabled by the maintainer where available.
 Do not enable CodeQL default setup alongside the committed advanced workflow.
@@ -42,7 +49,8 @@ Future provider clients must use approved publisher hosts, validate redirects,
 bound response sizes and timeouts, and retry only appropriate transient failures.
 No internal APIs or credentials may be used.
 
-Before public hosting, review TLS, trusted hosts/proxies, resource and request
-limits, rate limiting, database TLS/network access, backup restoration, secret
-rotation, and operational monitoring. Local Compose credentials are for local
-development; do not reuse them elsewhere.
+Before public hosting, configure the reviewed TLS, trusted-host, edge-limit,
+database-network, backup restoration, evidence retention, secret rotation and
+monitoring contracts. Proxy headers remain disabled until the exact ingress proxy
+network is known. Local Compose credentials are for local development; do not reuse
+them elsewhere.
