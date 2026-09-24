@@ -4,8 +4,7 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–3 complete; Phase 4 has a reviewed first Stream/company-data
-vertical slice.** The
+**Status: Phases 1–5 complete.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -71,6 +70,10 @@ uv run --locked uvicorn watergeo.api.app:create_app --factory --reload --no-acce
 ```
 
 Open <http://127.0.0.1:8000/docs> for OpenAPI documentation.
+
+For typed Python client and read-only CLI examples, see the
+[developer quickstart](docs/guides/developer-quickstart.md). WaterGeo has no hosted
+endpoint; configure the client or CLI with a local or self-hosted server URL.
 
 Existing databases from before the ingestion role was introduced need that role
 provisioned before migration `0003`; editing `.env` alone does not create it. See
