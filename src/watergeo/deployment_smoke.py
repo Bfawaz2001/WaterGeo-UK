@@ -56,6 +56,7 @@ def run_smoke_checks(
     base_url: str,
     *,
     data_path: str | None = None,
+    allow_http: bool = False,
     transport: httpx.BaseTransport | None = None,
 ) -> list[str]:
     """Run platform-independent deployment checks and return their names."""
@@ -71,6 +72,8 @@ def run_smoke_checks(
         or url.fragment
     ):
         raise SmokeFailure("base URL must be HTTP(S) without credentials, query, or fragment")
+    if url.scheme == "http" and not allow_http:
+        raise SmokeFailure("HTTPS is required unless local HTTP is explicitly allowed")
     if data_path is not None and (not data_path.startswith("/v1/") or "//" in data_path):
         raise SmokeFailure("data path must be an absolute /v1/ path")
 
@@ -108,14 +111,25 @@ def run_smoke_checks(
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check a deployed WaterGeo API")
-    parser.add_argument("base_url", help="Explicit HTTP(S) deployment base URL")
+    parser.add_argument(
+        "base_url", help="Explicit HTTPS deployment base URL (HTTP requires --allow-http)"
+    )
     parser.add_argument(
         "--data-path",
         help="Representative /v1/ endpoint expected to return 200 after data bootstrap",
     )
+    parser.add_argument(
+        "--allow-http",
+        action="store_true",
+        help="allow insecure HTTP for local testing only; never use for public go-live validation",
+    )
     arguments = parser.parse_args(argv)
     try:
-        checks = run_smoke_checks(arguments.base_url, data_path=arguments.data_path)
+        checks = run_smoke_checks(
+            arguments.base_url,
+            data_path=arguments.data_path,
+            allow_http=arguments.allow_http,
+        )
     except SmokeFailure as error:
         print(f"deployment smoke check failed: {error}", file=sys.stderr)
         return 1

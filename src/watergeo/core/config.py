@@ -21,13 +21,18 @@ class DatabaseSettings(BaseSettings):
     db_name: str = Field(default="watergeo", min_length=1)
     db_user: str = Field(default="watergeo_app", min_length=1)
     db_password: SecretStr = Field(min_length=16)
+    service_environment: Literal["development", "production"] = "development"
     db_sslmode: Literal["verify-full"] | None = None
     db_sslrootcert: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
-    def require_verification_for_ca(self) -> Self:
+    def require_verified_production_database_tls(self) -> Self:
         if self.db_sslrootcert and self.db_sslmode != "verify-full":
             raise ValueError("A database CA requires verify-full TLS mode")
+        if self.service_environment == "production" and (
+            self.db_sslmode != "verify-full" or not self.db_sslrootcert
+        ):
+            raise ValueError("production requires verify-full database TLS and a trusted CA")
         return self
 
     @property
@@ -51,7 +56,6 @@ class DatabaseSettings(BaseSettings):
 
 
 class Settings(DatabaseSettings):
-    service_environment: Literal["development", "production"] = "development"
     trusted_hosts: list[str] = Field(default_factory=list)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     hydrology_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
@@ -74,11 +78,10 @@ class Settings(DatabaseSettings):
         for host in hosts:
             if (
                 not host
-                or host == "*"
+                or "*" in host
                 or any(character.isspace() for character in host)
                 or "://" in host
                 or "/" in host
-                or ("*" in host and not host.startswith("*."))
             ):
                 raise ValueError("trusted hosts must be explicit hostnames")
         return hosts
@@ -89,8 +92,6 @@ class Settings(DatabaseSettings):
             return self
         if not self.trusted_hosts:
             raise ValueError("production requires at least one trusted host")
-        if self.db_sslmode != "verify-full" or not self.db_sslrootcert:
-            raise ValueError("production requires verify-full database TLS and a trusted CA")
         return self
 
 

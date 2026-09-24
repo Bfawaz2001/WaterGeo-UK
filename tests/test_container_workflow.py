@@ -37,6 +37,35 @@ def test_container_workflow_pins_actions_and_checkout_credentials():
                 assert step["with"]["persist-credentials"] == "false"
 
 
+def test_every_multi_architecture_build_sets_up_only_arm64_qemu_before_buildx():
+    workflow = load_workflow()
+    for job in workflow["jobs"].values():
+        steps = job["steps"]
+        multi_arch_builds = [
+            index
+            for index, step in enumerate(steps)
+            if step.get("with", {}).get("platforms") == "linux/amd64,linux/arm64"
+        ]
+        if not multi_arch_builds:
+            continue
+        qemu = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get("uses", "").startswith("docker/setup-qemu-action@")
+        )
+        buildx = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get("uses", "").startswith("docker/setup-buildx-action@")
+        )
+        assert qemu < buildx < multi_arch_builds[0]
+        assert steps[qemu]["with"]["platforms"] == "arm64"
+        assert re.fullmatch(
+            r"docker\.io/tonistiigi/binfmt:latest@sha256:[0-9a-f]{64}",
+            steps[qemu]["with"]["image"],
+        )
+
+
 def test_pull_request_build_cannot_publish_or_receive_credentials():
     workflow = load_workflow()
     build = workflow["jobs"]["build"]

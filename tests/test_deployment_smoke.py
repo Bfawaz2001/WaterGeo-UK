@@ -3,6 +3,7 @@ import json
 import httpx2 as httpx
 import pytest
 
+import watergeo.deployment_smoke as deployment_smoke
 from watergeo.deployment_smoke import SmokeFailure, run_smoke_checks
 
 
@@ -44,6 +45,37 @@ def test_smoke_checks_operational_openapi_data_and_invalid_request():
 def test_smoke_rejects_unsafe_base_urls(url: str):
     with pytest.raises(SmokeFailure, match="base URL"):
         run_smoke_checks(url, transport=httpx.MockTransport(response_for))
+
+
+def test_smoke_rejects_http_by_default():
+    with pytest.raises(SmokeFailure, match="HTTPS is required"):
+        run_smoke_checks("http://127.0.0.1:8000", transport=httpx.MockTransport(response_for))
+
+
+def test_smoke_allows_http_only_with_explicit_local_opt_in():
+    checks = run_smoke_checks(
+        "http://127.0.0.1:8000",
+        allow_http=True,
+        transport=httpx.MockTransport(response_for),
+    )
+    assert checks == ["health", "readiness", "openapi", "invalid_request"]
+
+
+def test_smoke_cli_forwards_explicit_http_opt_in(monkeypatch, capsys):
+    received = {}
+
+    def run(base_url, *, data_path=None, allow_http=False):
+        received.update(base_url=base_url, data_path=data_path, allow_http=allow_http)
+        return ["health"]
+
+    monkeypatch.setattr(deployment_smoke, "run_smoke_checks", run)
+    assert deployment_smoke.main(["http://127.0.0.1:8000", "--allow-http"]) == 0
+    assert received == {
+        "base_url": "http://127.0.0.1:8000",
+        "data_path": None,
+        "allow_http": True,
+    }
+    assert '"status":"ok"' in capsys.readouterr().out
 
 
 def test_smoke_fails_closed_when_readiness_fails():

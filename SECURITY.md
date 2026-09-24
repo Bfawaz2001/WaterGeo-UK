@@ -30,8 +30,9 @@ There is no production deployment or response-time guarantee yet.
   third-party Actions are pinned to verified commit SHAs. Dependency auditing,
   Dependabot, and CodeQL are configured.
 
-Production mode additionally requires explicit trusted hosts plus `verify-full`
-database TLS with a CA file. Container bases are pinned by digest, and the GHCR
+Production mode requires `verify-full` database TLS with a CA file for the API,
+migration and ingestion identities. The API additionally requires exact trusted
+hosts. Container bases are pinned by digest, and the GHCR
 publication job has the only package-write permission; publishing never deploys.
 The production design retains separate API, migration, ingestion and administrator
 identities. See the [production operations runbook](docs/guides/production-operations.md).

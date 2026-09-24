@@ -23,7 +23,7 @@ Set these non-secret API values:
 
 ```text
 WATERGEO_SERVICE_ENVIRONMENT=production
-WATERGEO_TRUSTED_HOSTS=["api.example.org"]
+WATERGEO_TRUSTED_HOSTS=["api.example.org","actual-app-name.ondigitalocean.app"]
 WATERGEO_DB_HOST=<private database hostname matching its certificate>
 WATERGEO_DB_PORT=25060
 WATERGEO_DB_NAME=watergeo
@@ -45,7 +45,11 @@ Store values in the platform secret manager, mask them from logs, restrict acces
 by component, and rotate one role at a time. Never save a composed connection URL.
 The provider CA may be configuration rather than a secret, but its file must remain
 read-only and controlled. Production settings refuse to start without an explicit
-trusted host, `verify-full`, and the CA path. `*` is rejected.
+trusted host, `verify-full`, and the CA path. Every database-connected API, migration,
+and ingestion job must set `WATERGEO_SERVICE_ENVIRONMENT=production`; this enforces
+verified TLS for all three identities. Every trusted host must be exact: all `*`
+characters are rejected. Replace the generated-host example with the actual App
+Platform component hostname when provisioning.
 
 TLS terminates at the managed ingress. Keep Uvicorn's proxy-header support disabled
 until the exact ingress proxy network is known and tested; never set an unrestricted
@@ -116,8 +120,16 @@ uv run --locked python -m watergeo.deployment_smoke \
   https://api.example.org --data-path /v1/sources/status
 ```
 
-The command disables environment proxy inheritance and redirects, uses ten-second
-timeouts, bounds every response at 2 MiB, and requires JSON contracts for `/health`,
+For a local production-shaped service only, opt into plain HTTP explicitly:
+
+```sh
+uv run --locked python -m watergeo.deployment_smoke \
+  http://127.0.0.1:8000 --allow-http
+```
+
+HTTPS is required by default; `--allow-http` is never valid for public go-live
+evidence. The command disables environment proxy inheritance and redirects, uses
+ten-second timeouts, bounds every response at 2 MiB, and requires JSON contracts for `/health`,
 `/ready`, `/openapi.json`, an optional `/v1/` data path, and a 422 invalid request.
 It also rejects common database/stack leakage markers. A data path is mandatory in
 the operator's go-live record after bootstrap.

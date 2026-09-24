@@ -93,13 +93,7 @@ def test_ca_cannot_silently_be_ignored():
         )
 
 
-def test_production_requires_trusted_hosts_and_verified_database_tls():
-    with pytest.raises(ValidationError, match="trusted host"):
-        Settings(
-            _env_file=None,
-            db_password=SecretStr("synthetic-password"),
-            service_environment="production",
-        )
+def test_production_api_requires_verified_database_tls():
     with pytest.raises(ValidationError, match="verify-full"):
         Settings(
             _env_file=None,
@@ -109,20 +103,81 @@ def test_production_requires_trusted_hosts_and_verified_database_tls():
         )
 
 
+def test_production_api_requires_trusted_hosts():
+    with pytest.raises(ValidationError, match="trusted host"):
+        Settings(
+            _env_file=None,
+            db_password=SecretStr("synthetic-password"),
+            service_environment="production",
+            db_sslmode="verify-full",
+            db_sslrootcert="/run/secrets/database-ca.pem",
+        )
+
+
 def test_production_configuration_accepts_explicit_hosts_and_verified_tls():
     settings = Settings(
         _env_file=None,
         db_password=SecretStr("synthetic-password"),
         service_environment="production",
-        trusted_hosts=["api.example.org", "*.ondigitalocean.app"],
+        trusted_hosts=["api.example.org", "actual-app-name.ondigitalocean.app"],
         db_sslmode="verify-full",
         db_sslrootcert="/run/secrets/database-ca.pem",
     )
-    assert settings.trusted_hosts == ["api.example.org", "*.ondigitalocean.app"]
+    assert settings.trusted_hosts == ["api.example.org", "actual-app-name.ondigitalocean.app"]
+
+
+def test_production_migrations_require_and_accept_verified_database_tls(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("WATERGEO_MIGRATION_PASSWORD", "migration-password-long")
+    with pytest.raises(ValidationError, match="verify-full"):
+        MigrationSettings(_env_file=None, service_environment="production")
+    settings = MigrationSettings(
+        _env_file=None,
+        service_environment="production",
+        db_sslmode="verify-full",
+        db_sslrootcert="/run/secrets/database-ca.pem",
+    )
+    assert settings.service_environment == "production"
+
+
+def test_production_ingestion_requires_and_accepts_verified_database_tls(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("WATERGEO_INGESTION_PASSWORD", "ingestion-password-long")
+    with pytest.raises(ValidationError, match="verify-full"):
+        IngestionSettings(_env_file=None, service_environment="production")
+    settings = IngestionSettings(
+        _env_file=None,
+        service_environment="production",
+        db_sslmode="verify-full",
+        db_sslrootcert="/run/secrets/database-ca.pem",
+    )
+    assert settings.service_environment == "production"
+
+
+def test_development_database_settings_remain_tls_optional(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("WATERGEO_MIGRATION_PASSWORD", "migration-password-long")
+    monkeypatch.setenv("WATERGEO_INGESTION_PASSWORD", "ingestion-password-long")
+    settings = Settings(_env_file=None, db_password=SecretStr("synthetic-password"))
+    migration = MigrationSettings(_env_file=None)
+    ingestion = IngestionSettings(_env_file=None)
+    assert settings.service_environment == "development"
+    assert migration.service_environment == "development"
+    assert ingestion.service_environment == "development"
+    assert all(dict(item.database_url.query) == {} for item in (settings, migration, ingestion))
 
 
 @pytest.mark.parametrize(
-    "host", ["*", "https://api.example.org", "api.example.org/path", "api example.org", "bad*host"]
+    "host",
+    [
+        "*",
+        "*.ondigitalocean.app",
+        "https://api.example.org",
+        "api.example.org/path",
+        "api example.org",
+        "bad*host",
+    ],
 )
 def test_trusted_hosts_reject_ambiguous_values(host: str):
     with pytest.raises(ValidationError, match="explicit hostnames"):
