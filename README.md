@@ -4,17 +4,34 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–5 complete; Phase 6 deployment foundation is in progress.** The
+**Status: Phases 1–5 and the Phase 6 deployment foundation are complete. Phase 7
+adds the first browser map explorer.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
 longitude/latitude. This is a local development service; a hosted API and visual
-explorer come later.
+explorer deployment may come later.
 
-The repository now defines a production architecture, immutable image workflow,
+The repository defines a production architecture, immutable image workflow,
 fail-closed production configuration and deployment smoke checks. No public endpoint
 or external infrastructure exists. See the [production operations runbook](docs/guides/production-operations.md)
 and [hosting assessment](docs/deployment/hosting-assessment-2026-09-24.md).
+
+The [map explorer](docs/guides/explorer-local-development.md) is a separate React,
+TypeScript and MapLibre application under `web/`. It shows bounded nearby point
+layers, demand-loaded water-supply and Water Body geometry, source status and
+provenance without adding browser CORS or API credentials. Node 24.15+ within the
+Node 24 LTS line is required:
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+Run the API on `127.0.0.1:8000`; Vite proxies same-origin API paths during local
+development. WaterGeo still has no public hosted endpoint or externally provisioned
+production environment.
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
