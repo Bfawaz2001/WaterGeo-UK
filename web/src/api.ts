@@ -63,7 +63,7 @@ async function readBoundedJson(response: Response): Promise<unknown> {
 
 async function request<T>(
   path: string,
-  options: { signal?: AbortSignal | undefined; immutable?: boolean | undefined } = {},
+  options: { signal?: AbortSignal | undefined; immutable?: boolean | undefined; responseKind?: "json" | "geojson" } = {},
 ): Promise<T> {
   const url = pathFor(path);
   if (options.immutable && immutableCache.has(url)) return immutableCache.get(url) as T;
@@ -83,7 +83,21 @@ async function request<T>(
       if (error instanceof DOMException && error.name === "AbortError") throw error;
       throw new ApiError(0, "WaterGeo could not be reached");
     }
-    const body = await readBoundedJson(response);
+    const expectedType = response.ok && options.responseKind === "geojson"
+      ? "application/geo+json" : "application/json";
+    const mediaType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+    if (mediaType !== expectedType) {
+      throw new ApiError(response.status, "WaterGeo returned an unexpected response media type");
+    }
+    let body: unknown;
+    try {
+      body = await readBoundedJson(response);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new ApiError(response.status, "WaterGeo returned malformed JSON");
+      }
+      throw error;
+    }
     if (!response.ok) {
       const detail =
         typeof body === "object" && body !== null && "detail" in body && typeof body.detail === "string"
@@ -177,10 +191,11 @@ export const api = {
     request<AreaFeature>(`/v1/water-supply/areas/${sourceId}/geometry`, {
       signal,
       immutable: true,
+      responseKind: "geojson",
     }),
 
   catchmentDataset: (signal?: AbortSignal) =>
-    request<CatchmentDataset>("/v1/catchments/dataset", { signal, immutable: true }),
+    request<CatchmentDataset>("/v1/catchments/dataset", { signal }),
 
   waterBodies: (snapshotId?: string, afterId?: string, signal?: AbortSignal) =>
     request<WaterBodyPage>(
@@ -191,13 +206,12 @@ export const api = {
   waterBody: (identity: string, signal?: AbortSignal) =>
     request<WaterBodyDetail>(`/v1/catchments/water-bodies/${encodeURIComponent(identity)}`, {
       signal,
-      immutable: true,
     }),
 
   waterBodyGeometry: (identity: string, signal?: AbortSignal) =>
     request<GeoJSONFeatureCollection>(
       `/v1/catchments/water-bodies/${encodeURIComponent(identity)}/geometry`,
-      { signal, immutable: true },
+      { signal, responseKind: "geojson" },
     ),
 };
 

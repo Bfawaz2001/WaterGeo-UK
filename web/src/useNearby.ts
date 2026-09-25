@@ -114,8 +114,15 @@ export function useNearby(
               if (result.reason instanceof DOMException && result.reason.name === "AbortError") return;
               next.errors[layer] = message(result.reason);
               if (result.reason instanceof ApiError && result.reason.message.includes("snapshot")) {
-                if (layer === "water-quality") waterQualitySnapshot.current = undefined;
-                if (layer === "reservoirs") reservoirSnapshot.current = undefined;
+                if (layer === "water-quality") {
+                  waterQualitySnapshot.current = undefined;
+                  next.waterQuality = [];
+                }
+                if (layer === "reservoirs") {
+                  reservoirSnapshot.current = undefined;
+                  next.reservoirs = [];
+                }
+                delete next.provenance[layer];
               }
               return;
             }

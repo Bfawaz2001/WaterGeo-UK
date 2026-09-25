@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { api } from "./api";
+import { ApiError, api } from "./api";
 import { dataset } from "./test/fixtures";
 import type { HydrologyStation, NearbyPage } from "./types";
 import { useNearby } from "./useNearby";
@@ -62,4 +62,32 @@ it("debounces movement, aborts stale requests, and ignores late results", async 
     await Promise.resolve();
   });
   expect(result.current.hydrology[0]?.station_id).toBe("new");
+});
+
+it.each(["water-quality", "reservoirs"] as const)("clears only mismatched %s results and permits a fresh snapshot", async (layer) => {
+  vi.useFakeTimers();
+  const item = { station_id: "keep" } as HydrologyStation;
+  vi.spyOn(api, "hydrologyNear").mockResolvedValue({ dataset, items: [item], next_after_id: null });
+  const method = layer === "water-quality" ? "waterQualityNear" : "reservoirsNear";
+  const target = vi.spyOn(api, method)
+    .mockResolvedValueOnce({ dataset, items: [{}] as never[], next_after_id: null })
+    .mockRejectedValueOnce(new ApiError(503, "WaterGeo changed snapshot during this map interaction"))
+    .mockResolvedValueOnce({ dataset: { ...dataset, snapshot_id: "B" }, items: [{}] as never[], next_after_id: null });
+  const layers = new Set(["hydrology", layer] as const);
+  const { result, rerender } = renderHook(({ longitude }) =>
+    useNearby({ longitude, latitude: 52, radiusM: 5000 }, layers, 20),
+  { initialProps: { longitude: -1 } });
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(result.current.provenance[layer]?.snapshot_id).toBe(dataset.snapshot_id);
+  rerender({ longitude: -2 });
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(result.current[layer === "water-quality" ? "waterQuality" : "reservoirs"]).toEqual([]);
+  expect(result.current.provenance[layer]).toBeUndefined();
+  expect(result.current.errors[layer]).toBeTruthy();
+  expect(result.current.hydrology).toEqual([item]);
+  rerender({ longitude: -3 });
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(target.mock.calls[2]?.[4]).toBeUndefined();
+  expect(result.current.provenance[layer]?.snapshot_id).toBe("B");
+  expect(result.current.errors[layer]).toBeUndefined();
 });

@@ -194,6 +194,7 @@ export function MapView({
     };
     const loaded = () => {
       addExplorerSources(map);
+      setStyleRevision((revision) => revision + 1);
       publishViewport();
     };
     const clicked = (event: MapMouseEvent) => {

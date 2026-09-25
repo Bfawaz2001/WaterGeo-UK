@@ -5,7 +5,7 @@ import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
 import type { AreaPage, AreaSummary, LayerId, SelectedFeature, SourceStatuses } from "./types";
-import { explorerSearch, parseExplorerState } from "./urlState";
+import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlState";
 import { useNearby, type ViewportQuery } from "./useNearby";
 import { WaterBodyBrowser } from "./WaterBodyBrowser";
 
@@ -94,9 +94,11 @@ export function App() {
         initialSelectionApplied.current = true;
         queueMicrotask(() => setSelected({ kind, item, dataset }));
       }
-    } else if (kind === "water-supply" && /^\d{1,19}$/u.test(identity)) {
+    } else if (kind === "water-supply") {
       initialSelectionApplied.current = true;
-      void api.areaGeometry(Number(identity)).then((item) => setSelected({ kind, item })).catch(() => setAreaError("The shared water-supply area is unavailable."));
+      const sourceId = parseWaterSupplyId(identity);
+      if (sourceId === null) return;
+      void api.areaGeometry(sourceId).then((item) => setSelected({ kind, item })).catch(() => setAreaError("The shared water-supply area is unavailable."));
     } else if (kind === "water-body") {
       initialSelectionApplied.current = true;
       const controller = new AbortController();

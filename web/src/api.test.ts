@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { api, clearApiCaches } from "./api";
+import { ApiError, api, clearApiCaches } from "./api";
 
 afterEach(() => {
   clearApiCaches();
@@ -91,4 +91,44 @@ it("deduplicates identical metadata requests", async () => {
   resolve(json({ checked_at: "2026-09-24T00:00:00Z", sources: [] }));
   await Promise.all([first, second]);
   expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it("refetches current Catchment resources after the current snapshot changes", async () => {
+  let snapshot = "A";
+  const fetcher = vi.fn((url: string) => Promise.resolve(new Response(JSON.stringify({ snapshot_id: snapshot }), {
+    headers: { "content-type": url.endsWith("/geometry") ? "application/geo+json" : "application/json" },
+  })));
+  vi.stubGlobal("fetch", fetcher);
+  const read = () => Promise.all([api.catchmentDataset(), api.waterBody("GB1"), api.waterBodyGeometry("GB1")]);
+  expect((await read()).map((value) => value.snapshot_id)).toEqual(["A", "A", "A"]);
+  snapshot = "B";
+  expect((await read()).map((value) => value.snapshot_id)).toEqual(["B", "B", "B"]);
+  expect(fetcher).toHaveBeenCalledTimes(6);
+});
+
+it.each([
+  ["application/json; charset=utf-8", false],
+  ["application/geo+json; charset=utf-8", true],
+])("accepts the declared response contract %s", async (contentType, geometry) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { headers: { "content-type": contentType } })));
+  await expect(geometry ? api.areaGeometry(3) : api.sourceStatuses()).resolves.toEqual({});
+});
+
+it.each([
+  ["text/html", false], ["text/html", true],
+  ["application/geo+json", false], ["application/json", true],
+])("rejects unexpected media type %s for geometry=%s", async (contentType, geometry) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("private body", { headers: { "content-type": contentType } })));
+  await expect(geometry ? api.waterBodyGeometry("GB1") : api.sourceStatuses())
+    .rejects.toMatchObject({ constructor: ApiError, message: "WaterGeo returned an unexpected response media type" });
+});
+
+it("wraps malformed JSON without exposing the body", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("private invalid JSON", { headers: { "content-type": "application/json" } })));
+  await expect(api.sourceStatuses()).rejects.toMatchObject({ constructor: ApiError, message: "WaterGeo returned malformed JSON" });
+});
+
+it("retains the byte limit", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { headers: { "content-type": "application/json", "content-length": String(11 * 1024 * 1024) } })));
+  await expect(api.sourceStatuses()).rejects.toThrow("size limit");
 });

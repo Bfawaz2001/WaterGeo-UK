@@ -24,6 +24,18 @@ const LAYERS = new Set<LayerId>([
 ]);
 const SELECTION = /^(hydrology|water-quality|reservoirs|water-supply|water-body):.{1,160}$/u;
 
+export function parseWaterSupplyId(value: string): number | null {
+  if (!/^[0-9]+$/u.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function validSelection(value: string | null): value is string {
+  return value !== null && SELECTION.test(value) &&
+    (!value.startsWith("water-supply:") ||
+      parseWaterSupplyId(value.slice("water-supply:".length)) !== null);
+}
+
 function finiteIn(value: string | null, minimum: number, maximum: number): number | null {
   if (value === null || value.trim() === "") return null;
   const parsed = Number(value);
@@ -45,7 +57,7 @@ export function parseExplorerState(search: string): ExplorerState {
     latitude,
     zoom,
     layers: layers.size > 0 ? layers : new Set(DEFAULT_STATE.layers),
-    selected: selectedValue !== null && SELECTION.test(selectedValue) ? selectedValue : null,
+    selected: validSelection(selectedValue) ? selectedValue : null,
   };
 }
 
@@ -56,7 +68,7 @@ export function explorerSearch(state: ExplorerState): string {
     z: state.zoom.toFixed(2),
     layers: [...state.layers].sort().join(","),
   });
-  if (state.selected !== null && SELECTION.test(state.selected)) {
+  if (validSelection(state.selected)) {
     params.set("selected", state.selected);
   }
   return `?${params.toString()}`;

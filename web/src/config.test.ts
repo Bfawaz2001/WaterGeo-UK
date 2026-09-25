@@ -6,7 +6,7 @@ describe("explorer configuration", () => {
   it("accepts only relative same-origin API prefixes", () => {
     expect(apiBasePath(undefined)).toBe("");
     expect(apiBasePath("/watergeo/")).toBe("/watergeo");
-    for (const value of ["watergeo", "//other.example", "https://other.example"]) {
+    for (const value of ["watergeo", "//other.example", "https://other.example", "/watergeo?x=1", "/watergeo#x", "/\\other"]) {
       expect(() => apiBasePath(value)).toThrow("same-origin absolute path");
     }
   });

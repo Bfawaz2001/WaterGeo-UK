@@ -17,7 +17,7 @@ export const FALLBACK_STYLE: StyleSpecification = {
 
 export function apiBasePath(value = import.meta.env.VITE_API_BASE_PATH): string {
   if (value === undefined || value === "") return "";
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("://")) {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("://") || /[?#\\]/u.test(value)) {
     throw new Error("VITE_API_BASE_PATH must be a same-origin absolute path");
   }
   return value.replace(/\/$/, "");

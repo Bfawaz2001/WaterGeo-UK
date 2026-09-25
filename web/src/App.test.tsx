@@ -163,3 +163,11 @@ it("retains overlapping water-supply matches and loads only the chosen geometry"
   expect(await screen.findByRole("heading", { name: "Example Water" })).toBeInTheDocument();
   expect(screen.getByText(/does not establish the current supplier/)).toBeInTheDocument();
 });
+
+
+it.each(["0", "9007199254740993", "-1", "abc"])("does not request invalid shared area %s", async (identity) => {
+  window.history.replaceState(null, "", "/?selected=water-supply:" + identity);
+  render(<App />);
+  await screen.findByRole("button", { name: "Select station" });
+  expect(mocks.areaGeometry).not.toHaveBeenCalled();
+});

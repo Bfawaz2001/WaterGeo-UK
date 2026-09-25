@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { explorerSearch, parseExplorerState } from "./urlState";
+import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlState";
 
 it("accepts bounded camera, known layers, and a short stable selection", () => {
   const state = parseExplorerState(
@@ -18,4 +18,15 @@ it("rejects invalid URL coordinates, layers, and oversized selections", () => {
   expect(state.zoom).toBe(5.2);
   expect([...state.layers]).toEqual(["hydrology"]);
   expect(state.selected).toBeNull();
+});
+
+
+it.each(["0", "-1", "1.5", "1e3", " 3", "abc", "9007199254740992", "9999999999999999999"])("rejects unsafe shared source ID %s", (identity) => {
+  expect(parseWaterSupplyId(identity)).toBeNull();
+  expect(parseExplorerState("?selected=" + encodeURIComponent("water-supply:" + identity)).selected).toBeNull();
+});
+
+it.each(["3", "1141", "9007199254740991"])("preserves safe shared source ID %s", (identity) => {
+  expect(parseWaterSupplyId(identity)).toBe(Number(identity));
+  expect(parseExplorerState("?selected=water-supply:" + identity).selected).toBe("water-supply:" + identity);
 });
