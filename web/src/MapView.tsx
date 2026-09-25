@@ -166,6 +166,7 @@ export function MapView({
     if (!container.current) return;
     const configuredStyle = basemapStyle();
     let fallbackApplied = configuredStyle === FALLBACK_STYLE;
+    let disposed = false;
     const map = new MapLibreMap({
       container: container.current,
       style: configuredStyle,
@@ -207,24 +208,29 @@ export function MapView({
         callbacks.current.onMapClick(event.lngLat.lng, event.lngLat.lat);
       }
     };
+    const restoreFallback = () => {
+      if (disposed) return;
+      addExplorerSources(map);
+      setStyleRevision((revision) => revision + 1);
+    };
+    const handleError = () => {
+      if (fallbackApplied) return;
+      fallbackApplied = true;
+      setMapMessage("Basemap unavailable. WaterGeo layers remain usable without it.");
+      map.once("style.load", restoreFallback);
+      map.setStyle(FALLBACK_STYLE);
+    };
     map.on("load", loaded);
     map.on("moveend", publishViewport);
     map.on("click", clicked);
-    map.on("error", () => {
-      if (!fallbackApplied) {
-        fallbackApplied = true;
-        setMapMessage("Basemap unavailable. WaterGeo layers remain usable without it.");
-        map.setStyle(FALLBACK_STYLE);
-        map.once("styledata", () => {
-          addExplorerSources(map);
-          setStyleRevision((revision) => revision + 1);
-        });
-      }
-    });
+    map.on("error", handleError);
     return () => {
+      disposed = true;
       map.off("load", loaded);
       map.off("moveend", publishViewport);
       map.off("click", clicked);
+      map.off("error", handleError);
+      map.off("style.load", restoreFallback);
       map.remove();
       mapRef.current = undefined;
     };
