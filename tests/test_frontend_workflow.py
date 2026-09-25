@@ -47,7 +47,9 @@ def test_npm_dependabot_and_javascript_codeql_are_enabled_without_extra_permissi
     ]
     security = load(".github/workflows/security.yml")
     codeql = security["jobs"]["codeql"]
-    initialize = next(step for step in codeql["steps"] if "github/codeql-action/init@" in step.get("uses", ""))
+    initialize = next(
+        step for step in codeql["steps"] if "github/codeql-action/init@" in step.get("uses", "")
+    )
     assert initialize["with"]["languages"] == "python,javascript-typescript"
     assert codeql["permissions"] == {"contents": "read", "security-events": "write"}
     frontend = security["jobs"]["frontend-dependencies"]
