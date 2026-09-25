@@ -10,12 +10,12 @@ production latency promise. The database contained the retained reviewed snapsho
 
 | Asset | Bytes | Gzip reported by Vite |
 | --- | ---: | ---: |
-| Initial application JavaScript | 244,691 | 75.86 kB |
+| Initial application JavaScript | 245,281 | 75.97 kB |
 | Initial application CSS | 7,540 | 2.46 kB |
 | Lazy MapLibre JavaScript | 1,028,793 | 278.38 kB |
 | MapLibre worker | 509,702 | not reported |
 | Lazy MapLibre CSS | 82,962 | 10.72 kB |
-| HTML | 500 | 0.31 kB |
+| HTML | 507 | 0.31 kB |
 
 The largest asset is the 1,028,793-byte MapLibre renderer chunk. Vite emits a
 greater-than-500-kB warning for that understood dependency; the warning is retained.
