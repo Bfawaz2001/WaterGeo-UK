@@ -225,3 +225,4 @@ __marimo__/
 # Local OS state and downloaded datasets (fixtures belong in tests).
 .DS_Store
 data/
+web/public/exports/

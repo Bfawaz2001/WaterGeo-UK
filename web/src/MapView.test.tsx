@@ -1,6 +1,7 @@
 import { act, render } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import type { AreaFeature, GeoJSONFeatureCollection } from "./types";
+import type { Overview } from "./overview";
 
 const mock = vi.hoisted(() => {
   class Map {
@@ -26,6 +27,9 @@ const mock = vi.hoisted(() => {
     }
     emit(event: string) { for (const callback of [...this.listeners.get(event) ?? []]) callback(); }
     addControl() {}
+    resize() {}
+    removeLayer(id: string) { this.layers.delete(id); }
+    removeSource(id: string) { this.sources.delete(id); }
     getCenter() { return { lng: -1, lat: 52 }; }
     getBounds() { return { getNorthEast: () => ({ lng: 0, lat: 53 }) }; }
     getZoom() { return 8; }
@@ -44,16 +48,17 @@ const mock = vi.hoisted(() => {
   return { Map };
 });
 vi.mock("maplibre-gl", () => ({
-  Map: mock.Map, NavigationControl: class {}, ScaleControl: class {}, setWorkerUrl: vi.fn(),
+  Map: mock.Map, NavigationControl: class {}, ScaleControl: class {}, setWorkerUrl: vi.fn(), addProtocol: vi.fn(),
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({ default: "mock-worker" }));
 
 import { MapView } from "./MapView";
 
-function renderMap() {
+function renderMap(overview: Overview | null = null) {
   const area = { type: "Feature", geometry: { type: "MultiPolygon", coordinates: [] } } as unknown as AreaFeature;
   const waterBody: GeoJSONFeatureCollection = { type: "FeatureCollection", features: [] };
   const { unmount } = render(<MapView
+    overview={overview}
     initial={{ longitude: -1, latitude: 52, zoom: 8 }}
     activeLayers={new Set(["water-supply"])}
     hydrology={[]} waterQuality={[]} reservoirs={[]}
@@ -90,6 +95,17 @@ it("restores current data only after the initial and fallback styles fully load"
   unmount();
   expect(map.remove).toHaveBeenCalledOnce();
   expect(map.listeners.size).toBe(0);
+});
+
+it("installs the PMTiles overview only after load and restores it after fallback", () => {
+  const { map } = renderMap({ url: "/exports/snapshot/water-supply.pmtiles", snapshot: "snapshot", attribution: "Ofwat attribution" });
+  expect(map.getLayer("watergeo-overview")).toBe(false);
+  act(() => { map.loaded = true; map.emit("load"); });
+  expect(map.getLayer("watergeo-overview")).toBe(true);
+  act(() => map.emit("error"));
+  expect(map.getLayer("watergeo-overview")).toBe(false);
+  act(() => { map.loaded = true; map.emit("style.load"); });
+  expect(map.getLayer("watergeo-overview")).toBe(true);
 });
 
 it("removes a pending fallback listener and ignores a captured late callback on teardown", () => {

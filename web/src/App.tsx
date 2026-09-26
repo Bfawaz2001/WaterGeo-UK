@@ -8,6 +8,8 @@ import type { AreaPage, AreaSummary, LayerId, SelectedFeature, SourceStatuses } 
 import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlState";
 import { useNearby, type ViewportQuery } from "./useNearby";
 import { WaterBodyBrowser } from "./WaterBodyBrowser";
+import { OverviewControl } from "./OverviewControl";
+import type { Overview } from "./overview";
 
 const MapView = lazy(async () => {
   const module = await import("./MapView");
@@ -26,11 +28,13 @@ function selectionKey(selected: SelectedFeature | null): string | null {
 export function App() {
   const initial = useMemo(() => parseExplorerState(window.location.search), []);
   const [layers, setLayers] = useState(initial.layers);
+  const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 740);
+  const [overview, setOverview] = useState<Overview | null>(null);
   const [viewport, setViewport] = useState<ViewportQuery & { zoom: number }>({
     longitude: initial.longitude,
     latitude: initial.latitude,
     zoom: initial.zoom,
-    radiusM: 100_000,
+    radiusM: 0,
   });
   const nearby = useNearby(viewport, layers);
   const [sourceStatus, setSourceStatus] = useState<SourceStatuses | null>(null);
@@ -204,8 +208,9 @@ export function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${panelOpen ? "" : "controls-collapsed"}`}>
       <header className="topbar">
+        <button className="share-button panel-toggle" aria-expanded={panelOpen} aria-controls="explorer-controls" onClick={() => setPanelOpen((open) => !open)}>Layers & filters</button>
         <div className="brand-mark" aria-hidden="true">WG</div>
         <div className="brand-copy">
           <span>WaterGeo UK</span>
@@ -214,7 +219,8 @@ export function App() {
         <button className="share-button" type="button" onClick={() => void copyShareUrl()} aria-label="Copy a shareable map URL">Copy view link</button>
       </header>
 
-      <aside className="control-panel" aria-label="Explorer controls">
+      <aside id="explorer-controls" className="control-panel" aria-label="Explorer controls" hidden={!panelOpen}>
+        <OverviewControl onChange={setOverview} />
         <LayerControls
           active={layers}
           counts={{
@@ -226,6 +232,14 @@ export function App() {
           errors={nearby.errors}
           onToggle={toggleLayer}
         />
+        <details className="panel-section"><summary>Browse nearby results without the map</summary>
+          <p>Current bounded results only; maximum 100 per source.</p>
+          <ul className="result-list nearby-list">
+            {layers.has("hydrology") && nearby.hydrology.map((item) => <li key={`h:${item.station_id}`}><button onClick={() => selectPoint("hydrology", item.station_id)}>Station: {item.labels[0] ?? item.station_id}</button></li>)}
+            {layers.has("water-quality") && nearby.waterQuality.map((item) => <li key={`q:${item.sampling_point_id}`}><button onClick={() => selectPoint("water-quality", item.sampling_point_id)}>Sampling point: {item.pref_label ?? item.alt_label}</button></li>)}
+            {layers.has("reservoirs") && nearby.reservoirs.map((item) => <li key={`r:${item.reservoir_id}`}><button onClick={() => selectPoint("reservoirs", item.reservoir_id)}>Reservoir: {item.name}</button></li>)}
+          </ul>
+        </details>
         <WaterBodyBrowser
           open={waterBodiesOpen}
           onToggle={() => setWaterBodiesOpen((value) => !value)}
@@ -235,8 +249,10 @@ export function App() {
       </aside>
 
       <main className="map-workspace">
+        {viewport.radiusM === 0 && <p className="map-message" role="status">Preparing map viewport…</p>}
         <Suspense fallback={<div className="map-loading" role="status">Loading map renderer…</div>}>
           <MapView
+            overview={overview}
             initial={initial}
             activeLayers={layers}
             hydrology={nearby.hydrology}

@@ -7,6 +7,7 @@ import {
   type GeoJSONSource,
   type MapMouseEvent,
   setWorkerUrl,
+  addProtocol,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
@@ -22,8 +23,12 @@ import type {
   PointGeometry,
 } from "./types";
 import type { ViewportQuery } from "./useNearby";
+import { Protocol } from "pmtiles";
+import type { Overview } from "./overview";
 
 setWorkerUrl(workerUrl);
+const tileProtocol = new Protocol();
+addProtocol("pmtiles", tileProtocol.tile);
 
 const SOURCE_LAYERS = {
   hydrology: "watergeo-hydrology",
@@ -32,6 +37,7 @@ const SOURCE_LAYERS = {
 } as const;
 
 interface Props {
+  overview?: Overview | null;
   initial: { longitude: number; latitude: number; zoom: number };
   activeLayers: Set<LayerId>;
   hydrology: HydrologyStation[];
@@ -141,6 +147,7 @@ function addExplorerSources(map: MapLibreMap): void {
 }
 
 export function MapView({
+  overview,
   initial,
   activeLayers,
   hydrology,
@@ -157,6 +164,17 @@ export function MapView({
   const callbacks = useRef({ onViewport, onMapClick, onSelectPoint, activeLayers });
   const [mapMessage, setMapMessage] = useState<string>();
   const [styleRevision, setStyleRevision] = useState(0);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded()) return;
+    if (map.getLayer("watergeo-overview")) map.removeLayer("watergeo-overview");
+    if (map.getSource("watergeo-overview")) map.removeSource("watergeo-overview");
+    if (overview) {
+      map.addSource("watergeo-overview", { type: "vector", url: `pmtiles://${window.location.origin}${overview.url}`, attribution: overview.attribution });
+      map.addLayer({ id: "watergeo-overview", type: "line", source: "watergeo-overview", "source-layer": "water_supply", filter: ["==", ["get", "snapshot_id"], overview.snapshot], paint: { "line-color": "#167d6b", "line-width": 1, "line-opacity": 0.6 } });
+    }
+  }, [overview, styleRevision]);
 
   useEffect(() => {
     callbacks.current = { onViewport, onMapClick, onSelectPoint, activeLayers };
@@ -177,6 +195,8 @@ export function MapView({
       attributionControl: { compact: false },
     });
     mapRef.current = map;
+    const resize = new ResizeObserver(() => map.resize());
+    resize.observe(container.current);
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
@@ -226,6 +246,7 @@ export function MapView({
     map.on("error", handleError);
     return () => {
       disposed = true;
+      resize.disconnect();
       map.off("load", loaded);
       map.off("moveend", publishViewport);
       map.off("click", clicked);

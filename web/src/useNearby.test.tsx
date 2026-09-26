@@ -8,6 +8,18 @@ import { useNearby } from "./useNearby";
 
 afterEach(() => vi.useRealTimers());
 
+it("waits for the actual map viewport before issuing the initial nearby request", async () => {
+  vi.useFakeTimers();
+  const hydrology = vi.spyOn(api, "hydrologyNear").mockResolvedValue({ dataset, items: [], next_after_id: null });
+  const layers = new Set(["hydrology"] as const);
+  const { rerender } = renderHook(({ radiusM }) => useNearby({ longitude: -1, latitude: 52, radiusM }, layers, 20), { initialProps: { radiusM: 0 } });
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(hydrology).not.toHaveBeenCalled();
+  rerender({ radiusM: 5000 });
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(hydrology).toHaveBeenCalledOnce();
+});
+
 it("debounces movement, aborts stale requests, and ignores late results", async () => {
   vi.useFakeTimers();
   const resolvers: Array<(value: NearbyPage<HydrologyStation>) => void> = [];

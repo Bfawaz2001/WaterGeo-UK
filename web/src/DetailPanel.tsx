@@ -1,4 +1,5 @@
 import type { DatasetProvenance, SelectedFeature } from "./types";
+import { FeatureDrilldown } from "./FeatureDrilldown";
 
 interface Props {
   selected: SelectedFeature | null;
@@ -80,10 +81,15 @@ export function DetailPanel({ selected, onClose }: Props) {
           <div><dt>Source ID</dt><dd>{selected.item.id}</dd></div>
           <div><dt>Area served</dt><dd>{selected.item.properties.area_served ?? "Not stated"}</dd></div>
           <div><dt>Presentation</dt><dd>{selected.item.presentation.method}</dd></div>
+          <div><dt>Presentation policy</dt><dd>{selected.item.presentation.policy_version}</dd></div>
+          <div><dt>Review</dt><dd>{selected.item.presentation.review_reference}</dd></div>
           <div><dt>Snapshot</dt><dd><code>{selected.item.properties.snapshot_id}</code></dd></div>
         </dl>
         <p className="caveat">{selected.item.properties.disclaimer ?? "This dated analytical boundary does not establish a property's current legal supplier."}</p>
         {selected.item.properties.licence_statement && <p>{selected.item.properties.licence_statement}</p>}
+        {selected.item.properties.source_provenance && <p>{selected.item.properties.source_provenance}</p>}
+        {selected.item.properties.premises_disclaimer && <p className="caveat">{selected.item.properties.premises_disclaimer}</p>}
+        {selected.item.properties.coastline_disclaimer && <p className="caveat">{selected.item.properties.coastline_disclaimer}</p>}
       </>
     );
   } else {
@@ -110,6 +116,9 @@ export function DetailPanel({ selected, onClose }: Props) {
       <p className="eyebrow">Selected {selected.kind.replaceAll("-", " ")}</p>
       <h2 id="detail-heading">{title}</h2>
       {body}
+      {selected.kind !== "water-supply" && selected.kind !== "water-body" && (
+        <FeatureDrilldown key={`${selected.kind}:${selected.dataset.snapshot_id}:${selected.kind === "hydrology" ? selected.item.station_id : selected.kind === "water-quality" ? selected.item.sampling_point_id : selected.item.reservoir_id}`} selected={selected} />
+      )}
       {dataset && <Provenance dataset={dataset} />}
     </section>
   );
