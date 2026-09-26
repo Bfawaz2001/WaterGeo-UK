@@ -73,6 +73,34 @@ export function DetailPanel({ selected, onClose }: Props) {
         <p className="caveat">Percentage is publisher data from a dated edition. It is not a restriction, safety, or supply-risk classification.</p>
       </>
     );
+  } else if (selected.kind === "thames-discharge") {
+    title = selected.item.location_name;
+    dataset = selected.dataset;
+    const moments = [
+      selected.item.most_recent_discharge_start && {
+        label: "Most recent indicated discharge started",
+        value: selected.item.most_recent_discharge_start,
+      },
+      selected.item.most_recent_discharge_stop && {
+        label: "Most recent indicated discharge stopped",
+        value: selected.item.most_recent_discharge_stop,
+      },
+      { label: `Status changed to ${selected.item.alert_status}`, value: selected.item.status_changed },
+    ].filter((moment): moment is { label: string; value: string } => Boolean(moment));
+    body = (
+      <>
+        <dl>
+          <div><dt>Site ID</dt><dd>{selected.item.site_id}</dd></div>
+          <div><dt>Permit</dt><dd>{selected.item.permit_number}</dd></div>
+          <div><dt>Receiving watercourse</dt><dd>{selected.item.receiving_watercourse}</dd></div>
+          <div><dt>Monitor status</dt><dd><strong>{selected.item.alert_status}</strong></dd></div>
+          <div><dt>Activity in past 48 hours</dt><dd>{selected.item.alert_past_48_hours ? "Publisher says yes" : "Publisher says no"}</dd></div>
+        </dl>
+        <h3>Publisher status timeline</h3>
+        <ol className="status-timeline">{moments.map((moment) => <li key={`${moment.label}:${moment.value}`}><strong>{moment.label}</strong><span>{moment.value.replace("T", " ")} (timezone not supplied)</span></li>)}</ol>
+        <p className="caveat">EDM status indicates monitor activity. It does not measure discharge volume, water quality or bathing safety.</p>
+      </>
+    );
   } else if (selected.kind === "water-supply") {
     title = selected.item.properties.company ?? `Area ${selected.item.id}`;
     body = (
@@ -116,7 +144,7 @@ export function DetailPanel({ selected, onClose }: Props) {
       <p className="eyebrow">Selected {selected.kind.replaceAll("-", " ")}</p>
       <h2 id="detail-heading">{title}</h2>
       {body}
-      {selected.kind !== "water-supply" && selected.kind !== "water-body" && (
+      {selected.kind !== "water-supply" && selected.kind !== "water-body" && selected.kind !== "thames-discharge" && (
         <FeatureDrilldown key={`${selected.kind}:${selected.dataset.snapshot_id}:${selected.kind === "hydrology" ? selected.item.station_id : selected.kind === "water-quality" ? selected.item.sampling_point_id : selected.item.reservoir_id}`} selected={selected} />
       )}
       {dataset && <Provenance dataset={dataset} />}

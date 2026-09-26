@@ -20,9 +20,10 @@ const LAYERS = new Set<LayerId>([
   "hydrology",
   "water-quality",
   "reservoirs",
+  "thames-discharge",
   "water-supply",
 ]);
-const SELECTION = /^(hydrology|water-quality|reservoirs|water-supply|water-body):.{1,160}$/u;
+const SELECTION = /^(hydrology|water-quality|reservoirs|thames-discharge|water-supply|water-body):.{1,160}$/u;
 
 export function parseWaterSupplyId(value: string): number | null {
   if (!/^[0-9]+$/u.test(value)) return null;

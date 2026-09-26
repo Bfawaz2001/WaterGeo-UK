@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from shapely.geometry import shape
 
@@ -77,6 +78,126 @@ def write_parquet(
         }
     )
     pq.write_table(table, destination, compression="zstd")
+
+
+def collect_thames_discharge(
+    client: WaterGeoClient,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Collect one complete, snapshot-pinned operational status edition."""
+    dataset = client.thames_discharge_dataset().model_dump(mode="json")
+    snapshot = UUID(dataset["snapshot_id"])
+    sites = [
+        site.model_dump(mode="json")
+        for site in client.iter_thames_discharge_sites(
+            snapshot_id=snapshot, max_pages=20, max_records=2000
+        )
+    ]
+    if len(sites) != dataset["site_count"]:
+        raise ValueError("Incomplete Thames Water discharge export")
+    if client.thames_discharge_dataset(snapshot_id=snapshot).model_dump(mode="json") != dataset:
+        raise ValueError("Thames Water discharge dataset changed during export")
+    return dataset, sites
+
+
+def write_thames_parquet(
+    destination: Path, dataset: dict[str, Any], sites: list[dict[str, Any]]
+) -> None:
+    """GeoParquet points with typed, Delta-friendly source columns."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    rows = []
+    for site in sites:
+        geometry = site.pop("geometry")
+        rows.append(
+            {
+                "snapshot_id": dataset["snapshot_id"],
+                **site,
+                "geometry": shape(geometry).wkb,
+            }
+        )
+    schema = pa.schema(
+        [
+            ("snapshot_id", pa.string()),
+            ("site_id", pa.string()),
+            ("location_name", pa.string()),
+            ("permit_number", pa.string()),
+            ("grid_reference", pa.string()),
+            ("easting", pa.float64()),
+            ("northing", pa.float64()),
+            ("receiving_watercourse", pa.string()),
+            ("alert_status", pa.string()),
+            ("status_changed", pa.string()),
+            ("alert_past_48_hours", pa.bool_()),
+            ("most_recent_discharge_start", pa.string()),
+            ("most_recent_discharge_stop", pa.string()),
+            ("distance_m", pa.float64()),
+            ("geometry", pa.binary()),
+        ]
+    )
+    table = pa.Table.from_pylist(rows, schema=schema)
+    geo = {
+        "version": "1.1.0",
+        "primary_column": "geometry",
+        "columns": {"geometry": {"encoding": "WKB", "geometry_types": ["Point"]}},
+    }
+    table = table.replace_schema_metadata(
+        {
+            b"geo": encode(geo),
+            b"watergeo": encode({"export_version": EXPORT_VERSION, "dataset": dataset}),
+        }
+    )
+    pq.write_table(table, destination, compression="zstd")
+
+
+def build_thames_export(
+    client: WaterGeoClient, destination: Path, *, parquet: bool = False
+) -> dict[str, Any]:
+    """Build a versioned operational point export; dynamic data is never tiled."""
+    if destination.exists():
+        raise ValueError("Export destination already exists; use a new version directory")
+    dataset, sites = collect_thames_discharge(client)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="watergeo-export-", dir=destination.parent) as temp:
+        staging = Path(temp) / "bundle"
+        staging.mkdir()
+        features = [
+            {
+                "type": "Feature",
+                "id": site["site_id"],
+                "geometry": site["geometry"],
+                "properties": {
+                    **{key: value for key, value in site.items() if key != "geometry"},
+                    "snapshot_id": dataset["snapshot_id"],
+                },
+            }
+            for site in sites
+        ]
+        geojson = staging / "thames-discharge-status.geojson"
+        geojson.write_bytes(encode({"type": "FeatureCollection", "features": features}))
+        if parquet:
+            write_thames_parquet(
+                staging / "thames-discharge-status.parquet",
+                dataset,
+                [dict(site) for site in sites],
+            )
+        manifest: dict[str, Any] = {
+            "export_version": EXPORT_VERSION,
+            "entity": "thames-discharge-status",
+            "dataset": dataset,
+            "feature_count": len(features),
+            "coordinate_reference": "OGC:CRS84",
+            "files": {},
+            "delivery_policy": "dynamic snapshot; GeoJSON/GeoParquet only; no PMTiles",
+        }
+        for file in sorted(staging.iterdir()):
+            manifest["files"][file.name] = {
+                "bytes": file.stat().st_size,
+                "sha256": hashlib.sha256(file.read_bytes()).hexdigest(),
+            }
+        (staging / "manifest.json").write_bytes(encode(manifest))
+        staging.rename(destination)
+    return manifest
 
 
 def build_export(
@@ -167,9 +288,19 @@ def main() -> None:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--parquet", action="store_true", help="Requires the exports extra")
     parser.add_argument("--tippecanoe", help="Optional executable path to build overview PMTiles")
+    parser.add_argument(
+        "--entity",
+        choices=("water-supply", "thames-discharge-status"),
+        default="water-supply",
+    )
     args = parser.parse_args()
     with WaterGeoClient(args.base_url) as client:
-        build_export(client, args.output, parquet=args.parquet, tippecanoe=args.tippecanoe)
+        if args.entity == "thames-discharge-status":
+            if args.tippecanoe:
+                parser.error("Dynamic discharge status does not support PMTiles")
+            build_thames_export(client, args.output, parquet=args.parquet)
+        else:
+            build_export(client, args.output, parquet=args.parquet, tippecanoe=args.tippecanoe)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ import type {
   LayerId,
   Reservoir,
   SamplingPoint,
+  ThamesDischargeSite,
   PointGeometry,
 } from "./types";
 import type { ViewportQuery } from "./useNearby";
@@ -34,6 +35,7 @@ const SOURCE_LAYERS = {
   hydrology: "watergeo-hydrology",
   "water-quality": "watergeo-water-quality",
   reservoirs: "watergeo-reservoirs",
+  "thames-discharge": "watergeo-thames-discharge",
 } as const;
 
 interface Props {
@@ -43,6 +45,7 @@ interface Props {
   hydrology: HydrologyStation[];
   waterQuality: SamplingPoint[];
   reservoirs: Reservoir[];
+  thamesDischarge?: ThamesDischargeSite[];
   area: AreaFeature | null;
   waterBody: GeoJSONFeatureCollection | null;
   onViewport: (viewport: ViewportQuery & { zoom: number }) => void;
@@ -95,6 +98,7 @@ function addExplorerSources(map: MapLibreMap): void {
         hydrology: "#176b87",
         "water-quality": "#7253a3",
         reservoirs: "#be5a36",
+        "thames-discharge": "#b32346",
       };
       map.addLayer({
         id: source,
@@ -153,6 +157,7 @@ export function MapView({
   hydrology,
   waterQuality,
   reservoirs,
+  thamesDischarge = [],
   area,
   waterBody,
   onViewport,
@@ -293,12 +298,24 @@ export function MapView({
         "reservoirs",
       ),
     );
+    setData(
+      map,
+      SOURCE_LAYERS["thames-discharge"],
+      pointCollection(
+        thamesDischarge.map((item) => ({
+          geometry: item.geometry,
+          id: item.site_id,
+          label: `${item.location_name}: ${item.alert_status}`,
+        })),
+        "thames-discharge",
+      ),
+    );
     setData(map, "watergeo-area", area ?? { type: "FeatureCollection", features: [] });
     setData(map, "watergeo-water-body", waterBody ?? { type: "FeatureCollection", features: [] });
     for (const [kind, layer] of Object.entries(SOURCE_LAYERS)) {
       map.setLayoutProperty(layer, "visibility", activeLayers.has(kind as LayerId) ? "visible" : "none");
     }
-  }, [activeLayers, area, hydrology, reservoirs, styleRevision, waterBody, waterQuality]);
+  }, [activeLayers, area, hydrology, reservoirs, styleRevision, thamesDischarge, waterBody, waterQuality]);
 
   return (
     <div className="map-region" aria-label="Interactive map workspace">

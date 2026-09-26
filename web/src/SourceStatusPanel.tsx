@@ -12,6 +12,7 @@ const LABELS: Record<string, string> = {
   catchments: "Catchments",
   "water-quality": "Water Quality",
   "stream-reservoir-levels": "Reservoir levels",
+  "thames-discharge-status": "Thames discharge monitors",
 };
 
 export function SourceStatusPanel({ status, error, loading }: Props) {

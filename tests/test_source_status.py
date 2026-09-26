@@ -20,6 +20,7 @@ SOURCES = (
     "catchments",
     "water-quality",
     "stream-reservoir-levels",
+    "thames-discharge-status",
 )
 
 
@@ -32,6 +33,17 @@ def test_water_quality_has_retrieval_policy_without_observation_policy(seconds, 
         settings(water_quality_retrieval_max_age_seconds=60),
     )
     assert result.retrieval_freshness == expected
+    assert result.observation_freshness == "not_applicable"
+
+
+def test_thames_status_uses_only_explicit_retrieval_freshness(seconds=61):
+    result = describe(
+        "thames-discharge-status",
+        {"retrieved_at": NOW - timedelta(seconds=seconds)},
+        NOW,
+        settings(thames_discharge_retrieval_max_age_seconds=60),
+    )
+    assert result.retrieval_freshness == "stale"
     assert result.observation_freshness == "not_applicable"
 
 

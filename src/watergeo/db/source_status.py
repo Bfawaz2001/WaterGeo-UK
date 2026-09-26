@@ -14,6 +14,8 @@ from watergeo.ingestion.hydrology import VERSION as HYDROLOGY_VERSION
 from watergeo.ingestion.hydrology_history import VERSION as HISTORY_VERSION
 from watergeo.ingestion.stream_reservoirs import EDITION as STREAM_RESERVOIR_EDITION
 from watergeo.ingestion.stream_reservoirs import VERSION as STREAM_RESERVOIR_VERSION
+from watergeo.ingestion.thames_discharge import API_VERSION as THAMES_API_VERSION
+from watergeo.ingestion.thames_discharge import VERSION as THAMES_DISCHARGE_VERSION
 from watergeo.ingestion.water_quality import VERSION as WATER_QUALITY_VERSION
 
 
@@ -78,6 +80,14 @@ def describe(
             "reservoir conditions; exact publisher timestamps are preserved and no supply "
             "restriction, safety or risk status is inferred.",
         ),
+        "thames-discharge-status": (
+            "dynamic_snapshot",
+            THAMES_DISCHARGE_VERSION,
+            THAMES_API_VERSION,
+            "Near-real-time publisher monitor indications. Retrieval age is an operator "
+            "threshold, not a publisher SLA or evidence of water quality or bathing safety. "
+            "Publisher status timestamps omit a timezone offset.",
+        ),
     }
     semantics, version, source_version, caveat = contracts[source]
     values: dict[str, Any] = dict(row or {})
@@ -110,6 +120,11 @@ def describe(
         values["retrieval_max_age_seconds"] = settings.water_quality_retrieval_max_age_seconds
         values["retrieval_freshness"] = freshness(
             values["snapshot_age_seconds"], settings.water_quality_retrieval_max_age_seconds
+        )
+    elif source == "thames-discharge-status":
+        values["retrieval_max_age_seconds"] = settings.thames_discharge_retrieval_max_age_seconds
+        values["retrieval_freshness"] = freshness(
+            values["snapshot_age_seconds"], settings.thames_discharge_retrieval_max_age_seconds
         )
     else:
         values["retrieval_freshness"] = "not_applicable" if row else "unknown"
@@ -165,6 +180,13 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
                     max(observed_at) AS observation_newest_at,
                     count(*) AS observation_count,0 AS missing_value_count
                 FROM watergeo.stream_reservoir_level WHERE snapshot_id=s.id) o""",
+        "thames-discharge-status": """WITH latest AS (
+            SELECT * FROM watergeo.thames_discharge_snapshot
+            WHERE normalization_version=:thames_discharge_version
+            ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1)
+            SELECT id AS snapshot_id,content_sha256,retrieval_started_at,
+                retrieval_completed_at AS retrieved_at,site_count AS observation_count,
+                0 AS missing_value_count FROM latest""",
     }
     parameters = {
         "water_quality_version": WATER_QUALITY_VERSION,
@@ -176,6 +198,7 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
         "plan": PLAN_VERSION,
         "stream_reservoir_version": STREAM_RESERVOIR_VERSION,
         "stream_edition": STREAM_RESERVOIR_EDITION,
+        "thames_discharge_version": THAMES_DISCHARGE_VERSION,
     }
     # Snapshot metadata and observation summaries must describe the same database view.
     with engine.connect().execution_options(isolation_level="REPEATABLE READ") as connection:

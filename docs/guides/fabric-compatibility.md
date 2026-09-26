@@ -11,6 +11,7 @@ must be checked by that user. No Fabric deployment has been tested in this phase
 | --- | --- | --- |
 | Reviewed water-supply area | GeoJSON Feature; GeoParquet WKB row | Exact feature inspection; notebook analysis |
 | Water-supply overview | PMTiles/MVT `water_supply` layer | Fabric Map or WaterGeo overview |
+| Thames Water discharge status | Point GeoJSON; GeoParquet WKB and typed status columns | Snapshot analysis, Lakehouse ingestion and Power BI reference points |
 | Export dataset/provenance | JSON manifest; Parquet schema metadata and row fields | Snapshot identification, hashes, licensing |
 | Hydrology, Water Quality, reservoirs, Water Bodies | Existing bounded API and SDK | Future dedicated exports; no new file exporter claimed |
 
@@ -70,3 +71,12 @@ PMTiles is not claimed as a Power BI reference-layer input.
 KQL/Eventhouse integration is deferred: static versioned boundaries do not need an
 additional streaming database. Native Delta generation and tenant authentication
 remain consumer responsibilities, not core API dependencies.
+
+For Thames status, upload the complete bundle under
+`Files/watergeo/thames-discharge-status/<snapshot>/` and use
+[`examples/fabric/thames_discharge_consumer.py`](../../examples/fabric/thames_discharge_consumer.py).
+The example verifies entity, snapshot and Parquet checksum before reading, then offers
+an explicit `errorifexists` Delta write. Join only on the publisher's stable `site_id`
+within an explicit snapshot. Do not spatially infer a link to Water Bodies or EA data.
+Power BI can consume the small snapshot GeoJSON as an Azure Maps reference layer;
+status and retrieval time must remain visible. No Fabric SDK is added to WaterGeo.

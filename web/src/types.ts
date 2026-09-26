@@ -1,6 +1,6 @@
 import type { Geometry } from "geojson";
 
-export type LayerId = "hydrology" | "water-quality" | "reservoirs" | "water-supply";
+export type LayerId = "hydrology" | "water-quality" | "reservoirs" | "thames-discharge" | "water-supply";
 
 export interface PointGeometry {
   type: "Point";
@@ -59,6 +59,25 @@ export interface Reservoir {
   capacity_unit: string;
   distance_m: number | null;
   latest_reading: ReservoirReading | null;
+}
+
+export type ThamesAlertStatus = "Discharging" | "Not discharging" | "Offline";
+
+export interface ThamesDischargeSite {
+  site_id: string;
+  location_name: string;
+  permit_number: string;
+  grid_reference: string;
+  easting: number;
+  northing: number;
+  geometry: PointGeometry;
+  receiving_watercourse: string;
+  alert_status: ThamesAlertStatus;
+  status_changed: string;
+  alert_past_48_hours: boolean;
+  most_recent_discharge_start: string | null;
+  most_recent_discharge_stop: string | null;
+  distance_m: number | null;
 }
 
 export interface NearbyPage<T> {
@@ -171,6 +190,7 @@ export type SelectedFeature =
   | { kind: "hydrology"; item: HydrologyStation; dataset: DatasetProvenance }
   | { kind: "water-quality"; item: SamplingPoint; dataset: DatasetProvenance }
   | { kind: "reservoirs"; item: Reservoir; dataset: DatasetProvenance }
+  | { kind: "thames-discharge"; item: ThamesDischargeSite; dataset: DatasetProvenance }
   | { kind: "water-supply"; item: AreaFeature }
   | {
       kind: "water-body";

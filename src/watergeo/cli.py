@@ -171,6 +171,27 @@ def _reservoir_readings_action(client: WaterGeoClient, args: argparse.Namespace)
     )
 
 
+def _thames_sites_action(client: WaterGeoClient, args: argparse.Namespace) -> object:
+    limit = args.limit if args.limit is not None else 50
+    keywords = {
+        "snapshot_id": _uuid(args.snapshot_id),
+        "alert_status": args.alert_status,
+        "alert_past_48_hours": args.alert_past_48_hours,
+    }
+    if args.all_pages:
+        if args.after_id is not None:
+            raise WaterGeoConfigurationError("--after-id cannot be combined with --all")
+        return client.iter_thames_discharge_sites(
+            page_size=limit,
+            max_pages=args.max_pages if args.max_pages is not None else 1000,
+            max_records=args.max_records if args.max_records is not None else 100000,
+            **keywords,
+        )
+    if args.max_pages is not None or args.max_records is not None:
+        raise WaterGeoConfigurationError("--max-pages and --max-records require --all")
+    return client.thames_discharge_sites(limit=limit, after_id=args.after_id, **keywords)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="watergeo", description="Query a WaterGeo UK HTTP API")
     parser.add_argument(
@@ -430,6 +451,44 @@ def build_parser() -> argparse.ArgumentParser:
     readings.add_argument("--max-pages", type=int)
     readings.add_argument("--max-records", type=int)
     _set_action(readings, _reservoir_readings_action)
+
+    thames = domains.add_parser("thames-water", help="Thames Water discharge status")
+    tw = thames.add_subparsers(dest="command", required=True)
+    dataset = tw.add_parser("dataset")
+    dataset.add_argument("--snapshot-id")
+    _set_action(
+        dataset,
+        lambda client, args: client.thames_discharge_dataset(snapshot_id=_uuid(args.snapshot_id)),
+    )
+    sites = tw.add_parser("sites")
+    _pagination(sites)
+    sites.add_argument("--alert-status", choices=("Discharging", "Not discharging", "Offline"))
+    sites.add_argument("--alert-past-48-hours", action=argparse.BooleanOptionalAction, default=None)
+    _set_action(sites, _thames_sites_action)
+    near = tw.add_parser("near")
+    _near(near, 50_000)
+    near.add_argument("--alert-status", choices=("Discharging", "Not discharging", "Offline"))
+    near.add_argument("--alert-past-48-hours", action=argparse.BooleanOptionalAction, default=None)
+    _set_action(
+        near,
+        lambda client, args: client.thames_discharge_sites_near(
+            args.lon,
+            args.lat,
+            radius_m=args.radius_m,
+            limit=args.limit,
+            snapshot_id=_uuid(args.snapshot_id),
+            alert_status=args.alert_status,
+            alert_past_48_hours=args.alert_past_48_hours,
+        ),
+    )
+    site = tw.add_parser("site")
+    _detail(site, "site_id")
+    _set_action(
+        site,
+        lambda client, args: client.thames_discharge_site(
+            args.site_id, snapshot_id=_uuid(args.snapshot_id)
+        ),
+    )
     return parser
 
 
