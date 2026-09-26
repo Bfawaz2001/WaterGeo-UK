@@ -29,7 +29,7 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
     })();
     return () => controller.abort();
   }, [selected]);
-  if (selected.kind === "water-supply" || selected.kind === "water-body") return null;
+  if (selected.kind === "water-supply" || selected.kind === "water-body" || selected.kind === "thames-discharge") return null;
   if (error) return <p role="alert">Details unavailable or snapshot changed. Reselect a current result to retry.</p>;
   if (!rows) return <p role="status">Loading source details…</p>;
   return <section aria-label="Source detail drill-down">

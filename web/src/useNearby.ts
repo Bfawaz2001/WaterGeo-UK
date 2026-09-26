@@ -7,6 +7,8 @@ import type {
   LayerId,
   Reservoir,
   SamplingPoint,
+  ThamesAlertStatus,
+  ThamesDischargeSite,
 } from "./types";
 
 export interface ViewportQuery {
@@ -19,6 +21,7 @@ interface NearbyState {
   hydrology: HydrologyStation[];
   waterQuality: SamplingPoint[];
   reservoirs: Reservoir[];
+  thamesDischarge: ThamesDischargeSite[];
   provenance: Partial<Record<LayerId, DatasetProvenance>>;
   loading: Set<LayerId>;
   errors: Partial<Record<LayerId, string>>;
@@ -28,6 +31,7 @@ const EMPTY: NearbyState = {
   hydrology: [],
   waterQuality: [],
   reservoirs: [],
+  thamesDischarge: [],
   provenance: {},
   loading: new Set(),
   errors: {},
@@ -45,17 +49,19 @@ export function useNearby(
   query: ViewportQuery,
   layers: Set<LayerId>,
   delayMs = 350,
+  thamesFilters: { status?: ThamesAlertStatus; recent?: boolean } = {},
 ): NearbyState {
   const [state, setState] = useState<NearbyState>(EMPTY);
   const generation = useRef(0);
   const waterQualitySnapshot = useRef<string | undefined>(undefined);
   const reservoirSnapshot = useRef<string | undefined>(undefined);
+  const thamesSnapshot = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (query.radiusM <= 0) return;
     const current = ++generation.current;
     const controller = new AbortController();
-    const requested = (["hydrology", "water-quality", "reservoirs"] as const).filter((layer) =>
+    const requested = (["hydrology", "water-quality", "reservoirs", "thames-discharge"] as const).filter((layer) =>
       layers.has(layer),
     );
     const timer = window.setTimeout(() => {
@@ -64,6 +70,7 @@ export function useNearby(
         hydrology: layers.has("hydrology") ? previous.hydrology : [],
         waterQuality: layers.has("water-quality") ? previous.waterQuality : [],
         reservoirs: layers.has("reservoirs") ? previous.reservoirs : [],
+        thamesDischarge: layers.has("thames-discharge") ? previous.thamesDischarge : [],
         loading: new Set(requested),
         errors: {},
       }));
@@ -88,14 +95,27 @@ export function useNearby(
           if (!controller.signal.aborted && current === generation.current) waterQualitySnapshot.current ??= page.dataset.snapshot_id;
           return { layer, items: page.items, dataset: page.dataset } as const;
         }
-        const page = await api.reservoirsNear(
+        if (layer === "reservoirs") {
+          const page = await api.reservoirsNear(
+            query.longitude,
+            query.latitude,
+            Math.min(query.radiusM, 200_000),
+            controller.signal,
+            reservoirSnapshot.current,
+          );
+          if (!controller.signal.aborted && current === generation.current) reservoirSnapshot.current ??= page.dataset.snapshot_id;
+          return { layer, items: page.items, dataset: page.dataset } as const;
+        }
+        const page = await api.thamesDischargeNear(
           query.longitude,
           query.latitude,
           Math.min(query.radiusM, 200_000),
           controller.signal,
-          reservoirSnapshot.current,
+          thamesSnapshot.current,
+          thamesFilters.status,
+          thamesFilters.recent,
         );
-        if (!controller.signal.aborted && current === generation.current) reservoirSnapshot.current ??= page.dataset.snapshot_id;
+        if (!controller.signal.aborted && current === generation.current) thamesSnapshot.current ??= page.dataset.snapshot_id;
         return { layer, items: page.items, dataset: page.dataset } as const;
       });
 
@@ -123,6 +143,10 @@ export function useNearby(
                   reservoirSnapshot.current = undefined;
                   next.reservoirs = [];
                 }
+                if (layer === "thames-discharge") {
+                  thamesSnapshot.current = undefined;
+                  next.thamesDischarge = [];
+                }
                 delete next.provenance[layer];
               }
               return;
@@ -133,6 +157,9 @@ export function useNearby(
               next.waterQuality = result.value.items as SamplingPoint[];
             }
             if (layer === "reservoirs") next.reservoirs = result.value.items as Reservoir[];
+            if (layer === "thames-discharge") {
+              next.thamesDischarge = result.value.items as ThamesDischargeSite[];
+            }
           });
           return next;
         });
@@ -143,7 +170,7 @@ export function useNearby(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [delayMs, layers, query.latitude, query.longitude, query.radiusM]);
+  }, [delayMs, layers, query.latitude, query.longitude, query.radiusM, thamesFilters.recent, thamesFilters.status]);
 
   return state;
 }

@@ -103,3 +103,30 @@ it.each(["water-quality", "reservoirs"] as const)("clears only mismatched %s res
   expect(result.current.provenance[layer]?.snapshot_id).toBe("B");
   expect(result.current.errors[layer]).toBeUndefined();
 });
+
+it("sends Thames status filters to the bounded server query", async () => {
+  vi.useFakeTimers();
+  const thames = vi.spyOn(api, "thamesDischargeNear").mockResolvedValue({
+    dataset,
+    items: [{
+      site_id: "TWL00001", location_name: "Test", permit_number: "CTCR.0001",
+      grid_reference: "SU12345678", easting: 412340, northing: 156780,
+      geometry: { type: "Point", coordinates: [-1.82, 51.31] },
+      receiving_watercourse: "Test Brook", alert_status: "Discharging",
+      status_changed: "2026-09-20T12:30:00", alert_past_48_hours: true,
+      most_recent_discharge_start: "2026-09-20T12:00:00",
+      most_recent_discharge_stop: null, distance_m: 10,
+    }],
+    next_after_id: null,
+  });
+  const layers = new Set(["thames-discharge"] as const);
+  const { result } = renderHook(() => useNearby(
+    { longitude: -1.82, latitude: 51.31, radiusM: 5000 },
+    layers,
+    20,
+    { status: "Discharging", recent: true },
+  ));
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(thames).toHaveBeenCalledWith(-1.82, 51.31, 5000, expect.any(AbortSignal), undefined, "Discharging", true);
+  expect(result.current.thamesDischarge[0]?.site_id).toBe("TWL00001");
+});

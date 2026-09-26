@@ -62,3 +62,22 @@ it("shows source provenance and reservoir interpretation caveats", () => {
   expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: dataset.licence })).toHaveAttribute("href", dataset.licence_url);
 });
+
+it("shows Thames monitor semantics and an offset-free status timeline", () => {
+  render(<DetailPanel onClose={vi.fn()} selected={{
+    kind: "thames-discharge",
+    dataset: { ...dataset, publisher: "Thames Water Utilities Limited" },
+    item: {
+      site_id: "TWL00001", location_name: "Test overflow", permit_number: "CTCR.0001",
+      grid_reference: "SU12345678", easting: 412340, northing: 156780,
+      geometry: { type: "Point", coordinates: [-1.82, 51.31] },
+      receiving_watercourse: "Test Brook", alert_status: "Discharging",
+      status_changed: "2026-09-20T12:30:00", alert_past_48_hours: true,
+      most_recent_discharge_start: "2026-09-20T12:00:00",
+      most_recent_discharge_stop: null, distance_m: 10,
+    },
+  }} />);
+  expect(screen.getByRole("heading", { name: "Test overflow" })).toBeInTheDocument();
+  expect(screen.getAllByText(/timezone not supplied/)).toHaveLength(2);
+  expect(screen.getByText(/does not measure discharge volume/)).toBeInTheDocument();
+});

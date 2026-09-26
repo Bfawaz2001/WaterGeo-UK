@@ -13,6 +13,11 @@ const LAYERS: Array<{ id: LayerId; label: string; description: string }> = [
     description: "Dated 2025 publisher edition",
   },
   {
+    id: "thames-discharge",
+    label: "Thames Water discharge monitors",
+    description: "Near-real-time publisher indications",
+  },
+  {
     id: "water-supply",
     label: "Water-supply lookup",
     description: "Click map; one reviewed area at a time",

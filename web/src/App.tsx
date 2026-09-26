@@ -4,7 +4,7 @@ import { ApiError, api } from "./api";
 import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
-import type { AreaPage, AreaSummary, LayerId, SelectedFeature, SourceStatuses } from "./types";
+import type { AreaPage, AreaSummary, LayerId, SelectedFeature, SourceStatuses, ThamesAlertStatus } from "./types";
 import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlState";
 import { useNearby, type ViewportQuery } from "./useNearby";
 import { WaterBodyBrowser } from "./WaterBodyBrowser";
@@ -21,6 +21,7 @@ function selectionKey(selected: SelectedFeature | null): string | null {
   if (selected.kind === "hydrology") return `hydrology:${selected.item.station_id}`;
   if (selected.kind === "water-quality") return `water-quality:${selected.item.sampling_point_id}`;
   if (selected.kind === "reservoirs") return `reservoirs:${selected.item.reservoir_id}`;
+  if (selected.kind === "thames-discharge") return `thames-discharge:${selected.item.site_id}`;
   if (selected.kind === "water-supply") return `water-supply:${selected.item.id}`;
   return `water-body:${selected.item.water_body_id}`;
 }
@@ -30,13 +31,22 @@ export function App() {
   const [layers, setLayers] = useState(initial.layers);
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 740);
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [thamesStatus, setThamesStatus] = useState<ThamesAlertStatus | "">("");
+  const [thamesRecent, setThamesRecent] = useState(false);
   const [viewport, setViewport] = useState<ViewportQuery & { zoom: number }>({
     longitude: initial.longitude,
     latitude: initial.latitude,
     zoom: initial.zoom,
     radiusM: 0,
   });
-  const nearby = useNearby(viewport, layers);
+  const nearby = useNearby(viewport, layers, 350, {
+    ...(thamesStatus ? { status: thamesStatus } : {}),
+    ...(thamesRecent ? { recent: true } : {}),
+  });
+  const thamesDischarge = useMemo(
+    () => nearby.thamesDischarge ?? [],
+    [nearby.thamesDischarge],
+  );
   const [sourceStatus, setSourceStatus] = useState<SourceStatuses | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [selected, setSelected] = useState<SelectedFeature | null>(null);
@@ -98,6 +108,13 @@ export function App() {
         initialSelectionApplied.current = true;
         queueMicrotask(() => setSelected({ kind, item, dataset }));
       }
+    } else if (kind === "thames-discharge") {
+      const item = thamesDischarge.find((candidate) => candidate.site_id === identity);
+      const dataset = nearby.provenance["thames-discharge"];
+      if (item && dataset) {
+        initialSelectionApplied.current = true;
+        queueMicrotask(() => setSelected({ kind, item, dataset }));
+      }
     } else if (kind === "water-supply") {
       initialSelectionApplied.current = true;
       const sourceId = parseWaterSupplyId(identity);
@@ -125,7 +142,7 @@ export function App() {
     } else {
       initialSelectionApplied.current = true;
     }
-  }, [initial.selected, nearby]);
+  }, [initial.selected, nearby, thamesDischarge]);
 
   const toggleLayer = (layer: LayerId) => {
     setLayers((current) => {
@@ -153,6 +170,10 @@ export function App() {
     } else if (layer === "reservoirs") {
       const item = nearby.reservoirs.find((candidate) => candidate.reservoir_id === identity);
       const dataset = nearby.provenance.reservoirs;
+      if (item && dataset) setSelected({ kind: layer, item, dataset });
+    } else if (layer === "thames-discharge") {
+      const item = thamesDischarge.find((candidate) => candidate.site_id === identity);
+      const dataset = nearby.provenance["thames-discharge"];
       if (item && dataset) setSelected({ kind: layer, item, dataset });
     }
   };
@@ -227,17 +248,31 @@ export function App() {
             hydrology: nearby.hydrology.length,
             "water-quality": nearby.waterQuality.length,
             reservoirs: nearby.reservoirs.length,
+            "thames-discharge": thamesDischarge.length,
           }}
           loading={nearby.loading}
           errors={nearby.errors}
           onToggle={toggleLayer}
         />
+        {layers.has("thames-discharge") && (
+          <section className="panel-section" aria-labelledby="thames-filter-heading">
+            <p className="eyebrow">Server-side filters</p>
+            <h2 id="thames-filter-heading">Thames monitor status</h2>
+            <label>Status <select value={thamesStatus} onChange={(event) => setThamesStatus(event.target.value as ThamesAlertStatus | "")}>
+              <option value="">All statuses</option>
+              <option>Discharging</option><option>Not discharging</option><option>Offline</option>
+            </select></label>
+            <label><input type="checkbox" checked={thamesRecent} onChange={(event) => setThamesRecent(event.target.checked)} /> Publisher marks activity in past 48 hours</label>
+            <p className="caveat">Filters run on the full selected snapshot before the nearest 100 results are returned.</p>
+          </section>
+        )}
         <details className="panel-section"><summary>Browse nearby results without the map</summary>
           <p>Current bounded results only; maximum 100 per source.</p>
           <ul className="result-list nearby-list">
             {layers.has("hydrology") && nearby.hydrology.map((item) => <li key={`h:${item.station_id}`}><button onClick={() => selectPoint("hydrology", item.station_id)}>Station: {item.labels[0] ?? item.station_id}</button></li>)}
             {layers.has("water-quality") && nearby.waterQuality.map((item) => <li key={`q:${item.sampling_point_id}`}><button onClick={() => selectPoint("water-quality", item.sampling_point_id)}>Sampling point: {item.pref_label ?? item.alt_label}</button></li>)}
             {layers.has("reservoirs") && nearby.reservoirs.map((item) => <li key={`r:${item.reservoir_id}`}><button onClick={() => selectPoint("reservoirs", item.reservoir_id)}>Reservoir: {item.name}</button></li>)}
+            {layers.has("thames-discharge") && thamesDischarge.map((item) => <li key={`t:${item.site_id}`}><button onClick={() => selectPoint("thames-discharge", item.site_id)}>Thames monitor: {item.location_name} · {item.alert_status}</button></li>)}
           </ul>
         </details>
         <WaterBodyBrowser
@@ -258,6 +293,7 @@ export function App() {
             hydrology={nearby.hydrology}
             waterQuality={nearby.waterQuality}
             reservoirs={nearby.reservoirs}
+            thamesDischarge={thamesDischarge}
             area={selected?.kind === "water-supply" ? selected.item : null}
             waterBody={selected?.kind === "water-body" ? selected.geometry : null}
             onViewport={setViewport}

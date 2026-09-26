@@ -7,6 +7,8 @@ import type {
   HydrologyStation,
   NearbyPage,
   Reservoir,
+  ThamesAlertStatus,
+  ThamesDischargeSite,
   SamplingPoint,
   SourceStatuses,
   WaterBodyDetail,
@@ -182,6 +184,23 @@ export const api = {
     pinned(
       await request<NearbyPage<Reservoir>>(
         `/v1/severn-trent/reservoir-levels/reservoirs/near?${query({ lon, lat, radius_m: radius, limit: 100, snapshot_id: snapshotId })}`,
+        { signal },
+      ),
+      snapshotId,
+    ),
+
+  thamesDischargeNear: async (
+    lon: number,
+    lat: number,
+    radius: number,
+    signal: AbortSignal,
+    snapshotId?: string,
+    alertStatus?: ThamesAlertStatus,
+    recent?: boolean,
+  ) =>
+    pinned(
+      await request<NearbyPage<ThamesDischargeSite>>(
+        `/v1/thames-water/discharge-status/sites/near?${query({ lon, lat, radius_m: radius, limit: 100, snapshot_id: snapshotId, alert_status: alertStatus, alert_past_48_hours: recent === undefined ? undefined : String(recent) })}`,
         { signal },
       ),
       snapshotId,

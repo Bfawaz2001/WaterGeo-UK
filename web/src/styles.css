@@ -84,6 +84,9 @@ a { color: var(--accent-dark); text-underline-offset: 2px; }
 select { max-width: 100%; padding: 8px; font: inherit; background: white; color: var(--ink); }
 select:focus-visible { outline: 3px solid var(--focus); }
 .nearby-list { max-height: 220px; overflow: auto; }
+.status-timeline { border-left: 2px solid var(--accent); margin-left: 7px; padding-left: 20px; }
+.status-timeline li { margin: 10px 0; padding-left: 4px; }
+.status-timeline span { display: block; color: var(--muted); font-size: 12px; }
 .panel-section, .detail-panel { position: relative; padding: 22px; border-bottom: 1px solid var(--line); }
 .section-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -112,6 +115,7 @@ p { line-height: 1.5; }
 .layer-swatch { width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: #176b87; box-shadow: 0 0 0 2px white, 0 0 0 3px #aac1c5; }
 .layer-water-quality .layer-swatch { background: #7253a3; }
 .layer-reservoirs .layer-swatch { background: #be5a36; }
+.layer-thames-discharge .layer-swatch { background: #b32346; }
 .layer-water-supply .layer-swatch { border-radius: 2px; background: #167d6b; }
 .state-detail { margin-top: 4px; color: var(--accent) !important; }
 .state-error { color: var(--error) !important; }
