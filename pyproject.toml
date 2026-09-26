@@ -26,6 +26,10 @@ dependencies = [
 
 [project.scripts]
 watergeo = "watergeo.cli:main"
+watergeo-export = "watergeo.exports:main"
+
+[project.optional-dependencies]
+exports = ["pyarrow>=21,<24"]
 
 [dependency-groups]
 dev = [
@@ -71,4 +75,8 @@ warn_required_dynamic_aliases = true
 
 [[tool.mypy.overrides]]
 module = ["shapefile", "shapely.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
 ignore_missing_imports = true
