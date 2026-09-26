@@ -50,6 +50,10 @@ from watergeo.client.models import (
     Station,
     StationDetail,
     StationPage,
+    ThamesDischargeDataset,
+    ThamesDischargeSite,
+    ThamesDischargeSiteDetail,
+    ThamesDischargeSitePage,
     WaterBody,
     WaterBodyDetail,
     WaterBodyGeometryCollection,
@@ -690,3 +694,92 @@ class WaterGeoClient:
             return result.items, result.next_after
 
         return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)
+
+    def thames_discharge_dataset(
+        self, *, snapshot_id: UUID | None = None
+    ) -> ThamesDischargeDataset:
+        return self._get(
+            "v1/thames-water/discharge-status/dataset",
+            ThamesDischargeDataset,
+            snapshot_id=snapshot_id,
+        )
+
+    def thames_discharge_sites(
+        self,
+        *,
+        limit: int = 50,
+        after_id: str | None = None,
+        snapshot_id: UUID | None = None,
+        alert_status: str | None = None,
+        alert_past_48_hours: bool | None = None,
+    ) -> ThamesDischargeSitePage:
+        return self._get(
+            "v1/thames-water/discharge-status/sites",
+            ThamesDischargeSitePage,
+            limit=limit,
+            after_id=after_id,
+            snapshot_id=snapshot_id,
+            alert_status=alert_status,
+            alert_past_48_hours=(
+                str(alert_past_48_hours).lower() if alert_past_48_hours is not None else None
+            ),
+        )
+
+    def iter_thames_discharge_sites(
+        self,
+        *,
+        page_size: int = 100,
+        snapshot_id: UUID | None = None,
+        alert_status: str | None = None,
+        alert_past_48_hours: bool | None = None,
+        max_pages: int = DEFAULT_MAX_PAGES,
+        max_records: int = DEFAULT_MAX_RECORDS,
+    ) -> Iterator[ThamesDischargeSite]:
+        snapshot: list[UUID | None] = [snapshot_id]
+
+        def page(cursor: str | None) -> tuple[list[ThamesDischargeSite], str | None]:
+            result = self.thames_discharge_sites(
+                limit=page_size,
+                after_id=cursor,
+                snapshot_id=snapshot[0],
+                alert_status=alert_status,
+                alert_past_48_hours=alert_past_48_hours,
+            )
+            self._verify_snapshot(snapshot, result.dataset.snapshot_id)
+            return result.items, result.next_after_id
+
+        return self._iterate(lambda: page(None), page, max_pages=max_pages, max_records=max_records)
+
+    def thames_discharge_sites_near(
+        self,
+        lon: float,
+        lat: float,
+        *,
+        radius_m: float = 50_000,
+        limit: int = 50,
+        snapshot_id: UUID | None = None,
+        alert_status: str | None = None,
+        alert_past_48_hours: bool | None = None,
+    ) -> ThamesDischargeSitePage:
+        return self._get(
+            "v1/thames-water/discharge-status/sites/near",
+            ThamesDischargeSitePage,
+            lon=lon,
+            lat=lat,
+            radius_m=radius_m,
+            limit=limit,
+            snapshot_id=snapshot_id,
+            alert_status=alert_status,
+            alert_past_48_hours=(
+                str(alert_past_48_hours).lower() if alert_past_48_hours is not None else None
+            ),
+        )
+
+    def thames_discharge_site(
+        self, site_id: str, *, snapshot_id: UUID | None = None
+    ) -> ThamesDischargeSiteDetail:
+        return self._get(
+            f"v1/thames-water/discharge-status/sites/{_identifier(site_id)}",
+            ThamesDischargeSiteDetail,
+            snapshot_id=snapshot_id,
+        )

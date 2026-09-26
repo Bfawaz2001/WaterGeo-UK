@@ -14,6 +14,7 @@ SourceName = Literal[
     "water-quality",
     "water-quality-observations",
     "stream-reservoir-levels",
+    "thames-discharge-status",
 ]
 Freshness = Literal["current", "stale", "unknown", "not_applicable"]
 

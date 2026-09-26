@@ -71,6 +71,45 @@ def station_page(ids: list[str], next_cursor: str | None) -> dict[str, Any]:
     }
 
 
+def thames_dataset(snapshot: str = SNAPSHOT) -> dict[str, Any]:
+    return {
+        "snapshot_id": snapshot,
+        "retrieval_started_at": "2026-09-20T12:30:00Z",
+        "retrieval_completed_at": "2026-09-20T12:31:00Z",
+        "content_sha256": "a" * 64,
+        "normalized_sha256": "b" * 64,
+        "normalization_version": "test-v1",
+        "site_count": 2,
+        "discharging_count": 1,
+        "offline_count": 1,
+    }
+
+
+def thames_page(identity: str, next_cursor: str | None, snapshot: str = SNAPSHOT) -> dict[str, Any]:
+    return {
+        "dataset": thames_dataset(snapshot),
+        "items": [
+            {
+                "site_id": identity,
+                "location_name": identity,
+                "permit_number": "CTCR.0001",
+                "grid_reference": "SU12345678",
+                "easting": 412340,
+                "northing": 156780,
+                "geometry": {"type": "Point", "coordinates": [-1.82, 51.31]},
+                "receiving_watercourse": "Test Brook",
+                "alert_status": "Discharging",
+                "status_changed": "2026-09-20T12:30:00",
+                "alert_past_48_hours": True,
+                "most_recent_discharge_start": "2026-09-20T12:00:00",
+                "most_recent_discharge_stop": None,
+                "distance_m": 10,
+            }
+        ],
+        "next_after_id": next_cursor,
+    }
+
+
 @pytest.mark.parametrize(
     "url",
     [
@@ -109,6 +148,54 @@ def test_redirect_is_not_followed() -> None:
         api.health()
     assert caught.value.status_code == 302
     assert caught.value.detail == "Unexpected redirect"
+
+
+def test_thames_iterator_pins_snapshot_and_preserves_server_filters() -> None:
+    requests: list[httpx.Request] = []
+
+    def responder(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        cursor = request.url.params.get("after_id")
+        return httpx.Response(
+            200,
+            json=thames_page(
+                "TWL00001" if cursor is None else "TWL00002",
+                "TWL00001" if cursor is None else None,
+            ),
+        )
+
+    with client(responder) as api:
+        rows = list(
+            api.iter_thames_discharge_sites(
+                page_size=1,
+                alert_status="Discharging",
+                alert_past_48_hours=True,
+            )
+        )
+    assert [row.site_id for row in rows] == ["TWL00001", "TWL00002"]
+    assert requests[0].url.params.get("snapshot_id") is None
+    assert requests[1].url.params["snapshot_id"] == SNAPSHOT
+    assert all(request.url.params["alert_status"] == "Discharging" for request in requests)
+    assert all(request.url.params["alert_past_48_hours"] == "true" for request in requests)
+
+
+def test_thames_iterator_rejects_snapshot_change() -> None:
+    calls = 0
+
+    def responder(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            json=thames_page(
+                f"TWL0000{calls}",
+                "TWL00001" if calls == 1 else None,
+                SNAPSHOT if calls == 1 else "00000000-0000-4000-8000-000000000002",
+            ),
+        )
+
+    with client(responder) as api, pytest.raises(WaterGeoResponseError, match="snapshot"):
+        list(api.iter_thames_discharge_sites(page_size=1))
 
 
 def test_transport_failure_is_stable_and_sanitized() -> None:

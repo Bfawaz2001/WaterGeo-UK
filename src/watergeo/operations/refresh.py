@@ -25,6 +25,7 @@ from watergeo.db import (
     hydrology_history_ingestion,
     hydrology_ingestion,
     stream_reservoir_ingestion,
+    thames_discharge_ingestion,
     water_quality_ingestion,
 )
 from watergeo.db.engine import create_database_engine
@@ -34,6 +35,7 @@ from watergeo.ingestion import (
     hydrology_client,
     hydrology_history_client,
     stream_reservoir_client,
+    thames_discharge_client,
     water_quality_client,
 )
 from watergeo.ingestion.hydrology import ID_PATTERN
@@ -55,6 +57,7 @@ SOURCE_KEYS = {
     "water-quality": 5,
     "water-quality-observations": 6,
     "stream-reservoir-levels": 7,
+    "thames-discharge-status": 8,
 }
 
 
@@ -162,6 +165,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
                 directory = water_quality_client.fetch_snapshot(root)
             elif request.source == "stream-reservoir-levels":
                 directory = stream_reservoir_client.fetch_snapshot(root)
+            elif request.source == "thames-discharge-status":
+                directory = thames_discharge_client.fetch_snapshot(root)
             elif request.source == "water-quality-observations":
                 if (
                     request.sampling_point_id is None
@@ -197,6 +202,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
             water_quality_client.read_snapshot(directory)
         elif request.source == "stream-reservoir-levels":
             stream_reservoir_client.read_snapshot(directory)
+        elif request.source == "thames-discharge-status":
+            thames_discharge_client.read_snapshot(directory)
         elif request.source == "water-quality-observations":
             read_observations(directory)
         else:
@@ -217,6 +224,8 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
             loaded = water_quality_ingestion.load_snapshot(engine, directory)
         elif request.source == "stream-reservoir-levels":
             loaded = stream_reservoir_ingestion.load_snapshot(engine, directory)
+        elif request.source == "thames-discharge-status":
+            loaded = thames_discharge_ingestion.load_snapshot(engine, directory)
         elif request.source == "water-quality-observations":
             loaded = load_observations(engine, directory)
         else:

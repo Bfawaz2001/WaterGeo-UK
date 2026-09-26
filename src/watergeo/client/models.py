@@ -58,6 +58,18 @@ from watergeo.api.stream_reservoir_models import (
     ReservoirDetail,
     ReservoirPage,
 )
+from watergeo.api.thames_discharge_models import (
+    Dataset as ThamesDischargeDataset,
+)
+from watergeo.api.thames_discharge_models import (
+    Site as ThamesDischargeSite,
+)
+from watergeo.api.thames_discharge_models import (
+    SiteDetail as ThamesDischargeSiteDetail,
+)
+from watergeo.api.thames_discharge_models import (
+    SitePage as ThamesDischargeSitePage,
+)
 from watergeo.api.water_quality_models import (
     Dataset as WaterQualityDataset,
 )
@@ -128,6 +140,10 @@ __all__ = [
     "SourceStatuses",
     "Station",
     "StationDetail",
+    "ThamesDischargeDataset",
+    "ThamesDischargeSite",
+    "ThamesDischargeSiteDetail",
+    "ThamesDischargeSitePage",
     "StationPage",
     "WaterBody",
     "WaterBodyDetail",

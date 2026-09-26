@@ -121,6 +121,10 @@ def test_base_url_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
         ["severn-trent", "near", "--lon", "-2", "--lat", "52"],
         ["severn-trent", "reservoir", "1"],
         ["severn-trent", "readings", "1", "--all"],
+        ["thames-water", "dataset"],
+        ["thames-water", "sites", "--all", "--alert-status", "Offline"],
+        ["thames-water", "near", "--lon", "-2", "--lat", "52"],
+        ["thames-water", "site", "TWL00001"],
     ],
 )
 def test_documented_command_surface_parses(arguments: list[str]) -> None:
@@ -141,6 +145,7 @@ def test_console_entry_point_is_packaged() -> None:
         (["water-quality", "sampling-points"], "iter_water_quality_sampling_points"),
         (["severn-trent", "reservoirs"], "iter_reservoirs"),
         (["severn-trent", "readings", "1"], "iter_reservoir_readings"),
+        (["thames-water", "sites"], "iter_thames_discharge_sites"),
     ],
 )
 def test_all_mode_passes_snapshot_to_iterator(arguments: list[str], method: str) -> None:
