@@ -33,7 +33,7 @@ exports = ["pyarrow>=21,<24"]
 
 [dependency-groups]
 dev = [
-    "mypy>=1.15,<2",
+    "mypy>=1.15,<3",
     "pip-audit>=2.9,<3",
     "pre-commit>=4.2,<5",
     "pytest>=8.3,<10",
