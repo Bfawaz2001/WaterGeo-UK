@@ -1,7 +1,7 @@
 # Source freshness and refresh operations
 
 Run these commands from the repository root after `uv sync --locked`, database setup
-and `uv run --locked alembic upgrade head`. Schema head is `0009`. The API uses
+and `uv run --locked alembic upgrade head`. Schema head is `0010`. The API uses
 the read-only application role; refresh jobs use `WATERGEO_INGESTION_PASSWORD` and the
 existing ingestion role. Jobs do not require administrator or migration credentials.
 
@@ -12,7 +12,7 @@ curl --fail http://127.0.0.1:8000/v1/sources/status
 ```
 
 The endpoint accepts no query parameters. It returns a database `checked_at` timestamp
-and six source entries. Missing compatible data is `availability: unavailable` with
+and seven source entries. Missing compatible data is `availability: unavailable` with
 null identity/times. A database failure returns a sanitized 503; unavailable data is
 still a successful 200 status report. Successful and database-error responses are
 `Cache-Control: no-store`. `/health` remains process liveness; `/ready` still checks
@@ -26,6 +26,7 @@ PostGIS and schema compatibility, independent of data age.
 | `catchments` | Latest compatible `c3-plan` snapshot, same ordering | Cycle 3 retrieval age, not publisher update time or a newer plan check. |
 | `water-quality` | Latest compatible sampling-point snapshot, same ordering | Metadata retrieval age only; observation freshness is not applicable. |
 | `stream-reservoir-levels` | Latest compatible reviewed 2025 snapshot | Static edition; retrieval age is not current reservoir status. Reading times/counts are descriptive only. |
+| `thames-discharge-status` | Latest compatible v2.0.1 retrieval | Retrieval age only; source status timestamps omit a timezone and are not converted into observation freshness. |
 
 `snapshot_id` also identifies a historical retrieval. `content_sha256` identifies
 accepted source evidence; `normalization_version` is the source contract version
@@ -43,6 +44,7 @@ restart/recreate the API. The following values are **illustrative operator choic
 WATERGEO_HYDROLOGY_RETRIEVAL_MAX_AGE_SECONDS=3600
 WATERGEO_HYDROLOGY_OBSERVATION_MAX_AGE_SECONDS=86400
 WATERGEO_WATER_QUALITY_RETRIEVAL_MAX_AGE_SECONDS=604800
+WATERGEO_THAMES_DISCHARGE_RETRIEVAL_MAX_AGE_SECONDS=3600
 ```
 
 Choose thresholds from your service's tolerated delay and the measures you ingest.
@@ -71,6 +73,7 @@ uv run --locked python scripts/refresh_sources.py hydrology
 uv run --locked python scripts/refresh_sources.py catchments --timeout-seconds 7200
 uv run --locked python scripts/refresh_sources.py ofwat
 uv run --locked python scripts/refresh_sources.py stream-reservoir-levels
+uv run --locked python scripts/refresh_sources.py thames-discharge-status
 uv run --locked python scripts/refresh_sources.py hydrology-history \
   --measure-id a-flow-i-900-m3s-qualified \
   --from 2026-09-01T00:00:00Z --to 2026-09-02T00:00:00Z

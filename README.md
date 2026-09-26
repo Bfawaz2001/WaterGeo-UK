@@ -4,8 +4,9 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–8 are complete. Phase 8 improves the explorer and adds optional
-portable exports for Fabric and other geospatial consumers. Public hosting remains pending.** The
+**Status: Phases 1–9 are complete. Phase 9 adds licensed Thames Water discharge
+status, bounded operational filtering and portable analytics exports. Public hosting remains
+pending.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -38,6 +39,12 @@ optional national PMTiles overview. The [export guide](docs/guides/phase-8-expor
 builds reviewed GeoJSON, GeoParquet and PMTiles with snapshot manifests. The
 [Fabric compatibility guide](docs/guides/fabric-compatibility.md) describes optional
 Lakehouse, Map and Power BI consumption; Fabric is not part of WaterGeo's runtime.
+
+Phase 9 adds source-identified Thames Water EDM monitor locations from the publisher's
+public v2 API. Status and recent-activity filters run on the server before
+bounded map results. See the [source semantics](docs/data-sources/thames-water-discharge-status.md)
+and [analytics guide](docs/guides/phase-9-company-analytics.md). Monitor indications
+do not establish discharge volume, water quality or bathing safety.
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
@@ -196,7 +203,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0009`), run these from the repository root:
+With the database at migration head (`0010`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -267,7 +274,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0009`), not dataset availability. See the
+infrastructure and migration head (`0010`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Query the Catchment Data Explorer hierarchy
@@ -333,7 +340,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through Stream reservoir levels (0009)
+migrations/              Alembic revisions through Thames discharge status (0010)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational, water-supply, hydrology and catchment public routes
