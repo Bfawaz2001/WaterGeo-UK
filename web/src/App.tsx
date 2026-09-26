@@ -264,6 +264,12 @@ export function App() {
             </select></label>
             <label><input type="checkbox" checked={thamesRecent} onChange={(event) => setThamesRecent(event.target.checked)} /> Publisher marks activity in past 48 hours</label>
             <p className="caveat">Filters run on the full selected snapshot before the nearest 100 results are returned.</p>
+            <p className="caveat">
+              Near-real-time means the latest accepted WaterGeo retrieval for each map request, not instantaneous publisher state.
+              {nearby.provenance["thames-discharge"] && (
+                <> Latest WaterGeo retrieval: <time dateTime={nearby.provenance["thames-discharge"].retrieval_completed_at}>{new Date(nearby.provenance["thames-discharge"].retrieval_completed_at).toLocaleString()}</time>.</>
+              )}
+            </p>
           </section>
         )}
         <details className="panel-section"><summary>Browse nearby results without the map</summary>

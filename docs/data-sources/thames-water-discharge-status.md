@@ -3,11 +3,15 @@
 Source: `https://api.thameswater.co.uk/opendata/v2/discharge/status`. The reviewed
 contract is API v2.0.1, normalization `thames-water-discharge-status-v2.0.1-v1`.
 
-Each refresh stores the exact response and a checksummed manifest before validation.
-Publication is append-only and atomic. An identical source body resolves to the
-existing snapshot after verifying every stored child row. A changed API version,
-metadata shape, field set, status vocabulary, duplicate/invalid ID, malformed BNG
-coordinate or invalid timestamp fails closed.
+Each refresh durably stores the exact bounded response as `response.json`, then writes
+a checksummed `retrieval.json` containing retrieval times and selected response
+headers. These two files remain inspectable if JSON decoding or strict normalization
+fails. They do not represent accepted data and cannot be loaded. Only successful
+normalization atomically adds `manifest.json`, the validated completion marker required
+by `read_snapshot()` and publication. Publication is append-only and atomic. An
+identical source body resolves to the existing snapshot after verifying every stored
+child row. A changed API version, metadata shape, field set, status vocabulary,
+duplicate/invalid ID, malformed BNG coordinate or invalid timestamp fails closed.
 
 The stable row key is `(snapshot_id, site_id)`, where the publisher's `uniqueId`
 matches `TWL[0-9]{5}`. Source coordinates are EPSG:27700 and PostGIS transforms them

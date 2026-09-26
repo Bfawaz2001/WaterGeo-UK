@@ -3,10 +3,29 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { ApiError, api } from "./api";
 import { dataset } from "./test/fixtures";
-import type { HydrologyStation, NearbyPage } from "./types";
+import type { HydrologyStation, NearbyPage, ThamesDischargeSite } from "./types";
 import { useNearby } from "./useNearby";
 
 afterEach(() => vi.useRealTimers());
+
+function thamesSite(identity: string): ThamesDischargeSite {
+  return {
+    site_id: identity,
+    location_name: identity,
+    permit_number: "CTCR.0001",
+    grid_reference: "SU12345678",
+    easting: 412340,
+    northing: 156780,
+    geometry: { type: "Point", coordinates: [-1.82, 51.31] },
+    receiving_watercourse: "Test Brook",
+    alert_status: "Discharging",
+    status_changed: "2026-09-20T12:30:00",
+    alert_past_48_hours: true,
+    most_recent_discharge_start: "2026-09-20T12:00:00",
+    most_recent_discharge_stop: null,
+    distance_m: 10,
+  };
+}
 
 it("waits for the actual map viewport before issuing the initial nearby request", async () => {
   vi.useFakeTimers();
@@ -129,4 +148,62 @@ it("sends Thames status filters to the bounded server query", async () => {
   await act(() => vi.advanceTimersByTimeAsync(20));
   expect(thames).toHaveBeenCalledWith(-1.82, 51.31, 5000, expect.any(AbortSignal), undefined, "Discharging", true);
   expect(result.current.thamesDischarge[0]?.site_id).toBe("TWL00001");
+});
+
+it("lets each independent Thames map request select the latest snapshot", async () => {
+  vi.useFakeTimers();
+  const snapshotA = { ...dataset, snapshot_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" };
+  const snapshotB = { ...dataset, snapshot_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
+  const thames = vi.spyOn(api, "thamesDischargeNear")
+    .mockResolvedValueOnce({ dataset: snapshotA, items: [thamesSite("TWL00001")], next_after_id: null })
+    .mockResolvedValueOnce({ dataset: snapshotB, items: [thamesSite("TWL00002")], next_after_id: null });
+  const layers = new Set(["thames-discharge"] as const);
+  const { result, rerender } = renderHook(({ status }) => useNearby(
+    { longitude: -1.82, latitude: 51.31, radiusM: 5000 },
+    layers,
+    20,
+    status ? { status } : {},
+  ), { initialProps: { status: undefined as "Discharging" | undefined } });
+
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(result.current.thamesDischarge[0]?.site_id).toBe("TWL00001");
+  expect(result.current.provenance["thames-discharge"]?.snapshot_id).toBe(snapshotA.snapshot_id);
+
+  rerender({ status: "Discharging" });
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(thames).toHaveBeenCalledTimes(2);
+  expect(thames.mock.calls[0]?.[4]).toBeUndefined();
+  expect(thames.mock.calls[1]?.[4]).toBeUndefined();
+  expect(result.current.thamesDischarge[0]?.site_id).toBe("TWL00002");
+  expect(result.current.provenance["thames-discharge"]?.snapshot_id).toBe(snapshotB.snapshot_id);
+});
+
+it("does not let a stale Thames response replace newer points or provenance", async () => {
+  vi.useFakeTimers();
+  const resolvers: Array<(value: NearbyPage<ThamesDischargeSite>) => void> = [];
+  vi.spyOn(api, "thamesDischargeNear").mockImplementation(
+    () => new Promise((resolve) => resolvers.push(resolve)),
+  );
+  const layers = new Set(["thames-discharge"] as const);
+  const { result, rerender } = renderHook(({ longitude }) => useNearby(
+    { longitude, latitude: 51.31, radiusM: 5000 },
+    layers,
+    20,
+  ), { initialProps: { longitude: -1.82 } });
+  await act(() => vi.advanceTimersByTime(20));
+  rerender({ longitude: -1.72 });
+  await act(() => vi.advanceTimersByTime(20));
+
+  const snapshotA = { ...dataset, snapshot_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" };
+  const snapshotB = { ...dataset, snapshot_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
+  await act(async () => {
+    resolvers[1]?.({ dataset: snapshotB, items: [thamesSite("TWL00002")], next_after_id: null });
+    await Promise.resolve();
+  });
+  await act(async () => {
+    resolvers[0]?.({ dataset: snapshotA, items: [thamesSite("TWL00001")], next_after_id: null });
+    await Promise.resolve();
+  });
+  expect(result.current.thamesDischarge[0]?.site_id).toBe("TWL00002");
+  expect(result.current.provenance["thames-discharge"]?.snapshot_id).toBe(snapshotB.snapshot_id);
 });

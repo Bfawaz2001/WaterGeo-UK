@@ -45,7 +45,16 @@ vi.mock("./useNearby", () => ({
     ],
     waterQuality: [],
     reservoirs: [],
-    provenance: { hydrology: dataset },
+    thamesDischarge: [{
+      site_id: "TWL00001", location_name: "Test overflow", permit_number: "CTCR.0001",
+      grid_reference: "SU12345678", easting: 412340, northing: 156780,
+      geometry: { type: "Point", coordinates: [-1.82, 51.31] },
+      receiving_watercourse: "Test Brook", alert_status: "Discharging",
+      status_changed: "2026-09-20T12:30:00", alert_past_48_hours: true,
+      most_recent_discharge_start: "2026-09-20T12:00:00",
+      most_recent_discharge_stop: null, distance_m: 10,
+    }],
+    provenance: { hydrology: dataset, "thames-discharge": dataset },
     loading: new Set(),
     errors: {},
   }),
@@ -148,6 +157,17 @@ it("selects a point and presents its provenance outside the map", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Select station" }));
   expect(screen.getByRole("heading", { name: "River Station" })).toBeInTheDocument();
   expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
+});
+
+it("labels Thames map status with the latest WaterGeo retrieval time", () => {
+  window.history.replaceState(null, "", "/?layers=thames-discharge");
+  render(<App />);
+  expect(screen.getByText(/Near-real-time means the latest accepted WaterGeo retrieval/)).toBeInTheDocument();
+  expect(screen.getByText(/Latest WaterGeo retrieval:/)).toBeInTheDocument();
+  expect(screen.getByText(/Latest WaterGeo retrieval:/).querySelector("time")).toHaveAttribute(
+    "datetime",
+    dataset.retrieval_completed_at,
+  );
 });
 
 it("collapses and restores the layer panel using an accessible control", async () => {

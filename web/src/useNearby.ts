@@ -55,7 +55,6 @@ export function useNearby(
   const generation = useRef(0);
   const waterQualitySnapshot = useRef<string | undefined>(undefined);
   const reservoirSnapshot = useRef<string | undefined>(undefined);
-  const thamesSnapshot = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (query.radiusM <= 0) return;
@@ -111,11 +110,10 @@ export function useNearby(
           query.latitude,
           Math.min(query.radiusM, 200_000),
           controller.signal,
-          thamesSnapshot.current,
+          undefined,
           thamesFilters.status,
           thamesFilters.recent,
         );
-        if (!controller.signal.aborted && current === generation.current) thamesSnapshot.current ??= page.dataset.snapshot_id;
         return { layer, items: page.items, dataset: page.dataset } as const;
       });
 
@@ -142,10 +140,6 @@ export function useNearby(
                 if (layer === "reservoirs") {
                   reservoirSnapshot.current = undefined;
                   next.reservoirs = [];
-                }
-                if (layer === "thames-discharge") {
-                  thamesSnapshot.current = undefined;
-                  next.thamesDischarge = [];
                 }
                 delete next.provenance[layer];
               }
