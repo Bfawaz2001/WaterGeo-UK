@@ -52,6 +52,7 @@ export function useNearby(
   const reservoirSnapshot = useRef<string | undefined>(undefined);
 
   useEffect(() => {
+    if (query.radiusM <= 0) return;
     const current = ++generation.current;
     const controller = new AbortController();
     const requested = (["hydrology", "water-quality", "reservoirs"] as const).filter((layer) =>
@@ -84,7 +85,7 @@ export function useNearby(
             controller.signal,
             waterQualitySnapshot.current,
           );
-          waterQualitySnapshot.current ??= page.dataset.snapshot_id;
+          if (!controller.signal.aborted && current === generation.current) waterQualitySnapshot.current ??= page.dataset.snapshot_id;
           return { layer, items: page.items, dataset: page.dataset } as const;
         }
         const page = await api.reservoirsNear(
@@ -94,7 +95,7 @@ export function useNearby(
           controller.signal,
           reservoirSnapshot.current,
         );
-        reservoirSnapshot.current ??= page.dataset.snapshot_id;
+        if (!controller.signal.aborted && current === generation.current) reservoirSnapshot.current ??= page.dataset.snapshot_id;
         return { layer, items: page.items, dataset: page.dataset } as const;
       });
 

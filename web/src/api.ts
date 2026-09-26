@@ -33,9 +33,9 @@ function pathFor(path: string): string {
   return `${apiBasePath()}${path}`;
 }
 
-async function readBoundedJson(response: Response): Promise<unknown> {
+export async function readBoundedJson(response: Response, maximumBytes = MAX_JSON_BYTES): Promise<unknown> {
   const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > MAX_JSON_BYTES) {
+  if (Number.isFinite(declared) && declared > maximumBytes) {
     throw new ApiError(response.status, "Response exceeded the explorer size limit");
   }
   if (!response.body) return await response.json();
@@ -46,7 +46,7 @@ async function readBoundedJson(response: Response): Promise<unknown> {
     const { done, value } = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > MAX_JSON_BYTES) {
+    if (size > maximumBytes) {
       await reader.cancel();
       throw new ApiError(response.status, "Response exceeded the explorer size limit");
     }
@@ -142,6 +142,12 @@ function pinned<T extends { dataset: { snapshot_id: string } }>(
 }
 
 export const api = {
+  hydrologyDetail: (id: string, signal: AbortSignal) =>
+    request<{ dataset: { snapshot_id: string }; measures: Array<{ measure_id: string; parameter: string; unit_name: string; latest_observation: { value: number | null; observed_at: string } | null }> }>(`/v1/hydrology/stations/${encodeURIComponent(id)}`, { signal }),
+  samplingPointDetail: (id: string, snapshot: string, signal: AbortSignal) =>
+    request<{ dataset: { snapshot_id: string }; publisher_metadata: Record<string, unknown> }>(`/v1/water-quality/sampling-points/${encodeURIComponent(id)}?${query({ snapshot_id: snapshot })}`, { signal }),
+  reservoirReadings: (id: string, snapshot: string, signal: AbortSignal) =>
+    request<{ dataset: { snapshot_id: string }; items: Array<{ observed_at: string; current_percentage: number; current_level: number; current_level_unit: string }>; next_after: string | null }>(`/v1/severn-trent/reservoir-levels/reservoirs/${encodeURIComponent(id)}/readings?${query({ snapshot_id: snapshot, limit: 20 })}`, { signal }),
   sourceStatuses: (signal?: AbortSignal) =>
     request<SourceStatuses>("/v1/sources/status", { signal }),
 

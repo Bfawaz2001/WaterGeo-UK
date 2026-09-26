@@ -67,3 +67,21 @@ it("loads a snapshot-pinned Water Body and preserves publisher geometry features
   expect(api.waterBodyGeometry).toHaveBeenCalledWith("GB/one");
 });
 import { useState } from "react";
+
+it("labels type filters as loaded-only and keeps continuation available", async () => {
+  vi.spyOn(api, "waterBodies").mockResolvedValue({ dataset: catchmentDataset, next_after_id: "GB2", items: [
+    { water_body_id: "GB1", name: "River One", water_body_type: "River", operational_catchment_id: "O", management_catchment_id: "M", river_basin_district_id: "R", publisher_uri: "https://example.test/1" },
+    { water_body_id: "GB2", name: "Lake Two", water_body_type: "Lake", operational_catchment_id: "O", management_catchment_id: "M", river_basin_district_id: "R", publisher_uri: "https://example.test/2" },
+  ] });
+  function Harness() {
+    const [open, setOpen] = useState(false);
+    return <WaterBodyBrowser open={open} onToggle={() => setOpen(!open)} onSelect={vi.fn()} />;
+  }
+  render(<Harness />);
+  await userEvent.click(screen.getByRole("button", { name: /Water Bodies/ }));
+  await screen.findByRole("button", { name: /River One/ });
+  await userEvent.selectOptions(screen.getByRole("combobox"), "River");
+  expect(screen.queryByRole("button", { name: /Lake Two/ })).not.toBeInTheDocument();
+  expect(screen.getByText(/1 matches within 2 loaded/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Load next 100" })).toBeEnabled();
+});

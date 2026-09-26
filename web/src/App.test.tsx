@@ -150,6 +150,17 @@ it("selects a point and presents its provenance outside the map", async () => {
   expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
 });
 
+it("collapses and restores the layer panel using an accessible control", async () => {
+  render(<App />);
+  const toggle = screen.getByRole("button", { name: "Layers & filters" });
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await userEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("complementary", { name: "Explorer controls" })).not.toBeInTheDocument();
+  await userEvent.click(toggle);
+  expect(screen.getByRole("complementary", { name: "Explorer controls" })).toBeVisible();
+});
+
 it("retains overlapping water-supply matches and loads only the chosen geometry", async () => {
   render(<App />);
   await userEvent.click(screen.getByRole("checkbox", { name: /Water-supply lookup/i }));

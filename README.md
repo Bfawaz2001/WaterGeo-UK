@@ -4,8 +4,8 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–5 and the Phase 6 deployment foundation are complete. Phase 7
-adds the first browser map explorer.** The
+**Status: Phases 1–8 are complete. Phase 8 improves the explorer and adds optional
+portable exports for Fabric and other geospatial consumers. Public hosting remains pending.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -32,6 +32,12 @@ npm run dev
 Run the API on `127.0.0.1:8000`; Vite proxies same-origin API paths during local
 development. WaterGeo still has no public hosted endpoint or externally provisioned
 production environment.
+
+Phase 8 adds collapsible controls, overlay details, source-backed drill-down and an
+optional national PMTiles overview. The [export guide](docs/guides/phase-8-exports.md)
+builds reviewed GeoJSON, GeoParquet and PMTiles with snapshot manifests. The
+[Fabric compatibility guide](docs/guides/fabric-compatibility.md) describes optional
+Lakehouse, Map and Power BI consumption; Fabric is not part of WaterGeo's runtime.
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.

@@ -26,7 +26,7 @@ jobs:
       - run: uv sync --locked
       - name: Audit locked production and development dependencies
         run: |
-          uv export --locked --all-groups --no-emit-project --format requirements-txt --output-file /tmp/watergeo-requirements.txt
+          uv export --locked --all-groups --all-extras --no-emit-project --format requirements-txt --output-file /tmp/watergeo-requirements.txt
           uv run --locked pip-audit --strict --require-hashes -r /tmp/watergeo-requirements.txt
 
   frontend-dependencies:

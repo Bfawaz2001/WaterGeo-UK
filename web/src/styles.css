@@ -28,8 +28,8 @@ a { color: var(--accent-dark); text-underline-offset: 2px; }
 
 .app-shell {
   display: grid;
-  grid-template: 64px minmax(0, calc(100vh - 64px)) / 320px minmax(420px, 1fr) 350px;
-  grid-template-areas: "header header header" "controls map details";
+  grid-template: 64px minmax(0, calc(100dvh - 64px)) / 300px minmax(0, 1fr);
+  grid-template-areas: "header header" "controls map";
   min-height: 100vh;
 }
 
@@ -69,6 +69,7 @@ a { color: var(--accent-dark); text-underline-offset: 2px; }
 }
 .share-button { margin-left: auto; border-color: rgb(255 255 255 / 40%); color: white; background: transparent; }
 .share-button:hover { background: rgb(255 255 255 / 10%); }
+.panel-toggle { margin-left: 0; }
 
 .control-panel, .selection-region {
   overflow-y: auto;
@@ -76,7 +77,13 @@ a { color: var(--accent-dark); text-underline-offset: 2px; }
   scrollbar-gutter: stable;
 }
 .control-panel { grid-area: controls; border-right: 1px solid var(--line); }
-.selection-region { grid-area: details; border-left: 1px solid var(--line); }
+.selection-region { position: fixed; z-index: 20; right: 12px; bottom: 48px; width: min(370px, calc(100vw - 24px)); max-height: 70dvh; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.selection-region:has(.empty-detail) { display: none; }
+.controls-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+[hidden] { display: none !important; }
+select { max-width: 100%; padding: 8px; font: inherit; background: white; color: var(--ink); }
+select:focus-visible { outline: 3px solid var(--focus); }
+.nearby-list { max-height: 220px; overflow: auto; }
 .panel-section, .detail-panel { position: relative; padding: 22px; border-bottom: 1px solid var(--line); }
 .section-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -225,9 +232,10 @@ p { line-height: 1.5; }
   .topbar { position: sticky; top: 0; min-height: 64px; }
   .brand-copy strong { font-size: 15px; }
   .share-button { padding: 7px 9px; font-size: 12px; }
-  .control-panel { order: 2; overflow: visible; border: 0; }
-  .map-workspace { order: 1; height: 58vh; min-height: 430px; }
+  .control-panel { position: fixed; top: 64px; left: 0; bottom: 0; width: min(320px, 88vw); overflow: auto; z-index: 15; }
+  .map-workspace { order: 1; height: calc(100dvh - 64px); min-height: 430px; }
   .selection-region { max-height: 55vh; }
+  .map-instruction { bottom: 95px; }
   .panel-section { padding: 17px; }
   .layer-list { grid-template-columns: 1fr 1fr; }
   .layer-option { grid-template-columns: 18px 8px 1fr; padding: 8px 4px; }

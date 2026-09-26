@@ -14,16 +14,18 @@ export function WaterBodyBrowser({ open, onToggle, onSelect }: Props) {
   const [dataset, setDataset] = useState<CatchmentDataset>();
   const [next, setNext] = useState<string | null>();
   const [search, setSearch] = useState("");
+  const [bodyType, setBodyType] = useState("");
+  const [shown, setShown] = useState(50);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const generation = useRef(0);
 
-  const load = async (after?: string) => {
+  const load = async (after?: string, restart = false) => {
     const current = ++generation.current;
     setLoading(true);
     setError(undefined);
     try {
-      const page = await api.waterBodies(dataset?.snapshot_id, after);
+      const page = await api.waterBodies(restart ? undefined : dataset?.snapshot_id, after);
       if (current !== generation.current) return;
       setDataset(page.dataset);
       setItems((existing) => (after ? [...existing, ...page.items] : page.items));
@@ -65,9 +67,9 @@ export function WaterBodyBrowser({ open, onToggle, onSelect }: Props) {
   const normalized = search.trim().toLocaleLowerCase();
   const filtered = items.filter(
     (item) =>
-      normalized === "" ||
+      (!bodyType || item.water_body_type === bodyType) && (normalized === "" ||
       item.name.toLocaleLowerCase().includes(normalized) ||
-      item.water_body_id.toLocaleLowerCase().includes(normalized),
+      item.water_body_id.toLocaleLowerCase().includes(normalized)),
   );
 
   return (
@@ -80,10 +82,12 @@ export function WaterBodyBrowser({ open, onToggle, onSelect }: Props) {
         <div className="browser-content">
           <label htmlFor="water-body-search">Find in loaded Water Bodies</label>
           <input id="water-body-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name or publisher ID" />
+          <label>Type within loaded Water Bodies <select value={bodyType} onChange={(event) => setBodyType(event.target.value)}><option value="">All loaded types</option>{[...new Set(items.flatMap((item) => item.water_body_type ? [item.water_body_type] : []))].sort().map((type) => <option key={type}>{type}</option>)}</select></label>
           <p className="state-detail">First 100 are loaded at a time and pinned to one snapshot.</p>
-          {error && <p className="state-error" role="alert">{error}</p>}
+          <p>{filtered.length} matches within {items.length} loaded records. This filter does not search the national dataset.</p>
+          {error && <><p className="state-error" role="alert">{error}</p><button type="button" disabled={loading} onClick={() => void load(undefined, true)}>Reload current snapshot</button></>}
           <ul className="result-list" aria-label="Water Body results">
-            {filtered.slice(0, 50).map((item) => (
+            {filtered.slice(0, shown).map((item) => (
               <li key={item.water_body_id}>
                 <button type="button" onClick={() => void select(item)}>
                   <strong>{item.name}</strong><small>{item.water_body_id} · {item.water_body_type ?? "type not stated"}</small>
@@ -93,7 +97,8 @@ export function WaterBodyBrowser({ open, onToggle, onSelect }: Props) {
           </ul>
           {!loading && filtered.length === 0 && <p>No loaded Water Bodies match that text.</p>}
           {loading && <p role="status">Loading Water Bodies…</p>}
-          {next && !search && <button className="secondary-button" type="button" disabled={loading} onClick={() => void load(next)}>Load next 100</button>}
+          {filtered.length > shown && <button type="button" onClick={() => setShown((value) => value + 50)}>Show more loaded matches</button>}
+          {next && <button className="secondary-button" type="button" disabled={loading} onClick={() => void load(next)}>Load next 100</button>}
         </div>
       )}
     </section>

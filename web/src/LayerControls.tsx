@@ -52,7 +52,7 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
               {active.has(layer.id) && layer.id !== "water-supply" && (
                 <small className={errors[layer.id] ? "state-error" : "state-detail"}>
                   {loading.has(layer.id)
-                    ? "Loading nearby results…"
+                    ? `Updating nearby results… ${counts[layer.id] ?? 0} previous points retained until ready.`
                     : errors[layer.id] ?? `${counts[layer.id] ?? 0} nearest results shown (maximum 100)`}
                 </small>
               )}
