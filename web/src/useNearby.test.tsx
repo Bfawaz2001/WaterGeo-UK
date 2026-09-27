@@ -95,6 +95,21 @@ it("debounces movement, aborts stale requests, and ignores late results", async 
   expect(result.current.hydrology[0]?.station_id).toBe("new");
 });
 
+it("reports a nearby 503 without claiming the snapshot is not loaded", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(api, "hydrologyNear").mockRejectedValue(new ApiError(503, "Database unavailable"));
+  const { result } = renderHook(() => useNearby(
+    { longitude: -1, latitude: 52, radiusM: 5000 },
+    new Set(["hydrology"]),
+    20,
+  ));
+  await act(() => vi.advanceTimersByTimeAsync(20));
+  expect(result.current.errors.hydrology).toBe(
+    "This dataset is currently unavailable from the WaterGeo service.",
+  );
+  expect(result.current.errors.hydrology).not.toMatch(/not loaded/i);
+});
+
 it.each(["water-quality", "reservoirs"] as const)("clears only mismatched %s results and permits a fresh snapshot", async (layer) => {
   vi.useFakeTimers();
   const item = { station_id: "keep" } as HydrologyStation;

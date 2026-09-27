@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -37,5 +38,26 @@ def test_backup_rehearsal_has_destructive_safety_interlock() -> None:
     script = Path("scripts/rehearse_backup_restore.sh").read_text()
     assert "WATERGEO_DISPOSABLE_REHEARSAL:-}" in script
     assert "watergeo-v1-rehearsal-*" in script
+    assert 'if [ "$source_container" = "$restore_container" ]' in script
+    assert "Source and restore containers must differ." in script
     assert "Refusing to overwrite" in script
     assert "snapshot_signature" in script
+
+
+def test_backup_rehearsal_rejects_same_source_and_restore_container() -> None:
+    container = "watergeo-v1-rehearsal-same-1"
+    script = Path("scripts/rehearse_backup_restore.sh").resolve()
+    result = subprocess.run(  # noqa: S603
+        [str(script)],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={
+            "PATH": "",
+            "WATERGEO_DISPOSABLE_REHEARSAL": "1",
+            "WATERGEO_REHEARSAL_SOURCE_CONTAINER": container,
+            "WATERGEO_REHEARSAL_RESTORE_CONTAINER": container,
+        },
+    )
+    assert result.returncode == 2
+    assert result.stderr == "Source and restore containers must differ.\n"

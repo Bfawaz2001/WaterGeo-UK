@@ -12,6 +12,10 @@ case "$source_container:$restore_container" in
   watergeo-v1-rehearsal-*:watergeo-v1-rehearsal-*) ;;
   *) echo "Both container names must begin watergeo-v1-rehearsal-." >&2; exit 2 ;;
 esac
+if [ "$source_container" = "$restore_container" ]; then
+  echo "Source and restore containers must differ." >&2
+  exit 2
+fi
 
 artifact=${WATERGEO_REHEARSAL_BACKUP:-/tmp/watergeo-rehearsal.dump}
 case "$artifact" in /tmp/watergeo-rehearsal-*.dump|/tmp/watergeo-rehearsal.dump) ;; *)

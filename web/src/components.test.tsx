@@ -33,6 +33,12 @@ it("distinguishes available and not-loaded source states outside the map", () =>
   expect(screen.getByText(/No compatible local snapshot/)).toBeInTheDocument();
 });
 
+it("renders a source-status request failure as an error", () => {
+  render(<SourceStatusPanel status={null} error="Source status is currently unavailable." loading={false} />);
+  expect(screen.getByRole("alert")).toHaveTextContent("Source status is currently unavailable.");
+  expect(screen.queryByText("Not loaded")).not.toBeInTheDocument();
+});
+
 it("shows source provenance and reservoir interpretation caveats", () => {
   render(
     <DetailPanel
