@@ -146,7 +146,8 @@ For the supplied hourly/manual GitHub Actions job, see
 environment/secrets and TLS trust, manually dispatch and verify a refresh, then enable
 hourly scheduling. Manual dispatch does not require the schedule-enable variable.
 
-Use cron, a container job or another scheduler with a fixed working directory, a
+Production jobs must use the [durable evidence contract](evidence-storage.md). Use
+cron, a container job or another scheduler with a fixed working directory, a
 configured Python/uv PATH, private credential injection and retained stdout/stderr.
 For example, after choosing an hourly Hydrology retrieval policy:
 
@@ -166,12 +167,16 @@ or publisher revision discovery yet. Source status cannot tell whether the
 last attempted refresh failed. Scheduler monitoring and logs fill that gap for now.
 See [ADR 0010](../adr/0010-source-freshness-refresh-operations.md).
 
-Water Quality metadata refresh uses `scripts/refresh_sources.py water-quality`.
+Water Quality metadata refresh uses `scripts/refresh_sources.py water-quality`. The
+Phase 10 gated workflow runs daily at 02:43 UTC after manual verification; Hydrology
+runs hourly at minute 17 and Thames status runs every 15 minutes at minutes 7, 22, 37
+and 52. These are latest WaterGeo retrieval cadences, not publisher streaming claims.
 Bounded `water-quality-observations` refreshes use a separate source lock and the same
 failure, evidence and retry framework. Their explicit retrieval IDs provide provenance;
 they do not add an aggregate freshness entry to `/v1/sources/status`. There is no
 Water Quality scheduler in this milestone: choose scopes, cadence and operational
-monitoring explicitly before deploying one.
+monitoring explicitly before deploying observation scopes. Global observation
+retrieval remains unscheduled.
 
 The Stream reservoir source is a static 2025 edition. It has a separate lock key and
 supports verified offline retries, but no freshness threshold or scheduler. A later

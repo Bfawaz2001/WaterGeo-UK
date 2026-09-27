@@ -144,6 +144,12 @@ freshness when policy is unset. Retain refresh exit code/run ID without raw upst
 responses or secrets. Application logs use controlled events and sanitized database
 errors; keep access logging at the trusted ingress with bounded retention.
 
+Refresh logs distinguish fetch, validation, accepted/rejected archive, load and final
+outcome. Alert on `EvidenceStorageError`, rejected evidence, stale Thames retrieval age,
+lock contention above the expected cadence and missing scheduled invocations. The API
+runtime has no object-storage credentials. See the [Phase 10 contract](../architecture/phase-10-production-contract.md)
+and [external checklist](production-validation-checklist.md).
+
 ## Go-live checklist
 
 - [ ] Budget, region, owner, public hostname and independent-project wording approved.
@@ -151,7 +157,7 @@ errors; keep access logging at the trusted ingress with bounded retention.
 - [ ] VPC/trusted sources and `verify-full` connection verified for each role.
 - [ ] Secret access boundaries and rotation/revocation procedure tested.
 - [ ] Migration succeeded and exact revision is `0010`.
-- [ ] Production data bootstrap and evidence upload verified.
+- [ ] Production data bootstrap and versioned evidence read-back verified.
 - [ ] Database backup plus evidence storage retention enabled; restore rehearsed.
 - [ ] Edge limits, TLS, HSTS, health checks and alerts configured.
 - [ ] Smoke check including representative data passed from outside the platform.

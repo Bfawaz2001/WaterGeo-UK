@@ -25,7 +25,7 @@ Assessment date: 2026-09-24. Baseline: `fd28eedc43fc741f136c2819fefd89fc7c979617
 | Reverse-proxy trust was undefined | Continue disabling proxy headers. Decide the exact platform ingress address range before enabling them; current routes do not depend on client IP or externally generated absolute URLs. |
 | No remote deployment check | Add a bounded explicit-URL smoke command covering liveness, readiness, OpenAPI, optional data, invalid requests and leakage markers. |
 | Image rollout/migration order was undocumented | Define build-by-digest, one-shot migration, revision check, API rollout, readiness and smoke gates. API replicas never migrate. |
-| Raw evidence is only in ignored local directories | Require encrypted versioned object storage with hashes and retention before production refresh scheduling. This remains a go-live blocker. |
+| Raw evidence is only in ignored local directories | Resolved in Phase 10 by a provider-neutral local/S3 archive gate with versioning, no-overwrite writes and read-back hashes. External provisioning and retention validation remain go-live work. |
 | Managed database backups had no restore contract | Define backup targets, restore rehearsal and verification; provider backups are only one layer. |
 | No production edge abuse policy | Retain application bounds and require edge request-rate, size, connection and timeout limits. Avoid a misleading per-process limiter. |
 | No minimum production monitoring contract | Define availability, latency/status, restarts, database, source freshness and refresh outcome signals. |
@@ -35,6 +35,5 @@ Assessment date: 2026-09-24. Baseline: `fd28eedc43fc741f136c2819fefd89fc7c979617
 
 The public hostname, region, traffic estimate, edge limits, retention periods,
 alert destination, recovery objectives and exact trusted ingress network need an
-operator decision. Production ingestion cannot be enabled until evidence upload
-is durable and failure-tested. These are explicit go-live blockers rather than
-defaults hidden in application code.
+operator decision. Production ingestion now fails closed without configured S3 evidence
+storage; actual infrastructure and a failure-tested rehearsal remain go-live blockers.

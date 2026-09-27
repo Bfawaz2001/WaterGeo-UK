@@ -1,28 +1,26 @@
 # Production data bootstrap and refresh
 
-The API image is intentionally API/migration-only. Run source tools from an exact
-Git commit with `uv sync --locked` in a separate one-shot job. Give the job only the
+The API image is intentionally API/migration-only. Use the dedicated operator image or
+an exact Git commit with `uv sync --locked --extra evidence-s3`. Give the job only the
 ingestion role, verified database TLS and outbound HTTPS to the reviewed publisher.
 Use an ephemeral working directory and never reuse API service secrets.
 
 ## Evidence gate
 
-Every fetch creates source evidence below ignored `data/raw/`. Before loading it:
+Every fetch creates source evidence below ignored `data/raw/`. The combined refresh
+command now enforces this order:
 
 1. let the fetch and validation complete;
 2. calculate and record the bundle/manifest hashes already produced by the client;
 3. upload the complete immutable directory to private, encrypted, versioned object
-   storage under `source/run-or-retrieval-id/`;
+   storage under a content-addressed source/disposition identity;
 4. verify the uploaded object's size and checksum by reading it back;
 5. load the exact retained directory with the ingestion identity;
-6. record snapshot/retrieval ID, evidence key/hash, source commit and job ID.
+6. record snapshot/retrieval ID, evidence key/hash/version, source commit and job ID.
 
-The current combined `refresh_sources.py` command publishes before an external
-object-store upload. Therefore unattended production refresh scheduling remains
-disabled until a failure-tested wrapper or dedicated operator image makes durable
-evidence a prerequisite for publication. Existing GitHub Hydrology scheduling keeps
-operational logs but does not retain raw evidence and is not sufficient for this
-production policy.
+Production mode cannot start with the local backend. Object-store or checksum failure
+prevents publication. Raw rejected bundles are retained under `rejected` when files
+exist and can never satisfy a source loader.
 
 ## Initial sequence
 
@@ -36,6 +34,7 @@ linked guide for exact evidence paths and interpretation.
 | 3 | EA Catchment Data Explorer | Fetch with `scripts/fetch_ea_catchments.py`, retain, then use `scripts/load_ea_catchments.py` | Reviewed Cycle 3 hierarchy; replace only after source review. |
 | 4 | EA Water Quality sampling points | Fetch with `scripts/fetch_ea_water_quality.py`, retain, then use `scripts/load_ea_water_quality.py` | Dynamic metadata snapshot. |
 | 5 | Severn Trent reservoir levels | Fetch the reviewed source using the bounded refresh client, retain its bundle, then replay with `refresh_sources.py stream-reservoir-levels --evidence-dir …` | Static 2025 edition; never schedule as live levels. |
+| 6 | Thames Water discharge status | Manually run and verify one durable refresh, then enable its gated schedule. | Dynamic publisher indication; latest WaterGeo retrieval, not continuous streaming. |
 
 Hydrology history and Water Quality observations are intentionally scoped retrievals,
 not global bootstrap jobs. Request only an explicit reviewed measure/time window or
@@ -52,7 +51,7 @@ or the source-specific verified no-op; unexpected changed IDs/hashes fail the re
 Finish with `/ready`, `/v1/sources/status`, representative dataset endpoints and the
 deployment smoke check. Do not make traffic public with an empty database.
 
-No source beyond Hydrology has an existing schedule. Do not enable new schedules in
-Phase 6. When durable evidence transfer is implemented, start with one manually
-dispatched refresh, verify retention and database publication, then enable the
-separately gated schedule.
+Static/versioned sources are Ofwat, Catchments and the Severn Trent edition. Dynamic
+sources are Hydrology latest, Water Quality sampling-point metadata and Thames status.
+Hydrology history and Water Quality observations remain bounded/on-demand. Enable each
+dynamic schedule only after its manual durable refresh succeeds.
