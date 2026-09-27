@@ -59,6 +59,24 @@ and reservoir selections show an accessible same-unit trend. See the
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
 
+## Run the complete local demo
+
+After starting PostgreSQL and migrating to `0011`, one command inspects the database,
+preserves compatible snapshots, replays retained verified evidence where available,
+and loads only missing accepted demo sources:
+
+```bash
+uv run --locked watergeo-demo-bootstrap --dry-run
+uv run --locked watergeo-demo-bootstrap
+uv run --locked watergeo-demo-smoke http://127.0.0.1:8000 --complete
+```
+
+See the [complete local demo guide](docs/guides/local-complete-demo.md) for offline and
+selected-source modes, source semantics and failure handling. The
+[v1 production rehearsal](docs/guides/v1-production-rehearsal.md) serves the built
+explorer and API from one local origin and defines guarded recovery, scheduling, cost
+and monitoring contracts. It does not claim public hosting or cloud provisioning.
+
 Phase 2D now includes source status and bounded refresh commands. Query
 `GET /v1/sources/status` for accepted retrieval and observation ages; dynamic freshness
 uses explicit operator-configured limits. Run
