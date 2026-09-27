@@ -39,7 +39,7 @@ const EMPTY: NearbyState = {
 
 function message(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 503) return "Dataset is currently unavailable.";
+    if (error.status === 503) return "This dataset is currently unavailable from the WaterGeo service.";
     if (error.status === 422) return "The map request was outside the supported bounds.";
   }
   return "This layer could not be loaded.";

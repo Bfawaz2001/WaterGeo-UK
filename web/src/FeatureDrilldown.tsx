@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 
 import { api } from "./api";
+import { MetadataValue } from "./MetadataValue";
 import { TrendChart } from "./TrendChart";
 import type { HydrologyMeasure, ReservoirReading, SelectedFeature } from "./types";
 
 type Drilldown =
   | { kind: "hydrology"; measures: HydrologyMeasure[] }
   | { kind: "reservoirs"; readings: ReservoirReading[]; truncated: boolean }
-  | { kind: "water-quality"; rows: Array<{ id: string; value: string }> };
+  | { kind: "water-quality"; rows: Array<{ id: string; value: unknown }> };
 
 export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
   const [detail, setDetail] = useState<Drilldown | null>(null);
@@ -29,7 +30,7 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
             kind: "water-quality",
             rows: Object.entries(response.publisher_metadata).map(([id, value]) => ({
               id,
-              value: typeof value === "string" ? value : JSON.stringify(value),
+              value,
             })),
           };
         } else if (selected.kind === "reservoirs") {
@@ -81,6 +82,6 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
   return <section aria-label="Source detail drill-down">
     <h3>Publisher sampling metadata</h3>
     {detail.rows.length === 0 && <p>No accepted metadata fields.</p>}
-    <dl>{detail.rows.map((row) => <div key={row.id}><dt>{row.id.replaceAll("_", " ")}</dt><dd>{row.value}</dd></div>)}</dl>
+    <dl className="publisher-metadata">{detail.rows.map((row) => <div key={row.id}><dt>{row.id.replaceAll("_", " ")}</dt><dd><MetadataValue value={row.value} /></dd></div>)}</dl>
   </section>;
 }

@@ -1,0 +1,113 @@
+name: watergeo-v1-rehearsal
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    environment:
+      POSTGRES_DB: watergeo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_MIGRATION_PASSWORD: ${WATERGEO_MIGRATION_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_DB_PASSWORD: ${WATERGEO_DB_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_INGESTION_PASSWORD: ${WATERGEO_INGESTION_PASSWORD:?Set a disposable rehearsal password}
+    volumes:
+      - rehearsal_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "watergeo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [private]
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      WATERGEO_DB_HOST: db
+      WATERGEO_MIGRATION_PASSWORD: ${WATERGEO_MIGRATION_PASSWORD:?Set a disposable rehearsal password}
+    depends_on:
+      db: {condition: service_healthy}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [private]
+
+  api:
+    build: .
+    environment:
+      WATERGEO_DB_HOST: db
+      WATERGEO_DB_PASSWORD: ${WATERGEO_DB_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_LOG_LEVEL: INFO
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [private, ingress]
+
+  edge:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    depends_on:
+      api: {condition: service_healthy}
+    ports:
+      - "127.0.0.1:${WATERGEO_REHEARSAL_PORT:-8080}:8080"
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [ingress]
+
+  restore-db:
+    profiles: [recovery]
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    environment:
+      POSTGRES_DB: watergeo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_MIGRATION_PASSWORD: ${WATERGEO_MIGRATION_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_DB_PASSWORD: ${WATERGEO_DB_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_INGESTION_PASSWORD: ${WATERGEO_INGESTION_PASSWORD:?Set a disposable rehearsal password}
+    volumes:
+      - rehearsal_restore:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "watergeo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [private]
+
+  restore-api:
+    profiles: [recovery]
+    build: .
+    environment:
+      WATERGEO_DB_HOST: restore-db
+      WATERGEO_DB_PASSWORD: ${WATERGEO_DB_PASSWORD:?Set a disposable rehearsal password}
+      WATERGEO_LOG_LEVEL: INFO
+    depends_on:
+      restore-db: {condition: service_healthy}
+    ports:
+      - "127.0.0.1:${WATERGEO_RESTORE_API_PORT:-18000}:8000"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [private, ingress]
+
+networks:
+  private:
+    internal: true
+  ingress:
+
+volumes:
+  rehearsal_postgres:
+  rehearsal_restore:

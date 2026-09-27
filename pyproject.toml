@@ -27,6 +27,8 @@ dependencies = [
 [project.scripts]
 watergeo = "watergeo.cli:main"
 watergeo-export = "watergeo.exports:main"
+watergeo-demo-bootstrap = "watergeo.operations.demo_bootstrap:main"
+watergeo-demo-smoke = "watergeo.operations.demo_smoke:main"
 
 [project.optional-dependencies]
 exports = ["pyarrow>=21,<24"]
