@@ -30,7 +30,12 @@ def test_frontend_workflow_is_locked_read_only_and_complete():
         "npm run typecheck",
         "npm test -- --run",
         "npm run build",
+        "npx playwright install --with-deps chromium",
+        "npm run test:e2e",
     ]
+    artifact = next(step for step in actions if "actions/upload-artifact@" in step["uses"])
+    assert artifact["with"]["path"] == "web/dist"
+    assert artifact["with"]["name"] == "watergeo-explorer-${{ github.sha }}"
     assert "permissions" not in job
 
 
