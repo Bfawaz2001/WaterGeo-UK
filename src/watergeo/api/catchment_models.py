@@ -30,10 +30,13 @@ class NoQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class PageQuery(NoQuery):
+class SnapshotQuery(NoQuery):
+    snapshot_id: UUID | None = None
+
+
+class PageQuery(SnapshotQuery):
     limit: PageSize = 50
     after_id: CatchmentId | None = None
-    snapshot_id: UUID | None = None
 
 
 class Dataset(BaseModel):

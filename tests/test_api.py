@@ -93,6 +93,7 @@ def test_openapi_documents_public_endpoints(client: TestClient) -> None:
         "/health",
         "/ready",
         "/v1/sources/status",
+        "/v1/search",
         "/v1/severn-trent/reservoir-levels/dataset",
         "/v1/severn-trent/reservoir-levels/reservoirs",
         "/v1/severn-trent/reservoir-levels/reservoirs/near",

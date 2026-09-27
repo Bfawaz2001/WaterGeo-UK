@@ -148,6 +148,41 @@ def test_station_http_list_detail_near_freshness(loaded: dict[str, Any]) -> None
         assert dataset.headers["cache-control"] == "no-store"
 
 
+def test_product_search_is_bounded_ranked_and_snapshot_identified(
+    loaded: dict[str, Any], engines: tuple[Engine, Engine, Engine]
+) -> None:
+    with TestClient(create_app()) as client:
+        response = client.get("/v1/search", params={"q": "synthetic", "limit": 2})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["query"] == "synthetic"
+        assert payload["truncated"] is True
+        assert [item["label"] for item in payload["items"]] == ["Synthetic a", "Synthetic b"]
+        assert all(item["kind"] == "hydrology" for item in payload["items"])
+        assert all(item["snapshot_id"] == loaded["snapshot_id"] for item in payload["items"])
+        assert "hydrology" in payload["available_kinds"]
+        assert payload["items"][0]["longitude"] == -1
+        assert response.headers["cache-control"] == "no-store"
+
+        exact = client.get("/v1/search", params={"q": "unlocated"}).json()["items"]
+        assert exact[0]["identity"] == "unlocated"
+        assert exact[0]["longitude"] is None
+
+    with engines[1].connect() as connection:
+        indexes = set(
+            connection.execute(
+                text("""
+                    SELECT indexname FROM pg_indexes
+                    WHERE schemaname='watergeo' AND indexname LIKE '%search%'
+                """)
+            ).scalars()
+        )
+    assert "hydrology_station_search_name" in indexes
+    assert "hydrology_station_search_identity" in indexes
+    assert "water_quality_sampling_point_search_name" in indexes
+    assert "water_quality_sampling_point_search_identity" in indexes
+
+
 @pytest.mark.parametrize(
     "latitude,longitude,wkt",
     [

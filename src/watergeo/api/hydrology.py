@@ -14,6 +14,7 @@ from watergeo.api.hydrology_models import (
     Dataset,
     NearQuery,
     PageQuery,
+    SnapshotQuery,
     StationDetail,
     StationId,
     StationPage,
@@ -66,6 +67,6 @@ def near(query: Annotated[NearQuery, Query()], db: Queries) -> StationPage:
 
 @router.get("/stations/{station_id}", responses={404: {"model": ApiError}})
 def station(
-    station_id: StationId, query: Annotated[NoQuery, Query()], db: Queries
+    station_id: StationId, query: Annotated[SnapshotQuery, Query()], db: Queries
 ) -> StationDetail:
-    return db.station(db.dataset(), station_id)
+    return db.station(db.dataset(query.snapshot_id), station_id)
