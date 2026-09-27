@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   catchmentDataset: vi.fn(),
   waterBody: vi.fn(),
   waterBodyGeometry: vi.fn(),
+  search: vi.fn(),
+  hydrologyDetail: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -26,6 +28,8 @@ vi.mock("./api", () => ({
     catchmentDataset: mocks.catchmentDataset,
     waterBody: mocks.waterBody,
     waterBodyGeometry: mocks.waterBodyGeometry,
+    search: mocks.search,
+    hydrologyDetail: mocks.hydrologyDetail,
   },
 }));
 
@@ -142,6 +146,19 @@ beforeEach(() => {
   mocks.catchmentDataset.mockResolvedValue(catchmentDataset);
   mocks.waterBody.mockResolvedValue(waterBody);
   mocks.waterBodyGeometry.mockResolvedValue(waterBodyGeometry);
+  mocks.search.mockResolvedValue({
+    query: "river", truncated: false, available_kinds: ["hydrology"], unavailable_kinds: [], items: [{
+      kind: "hydrology", identity: "station-1", label: "River Station",
+      context: "Hydrology station", publisher: "Environment Agency",
+      snapshot_id: dataset.snapshot_id, longitude: -1, latitude: 52,
+    }],
+  });
+  mocks.hydrologyDetail.mockResolvedValue({
+    station_id: "station-1", source_uri: "https://example.test/station",
+    labels: ["River Station"], location_status: "available", latitude: 52, longitude: -1,
+    geometry: { type: "Point", coordinates: [-1, 52] }, distance_m: null,
+    dataset, measures: [],
+  });
 });
 
 it("restores a shared Water Body selection with matching snapshot provenance", async () => {
@@ -157,6 +174,18 @@ it("selects a point and presents its provenance outside the map", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Select station" }));
   expect(screen.getByRole("heading", { name: "River Station" })).toBeInTheDocument();
   expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
+});
+
+it("searches current indexed entities and opens a snapshot-pinned map feature", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByRole("searchbox"), "river");
+  const result = await screen.findByRole("button", { name: /River Station/ });
+  await userEvent.click(result);
+  await waitFor(() => expect(mocks.hydrologyDetail).toHaveBeenCalledWith(
+    "station-1", expect.any(AbortSignal), dataset.snapshot_id,
+  ));
+  expect(screen.getByRole("heading", { name: "River Station" })).toBeInTheDocument();
+  expect(screen.getByRole("checkbox", { name: /Hydrology stations/ })).toBeChecked();
 });
 
 it("labels Thames map status with the latest WaterGeo retrieval time", () => {

@@ -4,12 +4,17 @@ import type {
   AreaPage,
   CatchmentDataset,
   GeoJSONFeatureCollection,
+  HydrologyDetail,
   HydrologyStation,
   NearbyPage,
   Reservoir,
+  ReservoirDetail,
+  SearchResponse,
   ThamesAlertStatus,
   ThamesDischargeSite,
+  ThamesDischargeDetail,
   SamplingPoint,
+  SamplingPointDetail,
   SourceStatuses,
   WaterBodyDetail,
   WaterBodyPage,
@@ -133,6 +138,11 @@ function query(values: Record<string, string | number | undefined>): string {
   return params.toString();
 }
 
+function withQuery(path: string, values: Record<string, string | number | undefined>): string {
+  const encoded = query(values);
+  return encoded ? `${path}?${encoded}` : path;
+}
+
 function pinned<T extends { dataset: { snapshot_id: string } }>(
   page: T,
   expectedSnapshot?: string,
@@ -144,12 +154,18 @@ function pinned<T extends { dataset: { snapshot_id: string } }>(
 }
 
 export const api = {
-  hydrologyDetail: (id: string, signal: AbortSignal) =>
-    request<{ dataset: { snapshot_id: string }; measures: Array<{ measure_id: string; parameter: string; unit_name: string; latest_observation: { value: number | null; observed_at: string } | null }> }>(`/v1/hydrology/stations/${encodeURIComponent(id)}`, { signal }),
+  search: (term: string, signal: AbortSignal) =>
+    request<SearchResponse>(`/v1/search?${query({ q: term, limit: 24 })}`, { signal }),
+  hydrologyDetail: (id: string, signal: AbortSignal, snapshot?: string) =>
+    request<HydrologyDetail>(withQuery(`/v1/hydrology/stations/${encodeURIComponent(id)}`, { snapshot_id: snapshot }), { signal }),
   samplingPointDetail: (id: string, snapshot: string, signal: AbortSignal) =>
-    request<{ dataset: { snapshot_id: string }; publisher_metadata: Record<string, unknown> }>(`/v1/water-quality/sampling-points/${encodeURIComponent(id)}?${query({ snapshot_id: snapshot })}`, { signal }),
+    request<SamplingPointDetail>(`/v1/water-quality/sampling-points/${encodeURIComponent(id)}?${query({ snapshot_id: snapshot })}`, { signal }),
+  reservoirDetail: (id: string, snapshot: string, signal: AbortSignal) =>
+    request<ReservoirDetail>(`/v1/severn-trent/reservoir-levels/reservoirs/${encodeURIComponent(id)}?${query({ snapshot_id: snapshot })}`, { signal }),
+  thamesDischargeDetail: (id: string, snapshot: string, signal: AbortSignal) =>
+    request<ThamesDischargeDetail>(`/v1/thames-water/discharge-status/sites/${encodeURIComponent(id)}?${query({ snapshot_id: snapshot })}`, { signal }),
   reservoirReadings: (id: string, snapshot: string, signal: AbortSignal) =>
-    request<{ dataset: { snapshot_id: string }; items: Array<{ observed_at: string; current_percentage: number; current_level: number; current_level_unit: string }>; next_after: string | null }>(`/v1/severn-trent/reservoir-levels/reservoirs/${encodeURIComponent(id)}/readings?${query({ snapshot_id: snapshot, limit: 20 })}`, { signal }),
+    request<{ dataset: { snapshot_id: string }; items: Array<{ observed_at: string; current_percentage: number; current_level: number; current_level_unit: string }>; next_after: string | null }>(`/v1/severn-trent/reservoir-levels/reservoirs/${encodeURIComponent(id)}/readings?${query({ snapshot_id: snapshot, limit: 100 })}`, { signal }),
   sourceStatuses: (signal?: AbortSignal) =>
     request<SourceStatuses>("/v1/sources/status", { signal }),
 
@@ -219,8 +235,8 @@ export const api = {
       responseKind: "geojson",
     }),
 
-  catchmentDataset: (signal?: AbortSignal) =>
-    request<CatchmentDataset>("/v1/catchments/dataset", { signal }),
+  catchmentDataset: (signal?: AbortSignal, snapshotId?: string) =>
+    request<CatchmentDataset>(withQuery("/v1/catchments/dataset", { snapshot_id: snapshotId }), { signal }),
 
   waterBodies: (snapshotId?: string, afterId?: string, signal?: AbortSignal) =>
     request<WaterBodyPage>(
@@ -228,14 +244,14 @@ export const api = {
       { signal },
     ).then((page) => pinned(page, snapshotId)),
 
-  waterBody: (identity: string, signal?: AbortSignal) =>
-    request<WaterBodyDetail>(`/v1/catchments/water-bodies/${encodeURIComponent(identity)}`, {
+  waterBody: (identity: string, signal?: AbortSignal, snapshotId?: string) =>
+    request<WaterBodyDetail>(withQuery(`/v1/catchments/water-bodies/${encodeURIComponent(identity)}`, { snapshot_id: snapshotId }), {
       signal,
     }),
 
-  waterBodyGeometry: (identity: string, signal?: AbortSignal) =>
+  waterBodyGeometry: (identity: string, signal?: AbortSignal, snapshotId?: string) =>
     request<GeoJSONFeatureCollection>(
-      `/v1/catchments/water-bodies/${encodeURIComponent(identity)}/geometry`,
+      withQuery(`/v1/catchments/water-bodies/${encodeURIComponent(identity)}/geometry`, { snapshot_id: snapshotId }),
       { signal, responseKind: "geojson" },
     ),
 };

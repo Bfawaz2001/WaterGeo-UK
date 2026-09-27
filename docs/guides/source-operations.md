@@ -1,7 +1,7 @@
 # Source freshness and refresh operations
 
 Run these commands from the repository root after `uv sync --locked`, database setup
-and `uv run --locked alembic upgrade head`. Schema head is `0010`. The API uses
+and `uv run --locked alembic upgrade head`. Schema head is `0011`. The API uses
 the read-only application role; refresh jobs use `WATERGEO_INGESTION_PASSWORD` and the
 existing ingestion role. Jobs do not require administrator or migration credentials.
 

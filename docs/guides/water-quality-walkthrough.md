@@ -1,7 +1,7 @@
 # Water Quality developer walkthrough
 
 Run from the repository root. Follow README database/password setup, start the database,
-then use `uv sync --locked` and `uv run --locked alembic upgrade head` (currently 0010).
+then use `uv sync --locked` and `uv run --locked alembic upgrade head` (currently 0011).
 The API uses the read-only application role; refresh uses the ingestion role.
 
 ## 1. Load sampling-point metadata

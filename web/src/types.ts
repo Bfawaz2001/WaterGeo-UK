@@ -30,6 +30,18 @@ export interface HydrologyStation {
   distance_m: number | null;
 }
 
+export interface HydrologyMeasure {
+  measure_id: string;
+  parameter: string;
+  unit_name: string;
+  latest_observation: { value: number | null; observed_at: string } | null;
+}
+
+export interface HydrologyDetail extends HydrologyStation {
+  dataset: DatasetProvenance;
+  measures: HydrologyMeasure[];
+}
+
 export interface SamplingPoint {
   sampling_point_id: string;
   source_uri: string;
@@ -40,6 +52,11 @@ export interface SamplingPoint {
   geometry: PointGeometry | null;
   location_status: "available" | "unavailable";
   distance_m: number | null;
+}
+
+export interface SamplingPointDetail extends SamplingPoint {
+  dataset: DatasetProvenance;
+  publisher_metadata: Record<string, unknown>;
 }
 
 export interface ReservoirReading {
@@ -61,6 +78,10 @@ export interface Reservoir {
   latest_reading: ReservoirReading | null;
 }
 
+export interface ReservoirDetail extends Reservoir {
+  dataset: DatasetProvenance;
+}
+
 export type ThamesAlertStatus = "Discharging" | "Not discharging" | "Offline";
 
 export interface ThamesDischargeSite {
@@ -78,6 +99,31 @@ export interface ThamesDischargeSite {
   most_recent_discharge_start: string | null;
   most_recent_discharge_stop: string | null;
   distance_m: number | null;
+}
+
+export interface ThamesDischargeDetail extends ThamesDischargeSite {
+  dataset: DatasetProvenance;
+}
+
+export type SearchKind = LayerId | "water-body";
+
+export interface SearchResult {
+  kind: SearchKind;
+  identity: string;
+  label: string;
+  context: string;
+  publisher: string;
+  snapshot_id: string;
+  longitude: number | null;
+  latitude: number | null;
+}
+
+export interface SearchResponse {
+  query: string;
+  items: SearchResult[];
+  truncated: boolean;
+  available_kinds: SearchKind[];
+  unavailable_kinds: SearchKind[];
 }
 
 export interface NearbyPage<T> {

@@ -18,6 +18,12 @@ class PageQuery(BaseModel):
     snapshot_id: UUID | None = None
 
 
+class SnapshotQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    snapshot_id: UUID | None = None
+
+
 class NearQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
     lon: float = Field(ge=-180, le=180, allow_inf_nan=False)

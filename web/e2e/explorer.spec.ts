@@ -34,6 +34,31 @@ async function syntheticApi(page: Page) {
       } });
       return;
     }
+    if (url.pathname === "/v1/search") {
+      await route.fulfill({ json: {
+        query: url.searchParams.get("q"), truncated: false,
+        available_kinds: ["hydrology"], unavailable_kinds: [],
+        items: [{
+          kind: "hydrology", identity: "station-1", label: "Synthetic station",
+          context: "Hydrology station", publisher: "Environment Agency",
+          snapshot_id: dataset.snapshot_id, longitude: -2.5, latitude: 54.5,
+        }],
+      } });
+      return;
+    }
+    if (url.pathname === "/v1/hydrology/stations/station-1") {
+      await route.fulfill({ json: {
+        station_id: "station-1", source_uri: "https://example.test/station",
+        labels: ["Synthetic station"], location_status: "available",
+        latitude: 54.5, longitude: -2.5,
+        geometry: { type: "Point", coordinates: [-2.5, 54.5] }, distance_m: null,
+        dataset,
+        measures: [{ measure_id: "level-1", parameter: "level", unit_name: "m", latest_observation: {
+          value: 0.82, observed_at: "2026-09-26T11:45:00Z",
+        } }],
+      } });
+      return;
+    }
     if (url.pathname === "/v1/water-supply/areas/at-point") {
       await route.fulfill({ json: { snapshot_id: dataset.snapshot_id, next_after_id: null, items: [{
         source_id: 3, area_served: "Synthetic area", company: "Synthetic Water",
@@ -73,7 +98,21 @@ test("explorer loads bounded data and shows selected provenance", async ({ page 
   await station.click();
   await expect(page.getByRole("heading", { name: "Synthetic station" })).toBeVisible();
   await expect(page.getByText("Synthetic acceptance data")).toBeVisible();
-  await expect(page.getByText(/9\/26\/2026|26\/09\/2026/)).toBeVisible();
+  await expect(page.locator('time[datetime="2026-09-26T12:00:00Z"]')).toBeVisible();
+});
+
+test("unified search opens a snapshot-consistent feature with observation timing", async ({ page }) => {
+  await syntheticApi(page);
+  await page.goto("/");
+  const search = page.getByRole("searchbox", { name: "Search WaterGeo" });
+  await search.fill("synthetic");
+  const result = page.getByRole("button", { name: /Synthetic station.*Hydrology station/ });
+  await expect(result).toBeVisible();
+  await result.click();
+  await expect(page.getByRole("heading", { name: "Synthetic station" })).toBeVisible();
+  await expect(page.getByText("0.82 m")).toBeVisible();
+  await expect(page.getByText(/Publisher observed/)).toBeVisible();
+  await expect(page.getByText("WaterGeo retrieved")).toBeVisible();
 });
 
 test("water-supply lookup and API failure states remain visible", async ({ page }) => {
@@ -100,4 +139,7 @@ test("mobile viewport exposes the collapsed controls", async ({ page }) => {
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.click();
   await expect(page.getByRole("complementary", { name: "Explorer controls" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search WaterGeo" })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search WaterGeo" }).fill("synthetic");
+  await expect(page.getByRole("button", { name: /Synthetic station.*Hydrology station/ })).toBeVisible();
 });

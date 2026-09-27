@@ -36,7 +36,7 @@ status command. Use `/v1/sources/status` for the accepted-data view.
 ## Enable safely
 
 1. Provision PostgreSQL/PostGIS using the existing schema and least-privilege roles;
-   apply migrations through `0010` separately. Check the API's `/ready` if deployed.
+   apply migrations through `0011` separately. Check the API's `/ready` if deployed.
 2. Provide a database endpoint reachable from `ubuntu-24.04` GitHub-hosted runners,
    with server TLS enabled and a certificate matching the connection hostname.
    A localhost Compose database or private endpoint without network connectivity will

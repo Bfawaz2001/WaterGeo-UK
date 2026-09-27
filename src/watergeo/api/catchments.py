@@ -21,6 +21,7 @@ from watergeo.api.catchment_models import (
     PageQuery,
     RiverBasinDistrictDetail,
     RiverBasinDistrictPage,
+    SnapshotQuery,
     WaterBodyDetail,
     WaterBodyGeometryCollection,
     WaterBodyPage,
@@ -82,8 +83,8 @@ Queries = Annotated[CatchmentQueries, Depends(queries)]
 
 
 @router.get("/dataset")
-def dataset(query: Annotated[NoQuery, Query()], db: Queries) -> Dataset:
-    return db.dataset()
+def dataset(query: Annotated[SnapshotQuery, Query()], db: Queries) -> Dataset:
+    return db.dataset(query.snapshot_id)
 
 
 @router.get("/river-basin-districts")
@@ -174,10 +175,10 @@ def water_bodies(query: Annotated[PageQuery, Query()], db: Queries) -> WaterBody
 )
 def water_body(
     entity_id: CatchmentId,
-    query: Annotated[NoQuery, Query()],
+    query: Annotated[SnapshotQuery, Query()],
     db: Queries,
 ) -> WaterBodyDetail:
-    return db.water_body(db.dataset(), entity_id)
+    return db.water_body(db.dataset(query.snapshot_id), entity_id)
 
 
 @router.get(
@@ -190,7 +191,7 @@ def water_body(
 )
 def water_body_geometry(
     entity_id: CatchmentId,
-    query: Annotated[NoQuery, Query()],
+    query: Annotated[SnapshotQuery, Query()],
     db: Queries,
 ) -> WaterBodyGeometryCollection:
-    return db.water_body_geometry(db.dataset(), entity_id)
+    return db.water_body_geometry(db.dataset(query.snapshot_id), entity_id)

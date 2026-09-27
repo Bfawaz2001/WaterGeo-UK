@@ -6,26 +6,26 @@ import type { Overview } from "./overview";
 const mock = vi.hoisted(() => {
   class Map {
     static latest: Map;
-    listeners = new globalThis.Map<string, Set<() => void>>();
-    sources = new globalThis.Map<string, { setData: ReturnType<typeof vi.fn> }>();
+    listeners = new globalThis.Map<string, Set<(...args: unknown[]) => void>>();
+    sources = new globalThis.Map<string, { setData: ReturnType<typeof vi.fn>; getClusterExpansionZoom?: ReturnType<typeof vi.fn> }>();
     layers = new Set<string>();
     operations: string[] = [];
     loaded = false;
     setLayoutProperty = vi.fn();
     remove = vi.fn(() => this.listeners.clear());
     constructor() { Map.latest = this; }
-    on(event: string, callback: () => void) {
+    on(event: string, callback: (...args: unknown[]) => void) {
       const listeners = this.listeners.get(event) ?? new Set();
       listeners.add(callback);
       this.listeners.set(event, listeners);
     }
-    off(event: string, callback: () => void) { this.listeners.get(event)?.delete(callback); }
+    off(event: string, callback: (...args: unknown[]) => void) { this.listeners.get(event)?.delete(callback); }
     once(event: string, callback: () => void) {
       this.operations.push(`once:${event}`);
       const once = () => { this.off(event, once); callback(); };
       this.on(event, once);
     }
-    emit(event: string) { for (const callback of [...this.listeners.get(event) ?? []]) callback(); }
+    emit(event: string, ...args: unknown[]) { for (const callback of [...this.listeners.get(event) ?? []]) callback(...args); }
     addControl() {}
     resize() {}
     removeLayer(id: string) { this.layers.delete(id); }
@@ -35,7 +35,10 @@ const mock = vi.hoisted(() => {
     getZoom() { return 8; }
     isStyleLoaded() { return this.loaded; }
     getSource(id: string) { return this.sources.get(id); }
-    addSource = vi.fn((id: string) => { this.sources.set(id, { setData: vi.fn() }); });
+    addSource = vi.fn((id: string) => { this.sources.set(id, { setData: vi.fn(), getClusterExpansionZoom: vi.fn().mockResolvedValue(12) }); });
+    queryRenderedFeatures = vi.fn((): Array<Record<string, unknown>> => []);
+    easeTo = vi.fn();
+    fitBounds = vi.fn();
     getLayer(id: string) { return this.layers.has(id); }
     addLayer(layer: { id: string }) { this.layers.add(layer.id); }
     setStyle = vi.fn(() => {
@@ -72,6 +75,10 @@ it("restores current data only after the initial and fallback styles fully load"
   const { area, waterBody, map, unmount } = renderMap();
   expect(map.sources.size).toBe(0);
   act(() => { map.loaded = true; map.emit("load"); });
+  expect(map.addSource).toHaveBeenCalledWith(
+    "watergeo-hydrology",
+    expect.objectContaining({ cluster: true, clusterMaxZoom: 10, clusterRadius: 44 }),
+  );
   expect(map.getSource("watergeo-area")?.setData).toHaveBeenLastCalledWith(area);
   expect(map.getSource("watergeo-water-body")?.setData).toHaveBeenLastCalledWith(waterBody);
   expect(map.setLayoutProperty).toHaveBeenCalledWith("watergeo-hydrology", "visibility", "none");
@@ -106,6 +113,20 @@ it("installs the PMTiles overview only after load and restores it after fallback
   expect(map.getLayer("watergeo-overview")).toBe(false);
   act(() => { map.loaded = true; map.emit("style.load"); });
   expect(map.getLayer("watergeo-overview")).toBe(true);
+});
+
+it("expands a point cluster instead of treating it as an individual feature", async () => {
+  const { map } = renderMap();
+  act(() => { map.loaded = true; map.emit("load"); });
+  map.queryRenderedFeatures.mockReturnValueOnce([{
+    source: "watergeo-hydrology",
+    properties: { cluster_id: 7, point_count: 4 },
+    geometry: { type: "Point", coordinates: [-1.5, 52.5] },
+  }]);
+  act(() => map.emit("click", { point: { x: 10, y: 10 }, lngLat: { lng: -1.5, lat: 52.5 } }));
+  await act(async () => Promise.resolve());
+  expect(map.getSource("watergeo-hydrology")?.getClusterExpansionZoom).toHaveBeenCalledWith(7);
+  expect(map.easeTo).toHaveBeenCalledWith({ center: [-1.5, 52.5], zoom: 12 });
 });
 
 it("removes a pending fallback listener and ignores a captured late callback on teardown", () => {
