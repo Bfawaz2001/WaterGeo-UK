@@ -91,6 +91,8 @@ def test_permissions_pins_and_no_shell_expressions(workflow):
                     "WATERGEO_INGESTION_USER",
                     "WATERGEO_INGESTION_PASSWORD",
                     "WATERGEO_DB_CA_PEM",
+                    "WATERGEO_EVIDENCE_S3_ACCESS_KEY_ID",
+                    "WATERGEO_EVIDENCE_S3_SECRET_ACCESS_KEY",
                 }:
                     assert value == "${{ secrets." + key + " }}"
     checkout = workflow["jobs"]["refresh"]["steps"][0]
@@ -106,6 +108,8 @@ def test_only_hydrology_cli_and_verified_tls(workflow):
     assert commands == ["hydrology"]
     assert "--timeout-seconds 1800" in refresh["run"]
     assert refresh["env"]["WATERGEO_DB_SSLMODE"] == "verify-full"
+    assert refresh["env"]["WATERGEO_SERVICE_ENVIRONMENT"] == "production"
+    assert refresh["env"]["WATERGEO_EVIDENCE_BACKEND"] == "s3"
     assert "WATERGEO_DB_CA_PEM" in refresh["env"]
     assert not re.search(
         r"refresh_sources.py (?:ofwat|catchments|hydrology-history)", PATH.read_text()
@@ -164,6 +168,12 @@ def test_actual_shell_preserves_cli_exit_and_only_captures_operational_stdout(
         "WATERGEO_INGESTION_PASSWORD": "synthetic-password",
         "WATERGEO_DB_CA_PEM": "synthetic CA",
         "WATERGEO_DB_SSLROOTCERT": str(tmp_path / "ca.pem"),
+        "WATERGEO_EVIDENCE_S3_ENDPOINT": "https://lon1.digitaloceanspaces.com",
+        "WATERGEO_EVIDENCE_S3_REGION": "lon1",
+        "WATERGEO_EVIDENCE_S3_BUCKET": "evidence",
+        "WATERGEO_EVIDENCE_S3_PREFIX": "watergeo/evidence",
+        "WATERGEO_EVIDENCE_S3_ACCESS_KEY_ID": "access-key",
+        "WATERGEO_EVIDENCE_S3_SECRET_ACCESS_KEY": "secret-key",
     }
     steps = workflow["jobs"]["refresh"]["steps"]
     if scenario == "missing":

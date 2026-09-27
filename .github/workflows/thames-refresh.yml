@@ -1,20 +1,20 @@
-name: Hydrology latest refresh
+name: Thames discharge status refresh
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "7,22,37,52 * * * *"
 
 permissions:
   contents: read
 
 concurrency:
-  group: hydrology-latest-refresh
+  group: thames-discharge-status-refresh
   cancel-in-progress: false
 
 jobs:
   refresh:
-    name: Refresh Hydrology latest
+    name: Refresh Thames discharge status
     if: >-
       github.repository == 'Bfawaz2001/WaterGeo-UK' &&
       github.ref == 'refs/heads/main' &&
@@ -22,12 +22,12 @@ jobs:
         github.event_name == 'workflow_dispatch' ||
         (
           github.event_name == 'schedule' &&
-          vars.WATERGEO_HYDROLOGY_SCHEDULE_ENABLED == 'true'
+          vars.WATERGEO_THAMES_SCHEDULE_ENABLED == 'true'
         )
       )
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    environment: hydrology-refresh
+    timeout-minutes: 25
+    environment: thames-refresh
     defaults:
       run:
         shell: bash
@@ -37,15 +37,15 @@ jobs:
           persist-credentials: false
       - name: Initialize operational log
         run: |
-          mkdir -p "$RUNNER_TEMP/hydrology-logs"
-          printf '%s\n' '{"event":"scheduled_refresh_setup","source":"hydrology"}' > "$RUNNER_TEMP/hydrology-logs/refresh.jsonl"
+          mkdir -p "$RUNNER_TEMP/thames-logs"
+          printf '%s\n' '{"event":"scheduled_refresh_setup","source":"thames-discharge-status"}' > "$RUNNER_TEMP/thames-logs/refresh.jsonl"
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "0.12.13"
           python-version: "3.12"
           enable-cache: false
       - run: uv sync --locked --extra evidence-s3
-      - name: Refresh accepted Hydrology latest
+      - name: Refresh accepted Thames discharge status
         id: refresh
         env:
           WATERGEO_DB_HOST: ${{ secrets.WATERGEO_DB_HOST }}
@@ -78,21 +78,21 @@ jobs:
               "WATERGEO_EVIDENCE_S3_ACCESS_KEY_ID", "WATERGEO_EVIDENCE_S3_SECRET_ACCESS_KEY",
           )
           if any(not os.environ.get(key) for key in required):
-              print('{"event":"scheduled_refresh_configuration_missing","source":"hydrology"}')
+              print('{"event":"scheduled_refresh_configuration_missing","source":"thames-discharge-status"}')
               raise SystemExit(2)
           try:
               path = Path(os.environ["WATERGEO_DB_SSLROOTCERT"])
               path.touch(mode=0o600, exist_ok=False)
               path.write_text(os.environ["WATERGEO_DB_CA_PEM"])
           except OSError:
-              print('{"event":"scheduled_refresh_ca_setup_failed","source":"hydrology"}')
+              print('{"event":"scheduled_refresh_ca_setup_failed","source":"thames-discharge-status"}')
               raise SystemExit(2) from None
           PY
             prepared=$?
             if [ "$prepared" -ne 0 ]; then exit "$prepared"; fi
             unset WATERGEO_DB_CA_PEM
-            uv run --locked python scripts/refresh_sources.py hydrology --timeout-seconds 1800 2>/dev/null
-          } | tee -a "$RUNNER_TEMP/hydrology-logs/refresh.jsonl"
+            uv run --locked python scripts/refresh_sources.py thames-discharge-status --timeout-seconds 900 2>/dev/null
+          } | tee -a "$RUNNER_TEMP/thames-logs/refresh.jsonl"
           statuses=("${PIPESTATUS[@]}")
           printf 'exit_code=%s\n' "${statuses[0]}" >> "$GITHUB_OUTPUT"
           if [ "${statuses[1]}" -ne 0 ]; then exit 1; fi
@@ -101,8 +101,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: hydrology-refresh-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/hydrology-logs/refresh.jsonl
+          name: thames-refresh-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/thames-logs/refresh.jsonl
           retention-days: 14
           if-no-files-found: error
           include-hidden-files: false
@@ -118,11 +118,11 @@ jobs:
           outcome = os.environ.get("REFRESH_OUTCOME") or "not run"
           succeeded = code == "0" and outcome == "success"
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-              summary.write("## Hydrology latest refresh\n\n")
-              summary.write(f"- Source: hydrology\n- Workflow run ID: {os.environ['GITHUB_RUN_ID']}\n")
+              summary.write("## Thames discharge status refresh\n\n")
+              summary.write(f"- Source: thames-discharge-status\n- Workflow run ID: {os.environ['GITHUB_RUN_ID']}\n")
               summary.write(f"- Refresh outcome: {outcome}\n- Exit code: {code}\n")
               summary.write(f"- Refresh succeeded: {'yes' if succeeded else 'no'}\n")
-              summary.write(f"- Log artifact: hydrology-refresh-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}\n")
+              summary.write(f"- Log artifact: thames-refresh-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}\n")
               summary.write("\nFreshness thresholds are separate operator policy; a successful refresh does not guarantee recent observations.\n")
               summary.write("Artifact upload failure can fail the job even when refresh succeeded.\n")
           PY

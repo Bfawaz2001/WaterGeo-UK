@@ -11,4 +11,7 @@
 !migrations/**
 !docker/
 !docker/**
+!scripts/
+!scripts/refresh_sources.py
+!Dockerfile.operator
 **/__pycache__/
