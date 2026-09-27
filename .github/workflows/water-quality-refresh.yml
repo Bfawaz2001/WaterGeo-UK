@@ -3,7 +3,7 @@ name: Water Quality metadata refresh
 on:
   workflow_dispatch:
   schedule:
-    - cron: "43 2 * * * *"
+    - cron: "43 2 * * *"
 
 permissions:
   contents: read
