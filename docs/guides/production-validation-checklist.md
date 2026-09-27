@@ -10,7 +10,7 @@ Nothing in this checklist has been provisioned or executed by the repository.
    migration, ingestion and app roles; require `verify-full` with the provider CA.
 3. Create a private encrypted Spaces bucket. Enable and verify object versioning,
    access logs and retention. Give write/read credentials only to ingestion jobs.
-4. Run migration `0010` as a one-shot job using the exact API image digest. Verify the
+4. Run migration `0011` as a one-shot job using the exact API image digest. Verify the
    revision and stop it before API rollout.
 5. Deploy the API digest without autodeploy. Configure trusted hosts, read-only database
    credentials, CA mount, freshness thresholds and `/health`/`/ready` probes.

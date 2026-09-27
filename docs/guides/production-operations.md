@@ -84,7 +84,7 @@ operator, time and smoke result in the release record.
    migrator is not an administrator.
 4. Select the reviewed application digest. Run a one-shot migration job from that
    digest with `alembic upgrade head`. Query `watergeo.alembic_version` and require
-   `0010`, the revision compiled into this release.
+   `0011`, the revision compiled into this release.
 5. Roll the API with only app credentials. Wait for `/health`, then `/ready`.
 6. Run the smoke command below. After bootstrap, include a representative data path.
 7. Enable public traffic only after backup, edge and monitoring checks pass.
@@ -156,7 +156,7 @@ and [external checklist](production-validation-checklist.md).
 - [ ] Immutable image digest and SBOM/provenance recorded.
 - [ ] VPC/trusted sources and `verify-full` connection verified for each role.
 - [ ] Secret access boundaries and rotation/revocation procedure tested.
-- [ ] Migration succeeded and exact revision is `0010`.
+- [ ] Migration succeeded and exact revision is `0011`.
 - [ ] Production data bootstrap and versioned evidence read-back verified.
 - [ ] Database backup plus evidence storage retention enabled; restore rehearsed.
 - [ ] Edge limits, TLS, HSTS, health checks and alerts configured.

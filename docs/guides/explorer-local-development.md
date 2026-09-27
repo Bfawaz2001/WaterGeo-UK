@@ -31,6 +31,25 @@ npm run dev
 Open <http://127.0.0.1:5173>. Vite forwards only `/health`, `/ready` and `/v1`
 to `http://127.0.0.1:8000`. Do not enable backend CORS for this workflow.
 
+## Product workflow
+
+The top-bar search covers current compatible Hydrology stations, Water Quality
+sampling points, Severn Trent reservoirs, Thames discharge monitors, Water Bodies
+and Ofwat water-supply areas. It searches exact publisher identities and indexed
+name prefixes, returns at most 24 results to the explorer, and does not call an
+external geocoder. Selecting a result retrieves detail from the exact snapshot
+reported by search before moving the map or opening the detail drawer.
+
+Point layers remain server-bounded to the nearest 100 results for the current map
+view. MapLibre clusters only those returned points at low zoom; it does not load a
+national point collection into browser memory. Cluster counts therefore describe
+the current bounded result set, not a complete national count.
+
+Selected Hydrology measures distinguish the publisher observation time from the
+WaterGeo retrieval time. Reservoir selections chart percentage readings only within
+the same snapshot and unit. The chart does not infer restriction, safety or supply
+risk. Exact values remain available below the accessible SVG summary.
+
 ## Configuration
 
 The browser uses relative API paths. Optional local `.env.local` values are:
@@ -58,9 +77,8 @@ The tests use deterministic WaterGeo contract fixtures. They do not call WaterGe
 OpenFreeMap or publisher services. Production source maps are disabled to avoid
 shipping source text; the normal minified assets and immutable build hashes remain.
 
-The MVP uses Vitest and Testing Library for its browser-facing smoke paths rather
-than installing a second browser runtime in CI. Those tests cover the map shell
-boundary, layer changes, selections, geometry requests and provenance with a mocked
-MapLibre component and deterministic API. A small real-browser E2E check is deferred
-until deployment routing exists, when it can also verify the same-origin ingress
-contract instead of duplicating component coverage.
+Vitest and Testing Library cover search, clustering, layer changes, charts,
+selection, geometry requests and provenance with deterministic contracts. Playwright
+runs the production Vite build against intercepted WaterGeo API fixtures, including
+desktop search/detail and narrow-screen controls. Browser tests do not contact live
+publisher services or a public WaterGeo deployment.

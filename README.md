@@ -4,9 +4,10 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–10 are complete. Phase 10 adds durable evidence storage,
-production refresh/deployment contracts and a locally tested Fabric tenant-validation
-package. Public hosting and real-tenant Fabric validation remain pending.** The
+**Status: Phases 1–11 are complete. Phase 11 adds bounded unified search,
+snapshot-consistent feature selection, reservoir trend charts, point clustering and
+a more usable responsive explorer. Public hosting and real-tenant Fabric validation
+remain pending.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -22,7 +23,9 @@ and [hosting assessment](docs/deployment/hosting-assessment-2026-09-24.md).
 The [map explorer](docs/guides/explorer-local-development.md) is a separate React,
 TypeScript and MapLibre application under `web/`. It shows bounded nearby point
 layers, demand-loaded water-supply and Water Body geometry, source status and
-provenance without adding browser CORS or API credentials. Node 24.15+ within the
+provenance without adding browser CORS or API credentials. Search runs against the
+latest compatible indexed database snapshots, then pins the selected feature to the
+search result's snapshot. Node 24.15+ within the
 Node 24 LTS line is required:
 
 ```bash
@@ -46,6 +49,12 @@ public v2 API. Status and recent-activity filters run on the server before
 bounded map results. See the [source semantics](docs/data-sources/thames-water-discharge-status.md)
 and [analytics guide](docs/guides/phase-9-company-analytics.md). Monitor indications
 do not establish discharge volume, water quality or bathing safety.
+
+Phase 11 turns the explorer into a stronger product workflow: grouped search moves
+from current indexed entities to snapshot-consistent detail, bounded point layers
+cluster at regional zooms, Hydrology cards separate observation from retrieval time,
+and reservoir selections show an accessible same-unit trend. See the
+[measured Phase 11 results](docs/performance/phase-11-product-experience.md).
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
@@ -123,6 +132,7 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /ready` | HTTP 200: PostGIS is available and the migration revision matches; otherwise HTTP 503 with a generic response. |
 | `GET /v1/water-supply/dataset` | Release, source identity, attribution, licence, counts and caveats. |
 | `GET /v1/sources/status` | Accepted source availability, retrieval/observation ages and explicit freshness policy. |
+| `GET /v1/search?q=river&limit=24` | Bounded current-snapshot prefix/identity search across six explorer entity types. |
 | `GET /v1/severn-trent/reservoir-levels/dataset` | Pinned 2025 company reservoir-level edition and provenance. |
 | `GET /v1/severn-trent/reservoir-levels/reservoirs` | Keyset-paginated reservoir locations and latest edition reading. |
 | `GET /v1/severn-trent/reservoir-levels/reservoirs/near` | Bounded WGS84 distance search over publisher points. |
@@ -206,7 +216,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0010`), run these from the repository root:
+With the database at migration head (`0011`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -277,7 +287,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0010`), not dataset availability. See the
+infrastructure and migration head (`0011`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Query the Catchment Data Explorer hierarchy
@@ -343,7 +353,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through Thames discharge status (0010)
+migrations/              Alembic revisions through indexed product search (0011)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational, water-supply, hydrology and catchment public routes
