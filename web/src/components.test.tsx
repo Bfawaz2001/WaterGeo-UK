@@ -24,11 +24,13 @@ it("renders accessible layer toggles and reports bounded results", async () => {
   expect(screen.getByText(/Spatial overlap does not establish/)).toBeInTheDocument();
 });
 
-it("renders available and unavailable source states outside the map", () => {
+it("distinguishes available and not-loaded source states outside the map", () => {
   render(<SourceStatusPanel status={sourceStatuses} error={null} loading={false} />);
   expect(screen.getByText("Hydrology")).toBeInTheDocument();
   expect(screen.getByText("Water Quality")).toBeInTheDocument();
-  expect(screen.getByText("Unavailable")).toBeInTheDocument();
+  expect(screen.getByText("Available")).toBeInTheDocument();
+  expect(screen.getByText("Not loaded")).toBeInTheDocument();
+  expect(screen.getByText(/No compatible local snapshot/)).toBeInTheDocument();
 });
 
 it("shows source provenance and reservoir interpretation caveats", () => {

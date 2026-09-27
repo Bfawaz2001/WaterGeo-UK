@@ -48,3 +48,34 @@ it("renders an accessible reservoir trend from consistent percentage readings", 
   expect(await screen.findByRole("img", { name: /Reservoir storage percentage/ })).toHaveAccessibleName(/range 70.0 to 82.0 %/);
   expect(screen.getByText(/2 dated values/)).toBeInTheDocument();
 });
+
+it("renders publisher classifications as labels with secondary notation", async () => {
+  const waterQuality: SelectedFeature = {
+    kind: "water-quality",
+    dataset,
+    item: {
+      sampling_point_id: "AN-1", source_uri: "https://example.test/AN-1",
+      alt_label: "A long sampling point name", pref_label: null,
+      latitude: 52, longitude: -1, geometry: { type: "Point", coordinates: [-1, 52] },
+      location_status: "available", distance_m: null,
+    },
+  };
+  vi.spyOn(api, "samplingPointDetail").mockResolvedValue({
+    ...waterQuality.item,
+    dataset,
+    publisher_metadata: {
+      region: { notation: "MD", pref_label: "Midlands" },
+      sampling_point_type: { notation: "TZ", pref_label: "TRADE DISCHARGES - UNSPECIFIED" },
+      active: true,
+      aliases: ["Upper Trent", "Tame"],
+    },
+  });
+  render(<FeatureDrilldown selected={waterQuality} />);
+  expect(await screen.findByText("Midlands")).toBeInTheDocument();
+  expect(screen.getByText("MD")).toBeInTheDocument();
+  expect(screen.getByText("TRADE DISCHARGES - UNSPECIFIED")).toBeInTheDocument();
+  expect(screen.getByText("TZ")).toBeInTheDocument();
+  expect(screen.getByText("Yes")).toBeInTheDocument();
+  expect(screen.getByText("Upper Trent")).toBeInTheDocument();
+  expect(screen.queryByText(/\{"notation"/)).not.toBeInTheDocument();
+});

@@ -128,7 +128,7 @@ test("water-supply lookup and API failure states remain visible", async ({ page 
   api.failures = true;
   await page.reload();
   await expect(page.getByText("Source status is currently unavailable.")).toBeVisible();
-  await expect(page.getByText("Dataset is currently unavailable.")).toBeVisible();
+  await expect(page.getByText("No compatible snapshot is loaded in this WaterGeo database.")).toBeVisible();
 });
 
 test("mobile viewport exposes the collapsed controls", async ({ page }) => {
