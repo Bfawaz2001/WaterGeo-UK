@@ -3,7 +3,8 @@
 WaterGeo can run without Microsoft Fabric. These instructions describe a consumer
 workflow in a user's existing Fabric environment; nothing here provisions or
 authenticates from WaterGeo. Tenant capacity, preview availability and permissions
-must be checked by that user. No Fabric deployment has been tested in this phase.
+must be checked by that user. The local validation package is implemented and tested;
+no real Fabric tenant execution is claimed.
 
 ## Entity mapping
 
@@ -32,6 +33,12 @@ manifest alongside it and preserve provenance columns.
    table-writing function uses `errorifexists`, so it cannot overwrite a table.
 4. Retain one table or partition per snapshot and an explicit accepted snapshot
    selection. Do not append indistinguishable editions into one table.
+
+Before upload, run `python examples/fabric/validate_bundle.py <bundle> --entity
+water-supply`. In the tenant, `examples/fabric/tenant_validation_notebook.py` combines
+the checksum-reading examples with a consumer-owned `errorifexists` Delta write. Follow
+the [real-tenant checklist](production-validation-checklist.md); these files do not
+authenticate, upload or provision anything.
 
 OneLake's Files area supports Parquet and other files; managed Lakehouse tables use
 Delta. These are separate storage contracts, not interchangeable extensions.

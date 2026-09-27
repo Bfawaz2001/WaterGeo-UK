@@ -92,7 +92,11 @@ def test_published_image_is_multi_architecture_traceable_and_attested():
 
 
 def test_container_bases_are_digest_pinned_and_context_excludes_secrets():
-    dockerfiles = [Path("Dockerfile"), Path("docker/postgres/Dockerfile")]
+    dockerfiles = [
+        Path("Dockerfile"),
+        Path("Dockerfile.operator"),
+        Path("docker/postgres/Dockerfile"),
+    ]
     from_lines = [
         line
         for dockerfile in dockerfiles
@@ -104,3 +108,26 @@ def test_container_bases_are_digest_pinned_and_context_excludes_secrets():
     ignored = Path(".dockerignore").read_text().splitlines()
     assert ignored[1] == "**"
     assert not any(line in {"!.env", "!data/**"} for line in ignored)
+
+
+def test_operator_image_supports_production_jobs_without_routable_entrypoint():
+    content = Path("Dockerfile.operator").read_text()
+
+    assert "USER 10001:10001" in content
+
+    # The operator image is deliberately not an HTTP/API image.
+    assert "uvicorn" not in content
+    assert "EXPOSE " not in content
+    assert "ENTRYPOINT " not in content
+
+    # It contains the assets needed for one-shot migrations and refresh operations.
+    assert "COPY alembic.ini ./alembic.ini" in content
+    assert "COPY migrations ./migrations" in content
+    assert "COPY scripts/refresh_sources.py ./scripts/refresh_sources.py" in content
+
+    # One immutable operator image supports durable refresh and portable export jobs.
+    assert "--extra evidence-s3" in content
+    assert "--extra exports" in content
+
+    # Safe default when invoked without an explicit operational command.
+    assert 'CMD ["python", "scripts/refresh_sources.py", "--help"]' in content

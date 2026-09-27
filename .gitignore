@@ -226,3 +226,5 @@ __marimo__/
 .DS_Store
 data/
 web/public/exports/
+web/playwright-report/
+web/test-results/

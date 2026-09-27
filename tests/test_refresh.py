@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from watergeo.core.logging import JsonFormatter
+from watergeo.evidence import EvidenceIdentity, EvidenceStorageError
 from watergeo.operations import refresh as jobs
 
 
@@ -194,6 +195,61 @@ def test_validation_precedes_publication_and_preserves_evidence(tmp_path):
         fetch.assert_not_called()
         load.assert_not_called()
         assert tmp_path.is_dir()
+
+
+def test_durable_evidence_precedes_publication_and_identity_reaches_snapshot(tmp_path):
+    (tmp_path / "manifest.json").write_text("{}")
+    request = jobs.RefreshRequest("hydrology", tmp_path)
+    identity = EvidenceIdentity("local", "file:///archive", "a" * 64, "b" * 64, 1, 2, "accepted")
+    store = MagicMock()
+    store.persist.return_value = identity
+    order: list[str] = []
+    store.persist.side_effect = lambda *args, **kwargs: order.append("archive") or identity
+    with (
+        patch.object(jobs, "source_lock", return_value=nullcontext(MagicMock())),
+        patch.object(jobs, "assert_lock"),
+        patch.object(jobs.hydrology_client, "read_snapshot"),
+        patch.object(
+            jobs.hydrology_ingestion,
+            "load_snapshot",
+            side_effect=lambda *args, **kwargs: (
+                order.append("load") or {"status": "inserted", "snapshot_id": "snapshot"}
+            ),
+        ) as load,
+    ):
+        result = jobs.refresh(MagicMock(), request, "run", store)
+    assert result["snapshot_id"] == "snapshot"
+    assert order == ["archive", "load"]
+    store.persist.assert_called_once_with("hydrology", tmp_path, disposition="accepted")
+    assert load.call_args.kwargs["evidence"] == identity
+
+
+def test_storage_failure_blocks_publication(tmp_path):
+    (tmp_path / "manifest.json").write_text("{}")
+    store = MagicMock()
+    store.persist.side_effect = EvidenceStorageError("unavailable")
+    with (
+        patch.object(jobs, "source_lock", return_value=nullcontext(MagicMock())),
+        patch.object(jobs.hydrology_client, "read_snapshot"),
+        patch.object(jobs.hydrology_ingestion, "load_snapshot") as load,
+        pytest.raises(EvidenceStorageError, match="unavailable"),
+    ):
+        jobs.refresh(MagicMock(), jobs.RefreshRequest("hydrology", tmp_path), "run", store)
+    load.assert_not_called()
+
+
+def test_rejected_evidence_is_archived_but_never_published(tmp_path):
+    (tmp_path / "response.json").write_text("changed")
+    store = MagicMock()
+    with (
+        patch.object(jobs, "source_lock", return_value=nullcontext(MagicMock())),
+        patch.object(jobs.hydrology_client, "read_snapshot", side_effect=ValueError("schema")),
+        patch.object(jobs.hydrology_ingestion, "load_snapshot") as load,
+        pytest.raises(ValueError, match="schema"),
+    ):
+        jobs.refresh(MagicMock(), jobs.RefreshRequest("hydrology", tmp_path), "run", store)
+    store.persist.assert_called_once_with("hydrology", tmp_path, disposition="rejected")
+    load.assert_not_called()
 
 
 def test_worker_failure_has_no_exception_payload(capsys):

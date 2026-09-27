@@ -24,6 +24,12 @@ or a public bucket. Keep a separate encrypted copy or provider/account failure p
 Deleting a managed database can delete its provider backups; require an independent
 verified export before destructive changes.
 
+The Phase 10 S3 adapter requires versioning and verifies each write by reading it back.
+That proves job-time durability, not retention or recovery. Monitor archive failures,
+versioning state, storage growth and access logs. Restore checks must verify every
+object/version in `evidence-index.json` and compare the bundle identity with the
+accepted snapshot's `manifest.durable_evidence` value.
+
 ## Disposable restore rehearsal
 
 Run at least quarterly and before a risky migration:

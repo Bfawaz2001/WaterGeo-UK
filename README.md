@@ -4,9 +4,9 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–9 are complete. Phase 9 adds licensed Thames Water discharge
-status, bounded operational filtering and portable analytics exports. Public hosting remains
-pending.** The
+**Status: Phases 1–10 are complete. Phase 10 adds durable evidence storage,
+production refresh/deployment contracts and a locally tested Fabric tenant-validation
+package. Public hosting and real-tenant Fabric validation remain pending.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -14,7 +14,8 @@ longitude/latitude. This is a local development service; a hosted API and visual
 explorer deployment may come later.
 
 The repository defines a production architecture, immutable image workflow,
-fail-closed production configuration and deployment smoke checks. No public endpoint
+fail-closed production configuration, versioned evidence gate and deployment smoke
+checks. No public endpoint
 or external infrastructure exists. See the [production operations runbook](docs/guides/production-operations.md)
 and [hosting assessment](docs/deployment/hosting-assessment-2026-09-24.md).
 
@@ -59,7 +60,9 @@ offline retries, exit codes and external scheduling, and
 
 The opt-in [scheduled Hydrology workflow](docs/guides/scheduled-hydrology-refresh.md)
 provides hourly/manual refresh, retained operational logs and GitHub failure summaries.
-It requires a reachable PostgreSQL database and configured ingestion/TLS secrets;
+Phase 10 also supplies separately gated Thames and Water Quality metadata schedules.
+Production jobs require reachable PostgreSQL, verified TLS and private versioned
+S3-compatible evidence storage;
 no hosted deployment is claimed.
 
 ## Independence and licensing

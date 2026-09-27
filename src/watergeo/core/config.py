@@ -1,6 +1,8 @@
 """Validated configuration; credentials never live in a connection string setting."""
 
+from pathlib import Path
 from typing import Literal, Self
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -113,3 +115,43 @@ class IngestionSettings(DatabaseSettings):
         min_length=16,
         validation_alias="WATERGEO_INGESTION_PASSWORD",
     )
+    evidence_backend: Literal["local", "s3"] = "local"
+    evidence_local_root: Path = Path("data/evidence")
+    evidence_s3_endpoint: str | None = None
+    evidence_s3_region: str | None = Field(default=None, min_length=1)
+    evidence_s3_bucket: str | None = Field(default=None, min_length=3)
+    evidence_s3_prefix: str = "watergeo/evidence"
+    evidence_s3_access_key_id: SecretStr | None = None
+    evidence_s3_secret_access_key: SecretStr | None = None
+
+    @model_validator(mode="after")
+    def evidence_storage_is_complete(self) -> Self:
+        if self.service_environment == "production" and self.evidence_backend != "s3":
+            raise ValueError("production ingestion requires durable S3 evidence storage")
+        if self.evidence_backend == "local":
+            return self
+        required = (
+            self.evidence_s3_endpoint,
+            self.evidence_s3_region,
+            self.evidence_s3_bucket,
+            self.evidence_s3_access_key_id,
+            self.evidence_s3_secret_access_key,
+        )
+        if any(value is None for value in required):
+            raise ValueError(
+                "S3 evidence storage requires endpoint, region, bucket and credentials"
+            )
+        endpoint = urlsplit(self.evidence_s3_endpoint or "")
+        if (
+            endpoint.scheme != "https"
+            or not endpoint.hostname
+            or endpoint.username
+            or endpoint.password
+            or endpoint.query
+            or endpoint.fragment
+            or endpoint.path not in ("", "/")
+        ):
+            raise ValueError("S3 evidence endpoint must be an HTTPS origin")
+        if self.evidence_s3_prefix.startswith("/") or ".." in self.evidence_s3_prefix.split("/"):
+            raise ValueError("S3 evidence prefix must be a relative object prefix")
+        return self

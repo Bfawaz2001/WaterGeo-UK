@@ -1,9 +1,8 @@
 # Scheduled Hydrology latest refresh
 
-> The workflow retains operational logs, not raw source evidence. The production
-> deployment policy requires durable encrypted evidence before publication, so do
-> not point this schedule at production until that retention gate is implemented
-> and failure-tested. See [production data bootstrap](production-data-bootstrap.md).
+> Phase 10 archives raw evidence to configured private, versioned S3-compatible
+> storage and verifies it before publication. Provisioning and a failure-tested
+> production rehearsal are still required. See [durable evidence](evidence-storage.md).
 
 Phase 2 is implemented end to end: ingestion → validation → storage → API → freshness
 → refresh scheduling. This is deployable repository infrastructure, not a claim that
@@ -37,7 +36,7 @@ status command. Use `/v1/sources/status` for the accepted-data view.
 ## Enable safely
 
 1. Provision PostgreSQL/PostGIS using the existing schema and least-privilege roles;
-   apply migrations through `0006` separately. Check the API's `/ready` if deployed.
+   apply migrations through `0010` separately. Check the API's `/ready` if deployed.
 2. Provide a database endpoint reachable from `ubuntu-24.04` GitHub-hosted runners,
    with server TLS enabled and a certificate matching the connection hostname.
    A localhost Compose database or private endpoint without network connectivity will
@@ -57,6 +56,13 @@ status command. Use `/v1/sources/status` for the accepted-data view.
    | `WATERGEO_INGESTION_USER` | Existing restricted ingestion role, normally `watergeo_ingest` |
    | `WATERGEO_INGESTION_PASSWORD` | Its password, at least 16 characters |
    | `WATERGEO_DB_CA_PEM` | Trusted CA certificate/bundle in PEM form, obtained through a trusted channel |
+   | `WATERGEO_EVIDENCE_S3_ACCESS_KEY_ID` | Dedicated private evidence-bucket access key |
+   | `WATERGEO_EVIDENCE_S3_SECRET_ACCESS_KEY` | Dedicated private evidence-bucket secret |
+
+   Set environment variables `WATERGEO_EVIDENCE_S3_ENDPOINT`,
+   `WATERGEO_EVIDENCE_S3_REGION`, `WATERGEO_EVIDENCE_S3_BUCKET` and
+   `WATERGEO_EVIDENCE_S3_PREFIX` to the reviewed private versioned bucket. The API
+   environment must not receive these credentials.
 
 5. After configuring the environment/secrets and merging the workflow separately,
    open Actions → **Hydrology latest refresh**
@@ -126,9 +132,8 @@ local database. Setup failures show an unavailable exit code/skipped refresh in 
 summary. Upload failures also fail the job, even when the refresh itself succeeded.
 Hard runner loss, platform cancellation or the job timeout may prevent summary/artifact
 finalization; a skipped job produces neither. Repository retention policy can constrain
-artifact lifetime. Raw evidence on ephemeral runners disappears when the runner is
-destroyed; this workflow does not provide durable raw-evidence retention or offline
-retry across runs. Existing accepted database provenance is preserved.
+artifact lifetime. Local runner files disappear, but accepted and rejected source
+evidence is already retained by the S3 archive gate before database publication.
 
 Failed runs are visible in GitHub Actions. There is no new email, Slack, PagerDuty or
 other notification integration; GitHub account notification preferences are independent.

@@ -80,6 +80,32 @@ def test_ingestion_tls_environment_contract(monkeypatch, tmp_path):
         engine.dispose()
 
 
+def test_production_ingestion_requires_complete_s3_evidence_configuration() -> None:
+    with pytest.raises(ValidationError, match="durable S3"):
+        IngestionSettings(
+            _env_file=None,
+            WATERGEO_INGESTION_PASSWORD=SecretStr("synthetic-password"),
+            service_environment="production",
+            db_sslmode="verify-full",
+            db_sslrootcert="ca.pem",
+        )
+    settings = IngestionSettings(
+        _env_file=None,
+        WATERGEO_INGESTION_PASSWORD=SecretStr("synthetic-password"),
+        service_environment="production",
+        db_sslmode="verify-full",
+        db_sslrootcert="ca.pem",
+        evidence_backend="s3",
+        evidence_s3_endpoint="https://lon1.digitaloceanspaces.com",
+        evidence_s3_region="lon1",
+        evidence_s3_bucket="watergeo-evidence",
+        evidence_s3_access_key_id=SecretStr("access-key"),
+        evidence_s3_secret_access_key=SecretStr("secret-key"),
+    )
+    assert settings.evidence_backend == "s3"
+    assert "secret-key" not in repr(settings)
+
+
 @pytest.mark.parametrize("mode", ["disable", "allow", "prefer", "require", "verify-ca"])
 def test_explicit_tls_cannot_disable_certificate_and_hostname_verification(mode):
     with pytest.raises(ValidationError):
@@ -152,6 +178,12 @@ def test_production_ingestion_requires_and_accepts_verified_database_tls(
         service_environment="production",
         db_sslmode="verify-full",
         db_sslrootcert="/run/secrets/database-ca.pem",
+        evidence_backend="s3",
+        evidence_s3_endpoint="https://lon1.digitaloceanspaces.com",
+        evidence_s3_region="lon1",
+        evidence_s3_bucket="watergeo-evidence",
+        evidence_s3_access_key_id=SecretStr("access-key"),
+        evidence_s3_secret_access_key=SecretStr("secret-key"),
     )
     assert settings.service_environment == "production"
 

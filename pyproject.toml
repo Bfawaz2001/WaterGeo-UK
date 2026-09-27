@@ -30,6 +30,7 @@ watergeo-export = "watergeo.exports:main"
 
 [project.optional-dependencies]
 exports = ["pyarrow>=21,<24"]
+evidence-s3 = ["boto3>=1.40,<2"]
 
 [dependency-groups]
 dev = [
