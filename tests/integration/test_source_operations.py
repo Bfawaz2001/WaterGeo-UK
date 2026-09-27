@@ -177,6 +177,7 @@ def test_offline_cli_retry_and_concurrency(engines, bundle, loaded):
         assert completed["snapshot_id"] == str(loaded["snapshot_id"])
         assert [item["phase"] for item in events if item["event"] == "refresh_phase"] == [
             "validate",
+            "archive",
             "load",
         ]
         assert not result.stderr

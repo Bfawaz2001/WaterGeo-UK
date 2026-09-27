@@ -8,6 +8,7 @@ from uuid import uuid4
 from sqlalchemy import Engine, text
 
 from watergeo.db.water_quality_integrity import verify_stored_content
+from watergeo.evidence import EvidenceIdentity
 from watergeo.ingestion.water_quality import (
     VERSION,
     WaterQualityError,
@@ -18,8 +19,12 @@ from watergeo.ingestion.water_quality_client import read_snapshot
 def load_snapshot(
     engine: Engine,
     directory: Path,
+    *,
+    evidence: EvidenceIdentity | None = None,
 ) -> dict[str, Any]:
     manifest, data = read_snapshot(directory)
+    if evidence is not None:
+        manifest = {**manifest, "durable_evidence": evidence.as_manifest()}
     counts = data.counts
 
     with engine.begin() as connection:

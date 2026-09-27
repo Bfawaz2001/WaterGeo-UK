@@ -30,6 +30,7 @@ from watergeo.db import (
 )
 from watergeo.db.engine import create_database_engine
 from watergeo.db.water_quality_observation_ingestion import load_observations
+from watergeo.evidence import EvidenceIdentity, EvidenceStore, create_evidence_store
 from watergeo.ingestion import (
     catchment_client,
     hydrology_client,
@@ -147,67 +148,104 @@ def assert_lock(connection: Connection, source: SourceName) -> None:
         raise RuntimeError("Refresh lock lost")
 
 
-def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, str]:
+def _contains_evidence(directory: Path | None) -> bool:
+    try:
+        return (
+            directory is not None
+            and directory.is_dir()
+            and any(path.is_file() or path.is_symlink() for path in directory.rglob("*"))
+        )
+    except OSError:
+        return False
+
+
+def refresh(
+    engine: Engine,
+    request: RefreshRequest,
+    run_id: str,
+    evidence_store: EvidenceStore | None = None,
+) -> dict[str, str]:
     """Existing loaders validate again and atomically publish; evidence is retained."""
     with source_lock(engine, request.source) as lock:
         directory = request.evidence_dir
-        if directory is None:
-            event("refresh_phase", request, run_id, phase="fetch")
-            root = Path("data/raw/refresh") / request.source / run_id
-            if request.source == "ofwat":
-                fetch_boundary_source(raw_root=root)
-                directory = root
-            elif request.source == "hydrology":
-                directory = hydrology_client.fetch_snapshot(root)
-            elif request.source == "catchments":
-                directory = catchment_client.fetch_snapshot(root)
-            elif request.source == "water-quality":
-                directory = water_quality_client.fetch_snapshot(root)
-            elif request.source == "stream-reservoir-levels":
-                directory = stream_reservoir_client.fetch_snapshot(root)
-            elif request.source == "thames-discharge-status":
-                directory = thames_discharge_client.fetch_snapshot(root)
-            elif request.source == "water-quality-observations":
-                if (
-                    request.sampling_point_id is None
-                    or request.determinand is None
-                    or request.date_from is None
-                    or request.date_to is None
-                ):
-                    raise ValueError("Observation refresh requires explicit scope")
-                directory = fetch_observations(
-                    Scope(
-                        request.sampling_point_id,
-                        request.determinand,
-                        request.date_from,
-                        request.date_to,
-                    ),
-                    root,
-                )
-            else:
-                if not request.measure_id or not request.requested_from or not request.requested_to:
-                    raise ValueError("History refresh requires an explicit measure and window")
-                directory = hydrology_history_client.fetch_history(
-                    request.measure_id, request.requested_from, request.requested_to, root
-                )
-        event("refresh_phase", request, run_id, phase="validate")
+        rejected_candidate = directory
         canonical = None
-        if request.source == "ofwat":
-            canonical = decode_reviewed_water_supply(raw_root=directory)
-        elif request.source == "hydrology":
-            hydrology_client.read_snapshot(directory)
-        elif request.source == "catchments":
-            catchment_client.read_snapshot(directory)
-        elif request.source == "water-quality":
-            water_quality_client.read_snapshot(directory)
-        elif request.source == "stream-reservoir-levels":
-            stream_reservoir_client.read_snapshot(directory)
-        elif request.source == "thames-discharge-status":
-            thames_discharge_client.read_snapshot(directory)
-        elif request.source == "water-quality-observations":
-            read_observations(directory)
-        else:
-            hydrology_history_client.read_history(directory)
+        try:
+            if directory is None:
+                event("refresh_phase", request, run_id, phase="fetch")
+                root = Path("data/raw/refresh") / request.source / run_id
+                rejected_candidate = root
+                if request.source == "ofwat":
+                    fetch_boundary_source(raw_root=root)
+                    directory = root
+                elif request.source == "hydrology":
+                    directory = hydrology_client.fetch_snapshot(root)
+                elif request.source == "catchments":
+                    directory = catchment_client.fetch_snapshot(root)
+                elif request.source == "water-quality":
+                    directory = water_quality_client.fetch_snapshot(root)
+                elif request.source == "stream-reservoir-levels":
+                    directory = stream_reservoir_client.fetch_snapshot(root)
+                elif request.source == "thames-discharge-status":
+                    directory = thames_discharge_client.fetch_snapshot(root)
+                elif request.source == "water-quality-observations":
+                    if (
+                        request.sampling_point_id is None
+                        or request.determinand is None
+                        or request.date_from is None
+                        or request.date_to is None
+                    ):
+                        raise ValueError("Observation refresh requires explicit scope")
+                    directory = fetch_observations(
+                        Scope(
+                            request.sampling_point_id,
+                            request.determinand,
+                            request.date_from,
+                            request.date_to,
+                        ),
+                        root,
+                    )
+                else:
+                    if (
+                        not request.measure_id
+                        or not request.requested_from
+                        or not request.requested_to
+                    ):
+                        raise ValueError("History refresh requires an explicit measure and window")
+                    directory = hydrology_history_client.fetch_history(
+                        request.measure_id, request.requested_from, request.requested_to, root
+                    )
+                rejected_candidate = directory
+            event("refresh_phase", request, run_id, phase="validate")
+            if request.source == "ofwat":
+                canonical = decode_reviewed_water_supply(raw_root=directory)
+            elif request.source == "hydrology":
+                hydrology_client.read_snapshot(directory)
+            elif request.source == "catchments":
+                catchment_client.read_snapshot(directory)
+            elif request.source == "water-quality":
+                water_quality_client.read_snapshot(directory)
+            elif request.source == "stream-reservoir-levels":
+                stream_reservoir_client.read_snapshot(directory)
+            elif request.source == "thames-discharge-status":
+                thames_discharge_client.read_snapshot(directory)
+            elif request.source == "water-quality-observations":
+                read_observations(directory)
+            else:
+                hydrology_history_client.read_history(directory)
+        except Exception:
+            if evidence_store is not None and _contains_evidence(rejected_candidate):
+                event("refresh_phase", request, run_id, phase="archive_rejected")
+                evidence_store.persist(
+                    request.source, cast(Path, rejected_candidate), disposition="rejected"
+                )
+                event("refresh_evidence_rejected", request, run_id, status="durable")
+            raise
+        evidence: EvidenceIdentity | None = None
+        if evidence_store is not None:
+            event("refresh_phase", request, run_id, phase="archive")
+            evidence = evidence_store.persist(request.source, directory, disposition="accepted")
+            event("refresh_evidence_durable", request, run_id, status="accepted")
         # Long network retrieval must not continue to publication after losing its lock.
         assert_lock(lock, request.source)
         event("refresh_phase", request, run_id, phase="load")
@@ -217,15 +255,15 @@ def refresh(engine: Engine, request: RefreshRequest, run_id: str) -> dict[str, s
             result = load_canonical_snapshot(engine, canonical)
             return {"status": result.status, "snapshot_id": str(result.snapshot_id)}
         if request.source == "hydrology":
-            loaded = hydrology_ingestion.load_snapshot(engine, directory)
+            loaded = hydrology_ingestion.load_snapshot(engine, directory, evidence=evidence)
         elif request.source == "catchments":
             loaded = catchment_ingestion.load_snapshot(engine, directory)
         elif request.source == "water-quality":
-            loaded = water_quality_ingestion.load_snapshot(engine, directory)
+            loaded = water_quality_ingestion.load_snapshot(engine, directory, evidence=evidence)
         elif request.source == "stream-reservoir-levels":
             loaded = stream_reservoir_ingestion.load_snapshot(engine, directory)
         elif request.source == "thames-discharge-status":
-            loaded = thames_discharge_ingestion.load_snapshot(engine, directory)
+            loaded = thames_discharge_ingestion.load_snapshot(engine, directory, evidence=evidence)
         elif request.source == "water-quality-observations":
             loaded = load_observations(engine, directory)
         else:
@@ -247,8 +285,10 @@ def _worker(request: RefreshRequest, run_id: str) -> None:
     engine = None
     exit_code = 1
     try:
-        engine = create_database_engine(IngestionSettings(), statement_timeout_ms=60000)
-        result = refresh(engine, request, run_id)
+        settings = IngestionSettings()
+        evidence_store = create_evidence_store(settings)
+        engine = create_database_engine(settings, statement_timeout_ms=60000)
+        result = refresh(engine, request, run_id, evidence_store)
         event("refresh_complete", request, run_id, phase="published", **result)
         exit_code = 0
     except RefreshBusy:

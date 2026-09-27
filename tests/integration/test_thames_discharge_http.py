@@ -12,6 +12,7 @@ from test_hydrology_http import engines as engines
 
 from watergeo.api.app import create_app
 from watergeo.db.thames_discharge_ingestion import load_snapshot
+from watergeo.evidence import LocalEvidenceStore
 from watergeo.ingestion import thames_discharge_client as source
 from watergeo.operations.refresh import RefreshRequest, refresh
 
@@ -58,8 +59,11 @@ def bundle(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def loaded(engines, bundle: Path) -> Iterator[dict[str, Any]]:
-    result = load_snapshot(engines[0], bundle)
+def loaded(engines, bundle: Path, tmp_path: Path) -> Iterator[dict[str, Any]]:
+    evidence = LocalEvidenceStore(tmp_path / "archive").persist(
+        "thames-discharge-status", bundle, disposition="accepted"
+    )
+    result = load_snapshot(engines[0], bundle, evidence=evidence)
     yield result
     with engines[2].begin() as connection:
         connection.execute(
@@ -75,6 +79,16 @@ def loaded(engines, bundle: Path) -> Iterator[dict[str, Any]]:
 def test_publication_api_filters_and_refresh(engines, bundle: Path, loaded: dict[str, Any]) -> None:
     assert loaded["status"] == "inserted"
     assert load_snapshot(engines[0], bundle) == {**loaded, "status": "existing"}
+    with engines[2].connect() as connection:
+        durable = connection.execute(
+            text(
+                "SELECT manifest->'durable_evidence' "
+                "FROM watergeo.thames_discharge_snapshot WHERE id=:id"
+            ),
+            {"id": loaded["snapshot_id"]},
+        ).scalar_one()
+    assert durable["format"] == "watergeo-evidence-v1"
+    assert durable["disposition"] == "accepted"
     with TestClient(create_app()) as api:
         prefix = "/v1/thames-water/discharge-status"
         dataset = api.get(prefix + "/dataset").json()

@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import Connection, Engine, text
 
+from watergeo.evidence import EvidenceIdentity
 from watergeo.ingestion.thames_discharge import (
     API_VERSION,
     VERSION,
@@ -62,8 +63,12 @@ def verify_stored(
         raise ThamesDischargeError("Stored Thames Water snapshot content mismatch")
 
 
-def load_snapshot(engine: Engine, directory: Path) -> dict[str, Any]:
+def load_snapshot(
+    engine: Engine, directory: Path, *, evidence: EvidenceIdentity | None = None
+) -> dict[str, Any]:
     manifest, data = read_snapshot(directory)
+    if evidence is not None:
+        manifest = {**manifest, "durable_evidence": evidence.as_manifest()}
     discharging = sum(row["alert_status"] == "Discharging" for row in data.sites)
     offline = sum(row["alert_status"] == "Offline" for row in data.sites)
     with engine.begin() as connection:
