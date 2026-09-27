@@ -1,26 +1,26 @@
 import type { LayerId } from "./types";
 
-const LAYERS: Array<{ id: LayerId; label: string; description: string }> = [
-  { id: "hydrology", label: "Hydrology stations", description: "Latest accepted EA snapshot" },
+const LAYERS: Array<{ id: LayerId; label: string; description: string; group: "changing" | "context" }> = [
+  { id: "hydrology", label: "Hydrology stations", description: "Latest accepted EA snapshot", group: "changing" },
   {
     id: "water-quality",
     label: "Water Quality sampling points",
-    description: "Publisher metadata, not results",
+    description: "Publisher metadata, not results", group: "changing",
   },
   {
     id: "reservoirs",
     label: "Severn Trent reservoirs",
-    description: "Dated 2025 publisher edition",
+    description: "Dated 2025 publisher edition", group: "changing",
   },
   {
     id: "thames-discharge",
     label: "Thames Water discharge monitors",
-    description: "Near-real-time publisher indications",
+    description: "Near-real-time publisher indications", group: "changing",
   },
   {
     id: "water-supply",
     label: "Water-supply lookup",
-    description: "Click map; one reviewed area at a time",
+    description: "Click map; one reviewed area at a time", group: "context",
   },
 ];
 
@@ -42,8 +42,10 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
         </div>
         <span className="bounded-badge">Bounded</span>
       </div>
-      <div className="layer-list">
-        {LAYERS.map((layer) => (
+      {(["changing", "context"] as const).map((group) => <div className="layer-group" key={group}>
+        <h3>{group === "changing" ? "Operational and observed" : "Geographic context"}</h3>
+        <div className="layer-list">
+        {LAYERS.filter((layer) => layer.group === group).map((layer) => (
           <label className={`layer-option layer-${layer.id}`} key={layer.id}>
             <input
               type="checkbox"
@@ -64,7 +66,8 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
             </span>
           </label>
         ))}
-      </div>
+        </div>
+      </div>)}
       <p className="interpretation-note">
         Layers are independent publisher datasets. Spatial overlap does not establish a relationship.
       </p>

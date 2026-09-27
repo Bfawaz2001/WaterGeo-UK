@@ -4,7 +4,8 @@ import { ApiError, api } from "./api";
 import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
-import type { AreaPage, AreaSummary, LayerId, SelectedFeature, SourceStatuses, ThamesAlertStatus } from "./types";
+import { SearchBox } from "./SearchBox";
+import type { AreaPage, AreaSummary, LayerId, SearchResult, SelectedFeature, SourceStatuses, ThamesAlertStatus } from "./types";
 import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlState";
 import { useNearby, type ViewportQuery } from "./useNearby";
 import { WaterBodyBrowser } from "./WaterBodyBrowser";
@@ -50,11 +51,13 @@ export function App() {
   const [sourceStatus, setSourceStatus] = useState<SourceStatuses | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [selected, setSelected] = useState<SelectedFeature | null>(null);
+  const [mapFocus, setMapFocus] = useState<{ key: string; longitude?: number; latitude?: number } | null>(null);
   const [areaMatches, setAreaMatches] = useState<AreaPage | null>(null);
   const [areaError, setAreaError] = useState<string>();
   const [areaLoading, setAreaLoading] = useState(false);
   const [waterBodiesOpen, setWaterBodiesOpen] = useState(false);
   const lookupController = useRef<AbortController | undefined>(undefined);
+  const searchSelectionController = useRef<AbortController | undefined>(undefined);
   const initialSelectionApplied = useRef(false);
 
   useEffect(() => {
@@ -70,7 +73,10 @@ export function App() {
     return () => controller.abort();
   }, []);
 
-  useEffect(() => () => lookupController.current?.abort(), []);
+  useEffect(() => () => {
+    lookupController.current?.abort();
+    searchSelectionController.current?.abort();
+  }, []);
 
   useEffect(() => {
     const next = explorerSearch({
@@ -228,6 +234,65 @@ export function App() {
     }
   };
 
+  const openSearchResult = async (result: SearchResult) => {
+    searchSelectionController.current?.abort();
+    const controller = new AbortController();
+    searchSelectionController.current = controller;
+    const enable = (layer: LayerId) => setLayers((current) => new Set(current).add(layer));
+    const focusPoint = (longitude: number | null, latitude: number | null) => {
+      setMapFocus({
+        key: `${result.kind}:${result.identity}:${result.snapshot_id}`,
+        ...(longitude === null ? {} : { longitude }),
+        ...(latitude === null ? {} : { latitude }),
+      });
+    };
+    if (result.kind === "hydrology") {
+      const detail = await api.hydrologyDetail(result.identity, controller.signal, result.snapshot_id);
+      if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
+      enable("hydrology");
+      setSelected({ kind: "hydrology", item: detail, dataset: detail.dataset });
+      focusPoint(detail.longitude, detail.latitude);
+    } else if (result.kind === "water-quality") {
+      const detail = await api.samplingPointDetail(result.identity, result.snapshot_id, controller.signal);
+      if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
+      enable("water-quality");
+      setSelected({ kind: "water-quality", item: detail, dataset: detail.dataset });
+      focusPoint(detail.longitude, detail.latitude);
+    } else if (result.kind === "reservoirs") {
+      const detail = await api.reservoirDetail(result.identity, result.snapshot_id, controller.signal);
+      if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
+      enable("reservoirs");
+      setSelected({ kind: "reservoirs", item: detail, dataset: detail.dataset });
+      focusPoint(detail.longitude, detail.latitude);
+    } else if (result.kind === "thames-discharge") {
+      const detail = await api.thamesDischargeDetail(result.identity, result.snapshot_id, controller.signal);
+      if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
+      enable("thames-discharge");
+      setSelected({ kind: "thames-discharge", item: detail, dataset: detail.dataset });
+      focusPoint(result.longitude, result.latitude);
+    } else if (result.kind === "water-body") {
+      const [dataset, item, geometry] = await Promise.all([
+        api.catchmentDataset(controller.signal, result.snapshot_id),
+        api.waterBody(result.identity, controller.signal, result.snapshot_id),
+        api.waterBodyGeometry(result.identity, controller.signal, result.snapshot_id),
+      ]);
+      if (dataset.snapshot_id !== result.snapshot_id || item.snapshot_id !== result.snapshot_id || geometry.snapshot_id !== result.snapshot_id) {
+        throw new ApiError(503, "Search snapshot changed");
+      }
+      setSelected({ kind: "water-body", item, dataset, geometry });
+      setWaterBodiesOpen(true);
+      focusPoint(null, null);
+    } else {
+      const sourceId = parseWaterSupplyId(result.identity);
+      if (sourceId === null) throw new ApiError(422, "Invalid water-supply identity");
+      const item = await api.areaGeometry(sourceId, controller.signal);
+      if (item.properties.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
+      enable("water-supply");
+      setSelected({ kind: "water-supply", item });
+      focusPoint(null, null);
+    }
+  };
+
   return (
     <div className={`app-shell ${panelOpen ? "" : "controls-collapsed"}`}>
       <header className="topbar">
@@ -237,6 +302,7 @@ export function App() {
           <span>WaterGeo UK</span>
           <strong>Public water data explorer</strong>
         </div>
+        <SearchBox onSelect={openSearchResult} />
         <button className="share-button" type="button" onClick={() => void copyShareUrl()} aria-label="Copy a shareable map URL">Copy view link</button>
       </header>
 
@@ -294,6 +360,7 @@ export function App() {
         <Suspense fallback={<div className="map-loading" role="status">Loading map renderer…</div>}>
           <MapView
             overview={overview}
+            focus={mapFocus}
             initial={initial}
             activeLayers={layers}
             hydrology={nearby.hydrology}

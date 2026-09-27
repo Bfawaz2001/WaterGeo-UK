@@ -40,6 +40,7 @@ const SOURCE_LAYERS = {
 
 interface Props {
   overview?: Overview | null;
+  focus?: { key: string; longitude?: number; latitude?: number } | null;
   initial: { longitude: number; latitude: number; zoom: number };
   activeLayers: Set<LayerId>;
   hydrology: HydrologyStation[];
@@ -92,21 +93,52 @@ function setData(map: MapLibreMap, source: string, data: GeoJSON): void {
 
 function addExplorerSources(map: MapLibreMap): void {
   for (const [kind, source] of Object.entries(SOURCE_LAYERS)) {
-    if (!map.getSource(source)) map.addSource(source, { type: "geojson", data: pointCollection([], kind as LayerId) });
+    if (!map.getSource(source)) map.addSource(source, {
+      type: "geojson",
+      data: pointCollection([], kind as LayerId),
+      cluster: true,
+      clusterMaxZoom: 10,
+      clusterRadius: 44,
+    });
+    const colors: Record<string, string> = {
+      hydrology: "#176b87",
+      "water-quality": "#7253a3",
+      reservoirs: "#be5a36",
+      "thames-discharge": "#b32346",
+    };
+    const color = colors[kind] ?? "#183c46";
+    if (!map.getLayer(`${source}-clusters`)) {
+      map.addLayer({
+        id: `${source}-clusters`,
+        source,
+        type: "circle",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-radius": ["step", ["get", "point_count"], 16, 20, 20, 60, 25],
+          "circle-color": color,
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+          "circle-opacity": 0.88,
+        },
+      });
+      map.addLayer({
+        id: `${source}-cluster-count`,
+        source,
+        type: "symbol",
+        filter: ["has", "point_count"],
+        layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 11 },
+        paint: { "text-color": "#ffffff" },
+      });
+    }
     if (!map.getLayer(source)) {
-      const colors: Record<string, string> = {
-        hydrology: "#176b87",
-        "water-quality": "#7253a3",
-        reservoirs: "#be5a36",
-        "thames-discharge": "#b32346",
-      };
       map.addLayer({
         id: source,
         source,
         type: "circle",
+        filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4, 12, 8],
-          "circle-color": colors[kind] ?? "#183c46",
+          "circle-color": color,
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 1.5,
           "circle-opacity": 0.9,
@@ -152,6 +184,7 @@ function addExplorerSources(map: MapLibreMap): void {
 
 export function MapView({
   overview,
+  focus,
   initial,
   activeLayers,
   hydrology,
@@ -224,10 +257,31 @@ export function MapView({
       publishViewport();
     };
     const clicked = (event: MapMouseEvent) => {
-      const layerIds = Object.values(SOURCE_LAYERS).filter((layer) => map.getLayer(layer));
+      const pointLayers = Object.values(SOURCE_LAYERS).filter((layer) => map.getLayer(layer));
+      const clusterLayers = Object.values(SOURCE_LAYERS)
+        .map((layer) => `${layer}-clusters`)
+        .filter((layer) => map.getLayer(layer));
+      const layerIds = [...pointLayers, ...clusterLayers];
       const feature = map.queryRenderedFeatures(event.point, { layers: layerIds })[0];
-      const kind = feature?.properties.kind as LayerId | undefined;
-      const identity = feature?.properties.identity as string | undefined;
+      if (!feature) {
+        if (callbacks.current.activeLayers.has("water-supply")) {
+          callbacks.current.onMapClick(event.lngLat.lng, event.lngLat.lat);
+        }
+        return;
+      }
+      const clusterId = feature.properties.cluster_id as number | undefined;
+      if (clusterId !== undefined && feature.geometry.type === "Point") {
+        const source = map.getSource<GeoJSONSource>(feature.source);
+        const center = feature.geometry.coordinates as [number, number];
+        if (source) {
+          void source.getClusterExpansionZoom(clusterId).then((zoom) => {
+            map.easeTo({ center, zoom });
+          });
+        }
+        return;
+      }
+      const kind = feature.properties.kind as LayerId | undefined;
+      const identity = feature.properties.identity as string | undefined;
       if (kind && identity) callbacks.current.onSelectPoint(kind, identity);
       else if (callbacks.current.activeLayers.has("water-supply")) {
         callbacks.current.onMapClick(event.lngLat.lng, event.lngLat.lat);
@@ -313,9 +367,47 @@ export function MapView({
     setData(map, "watergeo-area", area ?? { type: "FeatureCollection", features: [] });
     setData(map, "watergeo-water-body", waterBody ?? { type: "FeatureCollection", features: [] });
     for (const [kind, layer] of Object.entries(SOURCE_LAYERS)) {
-      map.setLayoutProperty(layer, "visibility", activeLayers.has(kind as LayerId) ? "visible" : "none");
+      const visibility = activeLayers.has(kind as LayerId) ? "visible" : "none";
+      map.setLayoutProperty(layer, "visibility", visibility);
+      map.setLayoutProperty(`${layer}-clusters`, "visibility", visibility);
+      map.setLayoutProperty(`${layer}-cluster-count`, "visibility", visibility);
     }
   }, [activeLayers, area, hydrology, reservoirs, styleRevision, thamesDischarge, waterBody, waterQuality]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!focus || !map?.isStyleLoaded()) return;
+    if (focus.longitude !== undefined && focus.latitude !== undefined) {
+      map.easeTo({ center: [focus.longitude, focus.latitude], zoom: Math.max(map.getZoom(), 11) });
+      return;
+    }
+    const bounds = { west: 180, south: 90, east: -180, north: -90, found: false };
+    const inspect = (value: unknown) => {
+      if (!Array.isArray(value)) return;
+      if (value.length >= 2 && typeof value[0] === "number" && typeof value[1] === "number") {
+        bounds.west = Math.min(bounds.west, value[0]);
+        bounds.east = Math.max(bounds.east, value[0]);
+        bounds.south = Math.min(bounds.south, value[1]);
+        bounds.north = Math.max(bounds.north, value[1]);
+        bounds.found = true;
+        return;
+      }
+      for (const child of value) inspect(child);
+    };
+    if (area) inspect(area.geometry.coordinates);
+    if (waterBody) for (const feature of waterBody.features) {
+      if ("coordinates" in feature.geometry) inspect(feature.geometry.coordinates);
+      else for (const geometry of feature.geometry.geometries) {
+        if ("coordinates" in geometry) inspect(geometry.coordinates);
+      }
+    }
+    if (bounds.found) {
+      map.fitBounds([[bounds.west, bounds.south], [bounds.east, bounds.north]], {
+        padding: 64,
+        maxZoom: 12,
+      });
+    }
+  }, [area, focus, styleRevision, waterBody]);
 
   return (
     <div className="map-region" aria-label="Interactive map workspace">

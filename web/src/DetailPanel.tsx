@@ -16,6 +16,17 @@ function safePublisherUrl(value: string | undefined): string | null {
   }
 }
 
+function retrievalAge(value: string): string {
+  const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+  const minutes = Math.floor(elapsed / 60_000);
+  if (minutes < 1) return "Retrieved less than a minute ago";
+  if (minutes < 60) return `Retrieved ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `Retrieved ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `Retrieved ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 function Provenance({ dataset }: { dataset: DatasetProvenance }) {
   const licence = safePublisherUrl(dataset.licence_url);
   return (
@@ -24,7 +35,7 @@ function Provenance({ dataset }: { dataset: DatasetProvenance }) {
       <dl>
         <div><dt>Publisher</dt><dd>{dataset.publisher}</dd></div>
         <div><dt>Snapshot</dt><dd><code>{dataset.snapshot_id}</code></dd></div>
-        <div><dt>Retrieved</dt><dd>{new Date(dataset.retrieval_completed_at).toLocaleString()}</dd></div>
+        <div><dt>WaterGeo retrieved</dt><dd><time dateTime={dataset.retrieval_completed_at}>{new Date(dataset.retrieval_completed_at).toLocaleString()}</time><small>{retrievalAge(dataset.retrieval_completed_at)}</small></dd></div>
         <div>
           <dt>Licence</dt>
           <dd>{licence ? <a href={licence} target="_blank" rel="noreferrer">{dataset.licence}</a> : dataset.licence}</dd>
@@ -68,7 +79,8 @@ export function DetailPanel({ selected, onClose }: Props) {
         <dl>
           <div><dt>Reservoir ID</dt><dd>{selected.item.reservoir_id}</dd></div>
           <div><dt>Publisher capacity</dt><dd>{selected.item.capacity} {selected.item.capacity_unit}</dd></div>
-          <div><dt>Dated level</dt><dd>{selected.item.latest_reading ? `${selected.item.latest_reading.current_percentage}% at ${new Date(selected.item.latest_reading.observed_at).toLocaleString()}` : "No reading in this edition"}</dd></div>
+          <div><dt>Latest publisher observation</dt><dd>{selected.item.latest_reading ? `${selected.item.latest_reading.current_percentage}%` : "No reading in this edition"}</dd></div>
+          {selected.item.latest_reading && <div><dt>Publisher observed</dt><dd><time dateTime={selected.item.latest_reading.observed_at}>{new Date(selected.item.latest_reading.observed_at).toLocaleString()}</time></dd></div>}
         </dl>
         <p className="caveat">Percentage is publisher data from a dated edition. It is not a restriction, safety, or supply-risk classification.</p>
       </>
