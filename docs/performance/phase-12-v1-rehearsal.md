@@ -37,4 +37,6 @@ source was seeded by a read-only logical copy of the complete local demo databas
 The pre/post snapshot signature was identical:
 `6:376b0d7817315368a607cdb9d999654d`. A separately started read-only API against the
 restored database passed all ten complete-demo smoke checks. The normal development
-database was read only during seeding and was never a restore target.
+database was read only during seeding and was never a restore target. A separate
+restart check stopped and restarted the disposable restored PostGIS container before
+starting its read-only API; readiness and all ten smoke checks still passed.
