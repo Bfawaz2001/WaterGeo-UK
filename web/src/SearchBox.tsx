@@ -115,6 +115,7 @@ export function SearchBox({ onSelect }: Props) {
           aria-activedescendant={activeIndex >= 0 ? `watergeo-search-result-${activeIndex}` : undefined}
           onChange={(event) => {
             const value = event.target.value;
+            setActiveIndex(-1);
             setTerm(value);
             if (value.trim().length < 2) {
               setResults([]);
@@ -122,7 +123,6 @@ export function SearchBox({ onSelect }: Props) {
               setUnavailableKinds([]);
               setState("idle");
               setOpen(false);
-              setActiveIndex(-1);
             }
           }}
           onFocus={() => { if (term.trim().length >= 2) setOpen(true); }}

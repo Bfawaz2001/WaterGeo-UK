@@ -39,7 +39,7 @@ export function TrendChart({ points, label, unit }: { points: Point[]; label: st
         <path d={path} />
         {points.map((point, index) => {
           const { x, y } = position(point, index);
-          return <circle key={`${point.observed_at}:${index}`} className={index === points.length - 1 ? "chart-latest" : ""} cx={x} cy={y} r={index === points.length - 1 ? "4" : "3"} tabIndex={0} role="button" aria-label={`${point.value} ${unit}, ${new Date(point.observed_at).toLocaleDateString()}`} onFocus={() => setActive(index)} onMouseEnter={() => setActive(index)}><title>{point.value} {unit} — {point.observed_at}</title></circle>;
+          return <circle key={`${point.observed_at}:${index}`} className={index === points.length - 1 ? "chart-latest" : ""} cx={x} cy={y} r={index === points.length - 1 ? "4" : "3"} tabIndex={0} role="graphics-symbol" aria-label={`${point.value} ${unit}, ${new Date(point.observed_at).toLocaleDateString()}`} onFocus={() => setActive(index)} onMouseEnter={() => setActive(index)}><title>{point.value} {unit} — {point.observed_at}</title></circle>;
         })}
       </svg>
       <figcaption><span>{new Date(first?.observed_at ?? "").toLocaleDateString()}</span><strong>{activePoint?.value.toFixed(1)} {unit} · {new Date(activePoint?.observed_at ?? "").toLocaleDateString()}</strong><span>{new Date(last?.observed_at ?? "").toLocaleDateString()}</span></figcaption>

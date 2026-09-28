@@ -2,12 +2,24 @@ import { useState } from "react";
 
 const STORAGE_KEY = "watergeo-explorer-introduction-v1";
 
+function introductionWasDismissed(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "dismissed";
+  } catch {
+    return false;
+  }
+}
+
 export function Onboarding() {
-  const [visible, setVisible] = useState(() => window.localStorage.getItem(STORAGE_KEY) !== "dismissed");
+  const [visible, setVisible] = useState(() => !introductionWasDismissed());
   if (!visible) return null;
   const dismiss = () => {
-    window.localStorage.setItem(STORAGE_KEY, "dismissed");
     setVisible(false);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, "dismissed");
+    } catch {
+      // Dismissal still applies to this mounted page when persistence is unavailable.
+    }
   };
   return (
     <aside className="onboarding" aria-labelledby="onboarding-heading">

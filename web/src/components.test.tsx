@@ -1,12 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
 import { dataset, sourceStatuses } from "./test/fixtures";
 import { Onboarding } from "./Onboarding";
+
+afterEach(() => vi.restoreAllMocks());
 
 it("renders accessible layer toggles and reports bounded results", async () => {
   const toggle = vi.fn();
@@ -22,6 +24,7 @@ it("renders accessible layer toggles and reports bounded results", async () => {
   await userEvent.click(screen.getByRole("checkbox", { name: /Hydrology stations/i }));
   expect(toggle).toHaveBeenCalledWith("hydrology");
   expect(screen.getByText(/12 nearest results shown/)).toBeInTheDocument();
+  expect(screen.getByText("Latest accepted EA data")).toBeInTheDocument();
   expect(screen.getByText(/Spatial overlap does not establish/)).toBeInTheDocument();
 });
 
@@ -55,6 +58,20 @@ it("shows dismissible first-use guidance and remembers dismissal", async () => {
   expect(screen.queryByRole("heading", { name: "Explore public water data in context" })).not.toBeInTheDocument();
   first.unmount();
   render(<Onboarding />);
+  expect(screen.queryByRole("heading", { name: "Explore public water data in context" })).not.toBeInTheDocument();
+});
+
+it("shows onboarding when local storage cannot be read", () => {
+  vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new DOMException("blocked"); });
+  render(<Onboarding />);
+  expect(screen.getByRole("heading", { name: "Explore public water data in context" })).toBeInTheDocument();
+});
+
+it("dismisses onboarding for the page when local storage cannot be written", async () => {
+  window.localStorage.clear();
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("blocked"); });
+  render(<Onboarding />);
+  await userEvent.click(screen.getByRole("button", { name: "Start exploring" }));
   expect(screen.queryByRole("heading", { name: "Explore public water data in context" })).not.toBeInTheDocument();
 });
 

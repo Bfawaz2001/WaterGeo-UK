@@ -2,7 +2,7 @@ import type { LayerId } from "./types";
 import { Icon, type IconName } from "./Icon";
 
 const LAYERS: Array<{ id: LayerId; icon: IconName; label: string; description: string; group: "changing" | "context" }> = [
-  { id: "hydrology", icon: "hydrology", label: "Hydrology stations", description: "Latest EA observations", group: "changing" },
+  { id: "hydrology", icon: "hydrology", label: "Hydrology stations", description: "Latest accepted EA data", group: "changing" },
   {
     id: "water-quality",
     icon: "water-quality", label: "Water Quality sampling points",

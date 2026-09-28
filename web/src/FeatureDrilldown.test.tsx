@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { api } from "./api";
@@ -48,8 +48,12 @@ it("renders an accessible reservoir trend from consistent percentage readings", 
   }} />);
   expect(await screen.findByRole("img", { name: /Reservoir storage percentage/ })).toHaveAccessibleName(/range 70.0 to 82.0 %/);
   expect(screen.getByText(/2 dated values/)).toBeInTheDocument();
-  await userEvent.hover(screen.getByRole("button", { name: /70 %,/ }));
+  expect(screen.queryByRole("button", { name: /70 %,/ })).not.toBeInTheDocument();
+  const firstPoint = screen.getByRole("graphics-symbol", { name: /70 %,/ });
+  fireEvent.focus(firstPoint);
   expect(screen.getByText(/70.0 %/)).toBeInTheDocument();
+  await userEvent.hover(screen.getByRole("graphics-symbol", { name: /82 %,/ }));
+  expect(screen.getByText(/82.0 %/)).toBeInTheDocument();
 });
 
 it("renders publisher classifications as labels with secondary notation", async () => {
