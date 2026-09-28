@@ -83,8 +83,8 @@ export function WaterBodyBrowser({ open, onToggle, onSelect }: Props) {
           <label htmlFor="water-body-search">Find in loaded Water Bodies</label>
           <input id="water-body-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name or publisher ID" />
           <label>Type within loaded Water Bodies <select value={bodyType} onChange={(event) => setBodyType(event.target.value)}><option value="">All loaded types</option>{[...new Set(items.flatMap((item) => item.water_body_type ? [item.water_body_type] : []))].sort().map((type) => <option key={type}>{type}</option>)}</select></label>
-          <p className="state-detail">First 100 are loaded at a time and pinned to one snapshot.</p>
-          <p>{filtered.length} matches within {items.length} loaded records. This filter does not search the national dataset.</p>
+          <p className="state-detail">Pages load 100 at a time and stay pinned to one reviewed snapshot.</p>
+          <p><strong>{filtered.length} match{filtered.length === 1 ? "" : "es"}</strong> within {items.length} loaded record{items.length === 1 ? "" : "s"}. This browser filter applies only to records loaded below; it does not search the complete national dataset.</p>
           {error && <><p className="state-error" role="alert">{error}</p><button type="button" disabled={loading} onClick={() => void load(undefined, true)}>Reload current snapshot</button></>}
           <ul className="result-list" aria-label="Water Body results">
             {filtered.slice(0, shown).map((item) => (

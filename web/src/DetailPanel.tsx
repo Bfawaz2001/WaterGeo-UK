@@ -1,5 +1,6 @@
-import type { DatasetProvenance, SelectedFeature } from "./types";
 import { FeatureDrilldown } from "./FeatureDrilldown";
+import { Icon, type IconName } from "./Icon";
+import type { DatasetProvenance, SelectedFeature } from "./types";
 
 interface Props {
   selected: SelectedFeature | null;
@@ -17,8 +18,7 @@ function safePublisherUrl(value: string | undefined): string | null {
 }
 
 function retrievalAge(value: string): string {
-  const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
-  const minutes = Math.floor(elapsed / 60_000);
+  const minutes = Math.floor(Math.max(0, Date.now() - new Date(value).getTime()) / 60_000);
   if (minutes < 1) return "Retrieved less than a minute ago";
   if (minutes < 60) return `Retrieved ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
   const hours = Math.floor(minutes / 60);
@@ -30,34 +30,45 @@ function retrievalAge(value: string): string {
 function Provenance({ dataset }: { dataset: DatasetProvenance }) {
   const licence = safePublisherUrl(dataset.licence_url);
   return (
-    <div className="provenance-block">
-      <h3>Source and provenance</h3>
-      <dl>
-        <div><dt>Publisher</dt><dd>{dataset.publisher}</dd></div>
-        <div><dt>Snapshot</dt><dd><code>{dataset.snapshot_id}</code></dd></div>
-        <div><dt>WaterGeo retrieved</dt><dd><time dateTime={dataset.retrieval_completed_at}>{new Date(dataset.retrieval_completed_at).toLocaleString()}</time><small>{retrievalAge(dataset.retrieval_completed_at)}</small></dd></div>
-        <div>
-          <dt>Licence</dt>
-          <dd>{licence ? <a href={licence} target="_blank" rel="noreferrer">{dataset.licence}</a> : dataset.licence}</dd>
-        </div>
-      </dl>
+    <section className="provenance-block" aria-labelledby="provenance-heading">
+      <div className="provenance-heading">
+        <span className="source-seal" aria-hidden="true">i</span>
+        <span><strong id="provenance-heading">Source and provenance</strong><small>{dataset.publisher}</small></span>
+      </div>
+      <p className="retrieval-age"><strong>WaterGeo retrieved</strong> · {retrievalAge(dataset.retrieval_completed_at)} · <time dateTime={dataset.retrieval_completed_at}>{new Date(dataset.retrieval_completed_at).toLocaleString()}</time></p>
       <p>{dataset.attribution}</p>
-      {(dataset.caveat ?? dataset.freshness_caveat) && (
-        <p className="caveat">{dataset.caveat ?? dataset.freshness_caveat}</p>
-      )}
-    </div>
+      <details className="technical-disclosure">
+        <summary>Snapshot and licence details</summary>
+        <dl>
+          <div><dt>Snapshot</dt><dd><code>{dataset.snapshot_id}</code></dd></div>
+          <div><dt>Licence</dt><dd>{licence ? <a href={licence} target="_blank" rel="noreferrer">{dataset.licence}</a> : dataset.licence}</dd></div>
+        </dl>
+      </details>
+      {(dataset.caveat ?? dataset.freshness_caveat) && <p className="caveat">{dataset.caveat ?? dataset.freshness_caveat}</p>}
+    </section>
   );
 }
 
+function SummaryGrid({ children }: { children: React.ReactNode }) {
+  return <dl className="summary-grid">{children}</dl>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div><dt>{label}</dt><dd>{children}</dd></div>;
+}
+
+const ICONS: Record<SelectedFeature["kind"], IconName> = {
+  hydrology: "hydrology",
+  "water-quality": "water-quality",
+  reservoirs: "reservoirs",
+  "thames-discharge": "thames-discharge",
+  "water-supply": "water-supply",
+  "water-body": "catchment",
+};
+
 export function DetailPanel({ selected, onClose }: Props) {
   if (!selected) {
-    return (
-      <section className="detail-panel empty-detail" aria-labelledby="detail-heading">
-        <p className="eyebrow">Selection</p>
-        <h2 id="detail-heading">Inspect a mapped feature</h2>
-        <p>Select a point, look up a water-supply area, or browse a Water Body.</p>
-      </section>
-    );
+    return <section className="detail-panel empty-detail" aria-labelledby="detail-heading"><p className="eyebrow">Selection</p><h2 id="detail-heading">Inspect a mapped feature</h2><p>Select a point, look up a water-supply area, or browse a Water Body.</p></section>;
   }
 
   let title: string;
@@ -66,99 +77,70 @@ export function DetailPanel({ selected, onClose }: Props) {
   if (selected.kind === "hydrology") {
     title = selected.item.labels[0] ?? selected.item.station_id;
     dataset = selected.dataset;
-    body = <dl><div><dt>Station ID</dt><dd>{selected.item.station_id}</dd></div><div><dt>Location</dt><dd>{selected.item.latitude?.toFixed(5)}, {selected.item.longitude?.toFixed(5)}</dd></div></dl>;
+    body = <SummaryGrid><Field label="Station ID"><code>{selected.item.station_id}</code></Field><Field label="Location">{selected.item.latitude?.toFixed(5)}, {selected.item.longitude?.toFixed(5)}</Field></SummaryGrid>;
   } else if (selected.kind === "water-quality") {
     title = selected.item.pref_label ?? selected.item.alt_label;
     dataset = selected.dataset;
-    body = <dl><div><dt>Sampling-point ID</dt><dd>{selected.item.sampling_point_id}</dd></div><div><dt>Location</dt><dd>{selected.item.latitude?.toFixed(5)}, {selected.item.longitude?.toFixed(5)}</dd></div></dl>;
+    body = <SummaryGrid><Field label="Sampling-point ID"><code>{selected.item.sampling_point_id}</code></Field><Field label="Location">{selected.item.latitude?.toFixed(5)}, {selected.item.longitude?.toFixed(5)}</Field></SummaryGrid>;
   } else if (selected.kind === "reservoirs") {
     title = selected.item.name;
     dataset = selected.dataset;
-    body = (
-      <>
-        <dl>
-          <div><dt>Reservoir ID</dt><dd>{selected.item.reservoir_id}</dd></div>
-          <div><dt>Publisher capacity</dt><dd>{selected.item.capacity} {selected.item.capacity_unit}</dd></div>
-          <div><dt>Latest publisher observation</dt><dd>{selected.item.latest_reading ? `${selected.item.latest_reading.current_percentage}%` : "No reading in this edition"}</dd></div>
-          {selected.item.latest_reading && <div><dt>Publisher observed</dt><dd><time dateTime={selected.item.latest_reading.observed_at}>{new Date(selected.item.latest_reading.observed_at).toLocaleString()}</time></dd></div>}
-        </dl>
-        <p className="caveat">Percentage is publisher data from a dated edition. It is not a restriction, safety, or supply-risk classification.</p>
-      </>
-    );
+    body = <>
+      <div className="metric-hero"><span><strong>{selected.item.latest_reading ? `${selected.item.latest_reading.current_percentage}%` : "No reading"}</strong><small>Latest publisher observation</small></span><span className="edition-badge">Dated 2025 edition</span></div>
+      <SummaryGrid><Field label="Capacity">{selected.item.capacity} {selected.item.capacity_unit}</Field>{selected.item.latest_reading && <Field label="Publisher observed"><time dateTime={selected.item.latest_reading.observed_at}>{new Date(selected.item.latest_reading.observed_at).toLocaleString()}</time></Field>}</SummaryGrid>
+      <p className="caveat">Percentage is publisher data from a dated edition. It is not a restriction, safety, or supply-risk classification.</p>
+      <details className="technical-disclosure"><summary>Publisher identifiers</summary><SummaryGrid><Field label="Reservoir ID"><code>{selected.item.reservoir_id}</code></Field></SummaryGrid></details>
+    </>;
   } else if (selected.kind === "thames-discharge") {
     title = selected.item.location_name;
     dataset = selected.dataset;
     const moments = [
-      selected.item.most_recent_discharge_start && {
-        label: "Most recent indicated discharge started",
-        value: selected.item.most_recent_discharge_start,
-      },
-      selected.item.most_recent_discharge_stop && {
-        label: "Most recent indicated discharge stopped",
-        value: selected.item.most_recent_discharge_stop,
-      },
+      selected.item.most_recent_discharge_start && { label: "Most recent indicated discharge started", value: selected.item.most_recent_discharge_start },
+      selected.item.most_recent_discharge_stop && { label: "Most recent indicated discharge stopped", value: selected.item.most_recent_discharge_stop },
       { label: `Status changed to ${selected.item.alert_status}`, value: selected.item.status_changed },
     ].filter((moment): moment is { label: string; value: string } => Boolean(moment));
-    body = (
-      <>
-        <dl>
-          <div><dt>Site ID</dt><dd>{selected.item.site_id}</dd></div>
-          <div><dt>Permit</dt><dd>{selected.item.permit_number}</dd></div>
-          <div><dt>Receiving watercourse</dt><dd>{selected.item.receiving_watercourse}</dd></div>
-          <div><dt>Monitor status</dt><dd><strong>{selected.item.alert_status}</strong></dd></div>
-          <div><dt>Activity in past 48 hours</dt><dd>{selected.item.alert_past_48_hours ? "Publisher says yes" : "Publisher says no"}</dd></div>
-        </dl>
-        <h3>Publisher status timeline</h3>
-        <ol className="status-timeline">{moments.map((moment) => <li key={`${moment.label}:${moment.value}`}><strong>{moment.label}</strong><span>{moment.value.replace("T", " ")} (timezone not supplied)</span></li>)}</ol>
-        <p className="caveat">EDM status indicates monitor activity. It does not measure discharge volume, water quality or bathing safety.</p>
-      </>
-    );
+    const statusClass = selected.item.alert_status.toLowerCase().replaceAll(" ", "-");
+    body = <>
+      <div className="status-hero"><span className={`status-pill status-${statusClass}`}>{selected.item.alert_status}</span><span>{selected.item.alert_past_48_hours ? "Activity indicated in past 48 hours" : "No activity indicated in past 48 hours"}</span></div>
+      <SummaryGrid><Field label="Receiving watercourse">{selected.item.receiving_watercourse}</Field><Field label="Permit"><code>{selected.item.permit_number}</code></Field></SummaryGrid>
+      <h3>Publisher status timeline</h3>
+      <ol className="status-timeline">{moments.map((moment) => <li key={`${moment.label}:${moment.value}`}><strong>{moment.label}</strong><span>{moment.value.replace("T", " ")} (timezone not supplied)</span></li>)}</ol>
+      <p className="caveat">EDM status indicates monitor activity. It does not measure discharge volume, water quality or bathing safety.</p>
+      <details className="technical-disclosure"><summary>Publisher identifiers</summary><SummaryGrid><Field label="Site ID"><code>{selected.item.site_id}</code></Field></SummaryGrid></details>
+    </>;
   } else if (selected.kind === "water-supply") {
     title = selected.item.properties.company ?? `Area ${selected.item.id}`;
-    body = (
-      <>
-        <dl>
-          <div><dt>Source ID</dt><dd>{selected.item.id}</dd></div>
-          <div><dt>Area served</dt><dd>{selected.item.properties.area_served ?? "Not stated"}</dd></div>
-          <div><dt>Presentation</dt><dd>{selected.item.presentation.method}</dd></div>
-          <div><dt>Presentation policy</dt><dd>{selected.item.presentation.policy_version}</dd></div>
-          <div><dt>Review</dt><dd>{selected.item.presentation.review_reference}</dd></div>
-          <div><dt>Snapshot</dt><dd><code>{selected.item.properties.snapshot_id}</code></dd></div>
-        </dl>
-        <p className="caveat">{selected.item.properties.disclaimer ?? "This dated analytical boundary does not establish a property's current legal supplier."}</p>
-        {selected.item.properties.licence_statement && <p>{selected.item.properties.licence_statement}</p>}
-        {selected.item.properties.source_provenance && <p>{selected.item.properties.source_provenance}</p>}
-        {selected.item.properties.premises_disclaimer && <p className="caveat">{selected.item.properties.premises_disclaimer}</p>}
-        {selected.item.properties.coastline_disclaimer && <p className="caveat">{selected.item.properties.coastline_disclaimer}</p>}
-      </>
-    );
+    body = <>
+      <div className="metric-hero water-supply-hero"><span><strong>{selected.item.properties.area_served ?? "Area served not stated"}</strong><small>Dated analytical boundary</small></span></div>
+      <p className="caveat caveat-prominent">{selected.item.properties.disclaimer ?? "This dated analytical boundary does not establish a property's current legal supplier."}</p>
+      {selected.item.properties.licence_statement && <p>{selected.item.properties.licence_statement}</p>}
+      {selected.item.properties.source_provenance && <p className="secondary-copy">{selected.item.properties.source_provenance}</p>}
+      {selected.item.properties.premises_disclaimer && <p className="caveat">{selected.item.properties.premises_disclaimer}</p>}
+      {selected.item.properties.coastline_disclaimer && <p className="caveat">{selected.item.properties.coastline_disclaimer}</p>}
+      <details className="technical-disclosure"><summary>Geometry and presentation details</summary><SummaryGrid>
+        <Field label="Source ID">{selected.item.id}</Field><Field label="Presentation">{selected.item.presentation.method}</Field>
+        <Field label="Policy">{selected.item.presentation.policy_version}</Field><Field label="Review">{selected.item.presentation.review_reference}</Field>
+        <Field label="Snapshot"><code>{selected.item.properties.snapshot_id}</code></Field>
+      </SummaryGrid></details>
+    </>;
   } else {
     title = selected.item.name;
     dataset = selected.dataset;
-    body = (
-      <>
-        <dl>
-          <div><dt>Water Body ID</dt><dd>{selected.item.water_body_id}</dd></div>
-          <div><dt>Type</dt><dd>{selected.item.water_body_type ?? "Not stated"}</dd></div>
-          <div><dt>Operational catchment</dt><dd>{selected.item.operational_catchment_id}</dd></div>
-          <div><dt>Management catchment</dt><dd>{selected.item.management_catchment_id}</dd></div>
-          <div><dt>River basin district</dt><dd>{selected.item.river_basin_district_id}</dd></div>
-          <div><dt>Geometry features</dt><dd>{selected.geometry.features.length}</dd></div>
-        </dl>
-        <p className="caveat">Publisher geometry features are shown individually. No relationship to stations, sampling points, companies or reservoirs is inferred.</p>
-      </>
-    );
+    body = <>
+      <div className="metric-hero"><span><strong>{selected.item.water_body_type ?? "Type not stated"}</strong><small>Catchment Data Explorer classification</small></span><span className="edition-badge">{selected.geometry.features.length} geometry feature{selected.geometry.features.length === 1 ? "" : "s"}</span></div>
+      <SummaryGrid><Field label="Operational catchment"><code>{selected.item.operational_catchment_id}</code></Field><Field label="Management catchment"><code>{selected.item.management_catchment_id}</code></Field><Field label="River basin district"><code>{selected.item.river_basin_district_id}</code></Field></SummaryGrid>
+      <p className="caveat">Publisher geometry features are shown individually. No relationship to stations, sampling points, companies or reservoirs is inferred.</p>
+      <details className="technical-disclosure"><summary>Publisher identifiers</summary><SummaryGrid><Field label="Water Body ID"><code>{selected.item.water_body_id}</code></Field></SummaryGrid></details>
+    </>;
   }
 
   return (
     <section className="detail-panel" aria-labelledby="detail-heading">
       <button className="close-button" type="button" onClick={onClose} aria-label="Close selected feature details">×</button>
-      <p className="eyebrow">Selected {selected.kind.replaceAll("-", " ")}</p>
+      <div className={`detail-kind layer-${selected.kind}`}><span className="layer-symbol"><Icon name={ICONS[selected.kind]} /></span><span>Selected {selected.kind.replaceAll("-", " ")}</span></div>
       <h2 id="detail-heading">{title}</h2>
       {body}
-      {selected.kind !== "water-supply" && selected.kind !== "water-body" && selected.kind !== "thames-discharge" && (
-        <FeatureDrilldown key={`${selected.kind}:${selected.dataset.snapshot_id}:${selected.kind === "hydrology" ? selected.item.station_id : selected.kind === "water-quality" ? selected.item.sampling_point_id : selected.item.reservoir_id}`} selected={selected} />
-      )}
+      {selected.kind !== "water-supply" && selected.kind !== "water-body" && selected.kind !== "thames-discharge" && <FeatureDrilldown key={`${selected.kind}:${selected.dataset.snapshot_id}:${selected.kind === "hydrology" ? selected.item.station_id : selected.kind === "water-quality" ? selected.item.sampling_point_id : selected.item.reservoir_id}`} selected={selected} />}
       {dataset && <Provenance dataset={dataset} />}
     </section>
   );
