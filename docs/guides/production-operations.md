@@ -23,18 +23,20 @@ Set these non-secret API values:
 
 ```text
 WATERGEO_SERVICE_ENVIRONMENT=production
-WATERGEO_TRUSTED_HOSTS=["api.example.org","actual-app-name.ondigitalocean.app"]
+WATERGEO_TRUSTED_HOSTS=["actual-app-name.ondigitalocean.app","health.internal"]
 WATERGEO_DB_HOST=<private database hostname matching its certificate>
 WATERGEO_DB_PORT=25060
 WATERGEO_DB_NAME=watergeo
 WATERGEO_DB_USER=watergeo_app
 WATERGEO_DB_SSLMODE=verify-full
-WATERGEO_DB_SSLROOTCERT=/run/secrets/database-ca.pem
+WATERGEO_DB_CA_CERT=<provider CA bindable; materialized by watergeo-with-db-ca>
 WATERGEO_LOG_LEVEL=INFO
 ```
 
 The API secret inventory is only `WATERGEO_DB_PASSWORD` and the mounted/read-only
-database CA certificate. Migration gets `WATERGEO_MIGRATION_PASSWORD`, its own
+database CA certificate. The exact `health.internal` name is used only by the
+container-local health request; the production edge rejects it before proxying.
+Migration gets `WATERGEO_MIGRATION_PASSWORD`, its own
 username and the same connection/TLS metadata. Ingestion gets
 `WATERGEO_INGESTION_PASSWORD`, its own username and TLS metadata. Initial database
 provisioning alone gets the provider administrator credential plus three generated
@@ -48,8 +50,8 @@ read-only and controlled. Production settings refuse to start without an explici
 trusted host, `verify-full`, and the CA path. Every database-connected API, migration,
 and ingestion job must set `WATERGEO_SERVICE_ENVIRONMENT=production`; this enforces
 verified TLS for all three identities. Every trusted host must be exact: all `*`
-characters are rejected. Replace the generated-host example with the actual App
-Platform component hostname when provisioning.
+characters are rejected. The DigitalOcean deployment binds `${APP_DOMAIN}` into the
+exact nginx and API host lists; it does not use an `ondigitalocean.app` wildcard.
 
 TLS terminates at the managed ingress. Keep Uvicorn's proxy-header support disabled
 until the exact ingress proxy network is known and tested; never set an unrestricted
@@ -61,8 +63,10 @@ redirects, certificates and HSTS at the ingress.
 
 `.github/workflows/container-image.yml` builds AMD64 and ARM64 on pull requests
 without logging into a registry. In the original repository, main pushes, `v*`
-tags, and a manual dispatch on main may publish
-`ghcr.io/bfawaz2001/watergeo-uk`. Only the publish job has `packages: write`.
+tags, and a manual dispatch on main may publish the API
+`ghcr.io/bfawaz2001/watergeo-uk`, operator
+`ghcr.io/bfawaz2001/watergeo-uk-operator`, and web
+`ghcr.io/bfawaz2001/watergeo-uk-web` images. Only the publish job has `packages: write`.
 Actions and base images are pinned to immutable commits/digests. Published images
 include build provenance and an SBOM.
 
@@ -75,11 +79,13 @@ operator, time and smoke result in the release record.
 
 1. Create managed PostgreSQL in the same region/VPC as the app. Enable PostGIS.
    Restrict trusted sources to the API and job components. Download the provider CA.
-2. As the provider administrator, adapt and run `docker/postgres/init.sql` once to
+2. As the provider administrator, run `scripts/provision_production_database.py` to
+   apply the managed-database adaptation of `docker/postgres/init.sql` and
    create `watergeo_migrator`, `watergeo_app`, `watergeo_ingest`, schema ownership,
    default read grants and app read-only default. Supply generated passwords through
    protected process environment; do not paste them into shell history or SQL files.
-3. Test all three identities over the private hostname with `verify-full`. Confirm
+3. Run `scripts/verify_production_database.py` over the private hostname with
+   `verify-full`. Confirm
    the API cannot write, ingestion cannot update/delete or create schema, and the
    migrator is not an administrator.
 4. Select the reviewed application digest. Run a one-shot migration job from that

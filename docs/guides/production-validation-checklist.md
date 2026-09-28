@@ -1,6 +1,8 @@
 # External production and Fabric validation checklist
 
-Nothing in this checklist has been provisioned or executed by the repository.
+Nothing in this checklist has been provisioned or executed by the repository. For the
+Phase 14 public preview, stop after manually validating each dynamic source; step 9
+belongs to Phase 15 and recurring production schedules remain disabled.
 
 ## DigitalOcean production rehearsal
 

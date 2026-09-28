@@ -55,3 +55,8 @@ need a separately reviewed expand/migrate/contract plan.
 
 Public go-live remains blocked on actual provisioning, DNS, secret entry, edge
 policy, evidence object storage, backup restore rehearsal and monitoring setup.
+
+Phase 14 implements the already anticipated dedicated operator image and a separate
+web image. This supersedes the initial repository-checkout mechanism without changing
+the API image boundary. The first bootstrap is a temporary, maintenance-gated
+POST_DEPLOY job; normal deployments retain only the PRE_DEPLOY migration.
