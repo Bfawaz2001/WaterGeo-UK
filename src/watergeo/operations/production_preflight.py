@@ -17,9 +17,11 @@ REQUIRED_ENVIRONMENT = (
     "WATERGEO_API_IMAGE_DIGEST",
     "WATERGEO_OPERATOR_IMAGE_DIGEST",
     "WATERGEO_WEB_IMAGE_DIGEST",
+    "WATERGEO_DO_DATABASE_CLUSTER_ID",
     "WATERGEO_DO_DATABASE_CLUSTER_NAME",
     "WATERGEO_DO_VPC_ID",
     "WATERGEO_DB_PRIVATE_HOST",
+    "WATERGEO_DB_PORT",
     "WATERGEO_DB_PASSWORD",
     "WATERGEO_MIGRATION_PASSWORD",
     "WATERGEO_INGESTION_PASSWORD",
@@ -29,6 +31,42 @@ REQUIRED_ENVIRONMENT = (
     "WATERGEO_EVIDENCE_S3_ACCESS_KEY_ID",
     "WATERGEO_EVIDENCE_S3_SECRET_ACCESS_KEY",
 )
+
+
+def _fields(output: str, count: int, description: str) -> tuple[str, ...]:
+    fields = tuple(output.strip().split())
+    if len(fields) != count:
+        raise ValueError(f"Unexpected {description} response")
+    return fields
+
+
+def database_endpoint_checks(
+    identity_output: str,
+    private_output: str,
+    public_output: str,
+    environment: Mapping[str, str],
+) -> list[str]:
+    """Compare non-secret provider fields with the selected deployment inputs."""
+    cluster_id, name, engine, region = _fields(identity_output, 4, "database identity")
+    private_host, private_port = _fields(private_output, 2, "private database connection")
+    public_host, _public_port = _fields(public_output, 2, "public database connection")
+    failures: list[str] = []
+    if cluster_id != environment.get("WATERGEO_DO_DATABASE_CLUSTER_ID"):
+        failures.append("Selected database cluster identity does not match")
+    if name != environment.get("WATERGEO_DO_DATABASE_CLUSTER_NAME"):
+        failures.append("Selected database cluster name does not match")
+    if engine != "pg":
+        failures.append("Selected database cluster is not PostgreSQL")
+    if region != RESOURCE_REGION:
+        failures.append("Selected database cluster is not in lon1")
+    configured_host = environment.get("WATERGEO_DB_PRIVATE_HOST", "")
+    if configured_host == public_host:
+        failures.append("Configured database host is the public endpoint")
+    elif configured_host != private_host:
+        failures.append("Configured database host is not the selected cluster private endpoint")
+    if environment.get("WATERGEO_DB_PORT") != private_port:
+        failures.append("Configured database port does not match the selected private endpoint")
+    return failures
 
 
 def _run(command: Sequence[str]) -> str:
@@ -84,6 +122,44 @@ def provider_checks(spec: Path, environment: Mapping[str, str]) -> list[str]:
         )
         if DATABASE_SIZE not in json.dumps(database_sizes):
             failures.append(f"Managed PostgreSQL size {DATABASE_SIZE} is unavailable")
+        cluster_id = environment["WATERGEO_DO_DATABASE_CLUSTER_ID"]
+        identity = _run(
+            (
+                "doctl",
+                "databases",
+                "get",
+                cluster_id,
+                "--format",
+                "ID,Name,Engine,Region",
+                "--no-header",
+            )
+        )
+        private_connection = _run(
+            (
+                "doctl",
+                "databases",
+                "connection",
+                cluster_id,
+                "--private",
+                "--format",
+                "Host,Port",
+                "--no-header",
+            )
+        )
+        public_connection = _run(
+            (
+                "doctl",
+                "databases",
+                "connection",
+                cluster_id,
+                "--format",
+                "Host,Port",
+                "--no-header",
+            )
+        )
+        failures.extend(
+            database_endpoint_checks(identity, private_connection, public_connection, environment)
+        )
         vpc = json.loads(
             _run(("doctl", "vpcs", "get", environment["WATERGEO_DO_VPC_ID"], "--output", "json"))
         )

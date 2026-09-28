@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from watergeo.operations.production_preflight import local_checks
+from watergeo.operations.production_preflight import database_endpoint_checks, local_checks
 from watergeo.operations.production_spec import render, write_private
 
 
@@ -15,9 +15,11 @@ def deployment_environment() -> dict[str, str]:
         "WATERGEO_API_IMAGE_DIGEST": digest,
         "WATERGEO_OPERATOR_IMAGE_DIGEST": digest,
         "WATERGEO_WEB_IMAGE_DIGEST": digest,
+        "WATERGEO_DO_DATABASE_CLUSTER_ID": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         "WATERGEO_DO_DATABASE_CLUSTER_NAME": "watergeo-db-lon1",
         "WATERGEO_DO_VPC_ID": "11111111-2222-3333-4444-555555555555",
         "WATERGEO_DB_PRIVATE_HOST": "private-watergeo-db.example",
+        "WATERGEO_DB_PORT": "25060",
         "WATERGEO_DB_PASSWORD": "app-password-value",
         "WATERGEO_MIGRATION_PASSWORD": "migration-password-value",
         "WATERGEO_INGESTION_PASSWORD": "ingestion-password-value",
@@ -139,6 +141,88 @@ def test_local_preflight_reports_names_only(monkeypatch: pytest.MonkeyPatch) -> 
     assert "WATERGEO_DB_PASSWORD" in combined
     assert "doctl is not installed" in combined
     assert "app-password-value" not in combined
+
+
+def test_database_endpoint_matches_exact_selected_cluster_private_connection() -> None:
+    environment = deployment_environment()
+    assert (
+        database_endpoint_checks(
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\twatergeo-db-lon1\tpg\tlon1\n",
+            "private-watergeo-db.example\t25060\n",
+            "public-watergeo-db.example\t25060\n",
+            environment,
+        )
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    ("identity", "private", "public", "expected"),
+    [
+        (
+            "ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee other-db pg lon1",
+            "private-other-db.example 25060",
+            "public-other-db.example 25060",
+            "identity",
+        ),
+        (
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee other-db pg lon1",
+            "private-watergeo-db.example 25060",
+            "public-watergeo-db.example 25060",
+            "name does not match",
+        ),
+        (
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee watergeo-db-lon1 mysql lon1",
+            "private-watergeo-db.example 25060",
+            "public-watergeo-db.example 25060",
+            "not PostgreSQL",
+        ),
+        (
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee watergeo-db-lon1 pg nyc3",
+            "private-watergeo-db.example 25060",
+            "public-watergeo-db.example 25060",
+            "not in lon1",
+        ),
+        (
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee watergeo-db-lon1 pg lon1",
+            "private-other-db.example 25060",
+            "public-watergeo-db.example 25060",
+            "not the selected cluster private endpoint",
+        ),
+        (
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee watergeo-db-lon1 pg lon1",
+            "private-watergeo-db.example 25061",
+            "private-watergeo-db.example 25060",
+            "public endpoint",
+        ),
+        (
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee watergeo-db-lon1 pg lon1",
+            "private-watergeo-db.example 25061",
+            "public-watergeo-db.example 25060",
+            "port does not match",
+        ),
+    ],
+)
+def test_database_endpoint_rejects_wrong_cluster_region_host_or_port(
+    identity: str, private: str, public: str, expected: str
+) -> None:
+    failures = database_endpoint_checks(identity, private, public, deployment_environment())
+    assert any(expected in failure for failure in failures)
+    assert not any("postgresql://" in failure or "password" in failure for failure in failures)
+
+
+def test_database_endpoint_rejects_unexpected_provider_output_without_echoing_it() -> None:
+    secret = "postgresql://user:secret@private-watergeo-db.example:25060/defaultdb"
+    with pytest.raises(
+        ValueError, match="Unexpected private database connection response"
+    ) as error:
+        database_endpoint_checks(
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee watergeo-db-lon1 pg lon1",
+            secret,
+            "public-watergeo-db.example 25060",
+            deployment_environment(),
+        )
+    assert secret not in str(error.value)
 
 
 def test_edge_rejects_unknown_hosts_before_preserving_the_reviewed_host() -> None:

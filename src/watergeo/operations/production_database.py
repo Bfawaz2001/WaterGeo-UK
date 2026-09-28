@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 import psycopg
-from psycopg import Connection, sql
+from psycopg import Connection, Cursor, sql
 from psycopg.errors import InsufficientPrivilege, ReadOnlySqlTransaction
 
 DATABASE_NAME = "watergeo"
@@ -71,6 +71,35 @@ def role_passwords(environment: Mapping[str, str]) -> dict[str, str]:
     return {role: environment[name] for role, name in names.items()}
 
 
+def _converge_role(cursor: Cursor[tuple[object, ...]], role: str, password: str) -> None:
+    cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,))
+    if cursor.fetchone() is None:
+        cursor.execute(sql.SQL("CREATE ROLE {}").format(sql.Identifier(role)))
+    cursor.execute(
+        sql.SQL(
+            "ALTER ROLE {} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
+            "NOREPLICATION NOBYPASSRLS PASSWORD %s"
+        ).format(sql.Identifier(role)),
+        (password,),
+    )
+    cursor.execute(
+        """
+        SELECT granted.rolname
+        FROM pg_auth_members AS membership
+        JOIN pg_roles AS granted ON granted.oid = membership.roleid
+        JOIN pg_roles AS member ON member.oid = membership.member
+        WHERE member.rolname = %s
+        ORDER BY granted.rolname
+        """,
+        (role,),
+    )
+    for row in cursor.fetchall():
+        granted_role = str(row[0])
+        cursor.execute(
+            sql.SQL("REVOKE {} FROM {}").format(sql.Identifier(granted_role), sql.Identifier(role))
+        )
+
+
 def provision(environment: Mapping[str, str]) -> None:
     parameters = ConnectionParameters.from_environment(environment)
     passwords = role_passwords(environment)
@@ -80,17 +109,7 @@ def provision(environment: Mapping[str, str]) -> None:
         administrator.autocommit = True
         with administrator.cursor() as cursor:
             for role in ROLES:
-                cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,))
-                if cursor.fetchone() is None:
-                    cursor.execute(
-                        sql.SQL(
-                            "CREATE ROLE {} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION"
-                        ).format(sql.Identifier(role))
-                    )
-                cursor.execute(
-                    sql.SQL("ALTER ROLE {} PASSWORD %s").format(sql.Identifier(role)),
-                    (passwords[role],),
-                )
+                _converge_role(cursor, role, passwords[role])
             cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (DATABASE_NAME,))
             if cursor.fetchone() is None:
                 cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DATABASE_NAME)))
@@ -151,7 +170,7 @@ def verify(environment: Mapping[str, str]) -> None:
         cursor.fetchone()
         cursor.execute(
             """
-            SELECT rolname, rolsuper, rolcreatedb, rolcreaterole, rolreplication
+            SELECT rolname, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
             FROM pg_roles WHERE rolname = ANY(%s) ORDER BY rolname
             """,
             (list(ROLES),),
@@ -159,6 +178,19 @@ def verify(environment: Mapping[str, str]) -> None:
         rows = cursor.fetchall()
         if len(rows) != len(ROLES) or any(any(row[1:]) for row in rows):
             raise RuntimeError("WaterGeo roles are missing or hold elevated cluster privileges")
+        cursor.execute(
+            """
+            SELECT member.rolname, granted.rolname
+            FROM pg_auth_members AS membership
+            JOIN pg_roles AS granted ON granted.oid = membership.roleid
+            JOIN pg_roles AS member ON member.oid = membership.member
+            WHERE member.rolname = ANY(%s)
+            ORDER BY member.rolname, granted.rolname
+            """,
+            (list(ROLES),),
+        )
+        if cursor.fetchall():
+            raise RuntimeError("A WaterGeo role belongs to another PostgreSQL role")
         cursor.execute(
             """
             SELECT tablename

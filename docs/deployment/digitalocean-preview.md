@@ -32,6 +32,8 @@ Primary references: [App spec](https://docs.digitalocean.com/products/app-platfo
 [health checks](https://docs.digitalocean.com/products/app-platform/how-to/manage-health-checks/),
 [VPC networking](https://docs.digitalocean.com/products/app-platform/how-to/enable-vpc/),
 [container images](https://docs.digitalocean.com/products/app-platform/how-to/deploy-from-container-images/),
+[database cluster inspection](https://docs.digitalocean.com/reference/doctl/reference/databases/get/),
+[private connection inspection](https://docs.digitalocean.com/reference/doctl/reference/databases/connection/),
 [PostgreSQL connection security](https://docs.digitalocean.com/products/databases/postgresql/how-to/connect/),
 [trusted sources](https://docs.digitalocean.com/products/databases/postgresql/how-to/secure/),
 [PostGIS](https://docs.digitalocean.com/products/databases/postgresql/details/supported-extensions/),
@@ -90,11 +92,15 @@ component-scoped `SECRET` variables and never build arguments.
    the least-privilege GHCR pull credential.
 2. Run `watergeo-production-preflight`; it is read-only and reports missing names only.
    `doctl` is currently required (`brew install doctl` on macOS). Initialise its auth
-   interactively without putting a token on the command line.
+   interactively without putting a token on the command line. The online preflight
+   retrieves only the selected cluster's ID, name, engine, region, and public/private
+   host and port fields. It requires the configured host and port to equal that
+   cluster's private endpoint and rejects its public endpoint; credentials and
+   connection URLs are neither requested nor printed.
 3. Confirm `lon` App Platform, `lon1` database/Spaces, and selected sizes are currently
    available. Stop for approval if a common London deployment is unavailable.
 4. Create or select a `lon1` VPC, record its UUID, and create the smallest PostgreSQL
-   cluster in that VPC. Record its private hostname as
+   cluster in that VPC. Record its cluster ID, name, private hostname, and port as
    non-secret deployment metadata; do not pass a provider URL or provider username to
    any component. Temporarily trust the operator's current IP only for provisioning,
    download its CA, and run
@@ -135,9 +141,11 @@ bounded PEM file with mode `0600`, sets `WATERGEO_DB_SSLROOTCERT`, and uses
 
 ## Role and data verification
 
-Provisioning is idempotent: it creates or rotates the three fixed login roles, creates
-`watergeo`, installs PostGIS, assigns the `watergeo` schema to the migrator, revokes
-public database/schema privileges, and grants only schema usage to app/ingest. Existing
+Provisioning is idempotent: it creates or rotates the three fixed login roles,
+reasserts their least-privilege cluster attributes, removes any inherited role
+memberships, creates `watergeo`, installs PostGIS, assigns the `watergeo` schema to the
+migrator, revokes public database/schema privileges, and grants only schema usage to
+app/ingest. Existing
 migrations remain authoritative for table grants. Verification authenticates each
 identity and proves app writes, ingest UPDATE/DELETE/schema creation, and all elevated
 role attributes are rejected; the migrator can manage the application schema.
