@@ -57,11 +57,12 @@ vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({ default: 
 
 import { MapView } from "./MapView";
 
-function renderMap(overview: Overview | null = null) {
+function renderMap(overview: Overview | null = null, focus?: { key: string; longitude?: number; latitude?: number }) {
   const area = { type: "Feature", geometry: { type: "MultiPolygon", coordinates: [] } } as unknown as AreaFeature;
   const waterBody: GeoJSONFeatureCollection = { type: "FeatureCollection", features: [] };
   const { unmount } = render(<MapView
     overview={overview}
+    focus={focus ?? null}
     initial={{ longitude: -1, latitude: 52, zoom: 8 }}
     activeLayers={new Set(["water-supply"])}
     hydrology={[]} waterQuality={[]} reservoirs={[]}
@@ -102,6 +103,16 @@ it("restores current data only after the initial and fallback styles fully load"
   unmount();
   expect(map.remove).toHaveBeenCalledOnce();
   expect(map.listeners.size).toBe(0);
+});
+
+it("renders a source-independent selection halo for a focused point", () => {
+  const { map } = renderMap(null, { key: "hydrology:station", longitude: -1.5, latitude: 52.5 });
+  act(() => { map.loaded = true; map.emit("load"); });
+  expect(map.getSource("watergeo-selection")?.setData).toHaveBeenLastCalledWith({
+    type: "FeatureCollection",
+    features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [-1.5, 52.5] } }],
+  });
+  expect(map.easeTo).toHaveBeenCalledWith({ center: [-1.5, 52.5], zoom: 11 });
 });
 
 it("installs the PMTiles overview only after load and restores it after fallback", () => {

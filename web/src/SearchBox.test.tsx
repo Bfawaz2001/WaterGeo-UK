@@ -32,6 +32,21 @@ it("debounces bounded search, groups results and opens a selection", async () =>
   expect(select).toHaveBeenCalledWith(result);
 });
 
+it("supports keyboard navigation and selection without moving focus from search", async () => {
+  vi.spyOn(api, "search").mockResolvedValue({ query: "river", items: [result], truncated: false, available_kinds: ["hydrology"], unavailable_kinds: [] });
+  const select = vi.fn().mockResolvedValue(undefined);
+  render(<SearchBox onSelect={select} />);
+  const input = screen.getByRole("searchbox");
+  await userEvent.type(input, "river");
+  await act(() => vi.advanceTimersByTimeAsync(250));
+  await screen.findByRole("button", { name: /River Avon/ });
+  await userEvent.keyboard("{ArrowDown}");
+  expect(input).toHaveAttribute("aria-activedescendant", "watergeo-search-result-0");
+  expect(input).toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+  expect(select).toHaveBeenCalledWith(result);
+});
+
 it("distinguishes no matches from an unavailable search", async () => {
   vi.spyOn(api, "search").mockResolvedValueOnce({ query: "none", items: [], truncated: false, available_kinds: ["hydrology"], unavailable_kinds: [] });
   render(<SearchBox onSelect={vi.fn()} />);

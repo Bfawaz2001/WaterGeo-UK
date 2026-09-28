@@ -6,6 +6,7 @@ import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
 import { dataset, sourceStatuses } from "./test/fixtures";
+import { Onboarding } from "./Onboarding";
 
 it("renders accessible layer toggles and reports bounded results", async () => {
   const toggle = vi.fn();
@@ -37,6 +38,24 @@ it("renders a source-status request failure as an error", () => {
   render(<SourceStatusPanel status={null} error="Source status is currently unavailable." loading={false} />);
   expect(screen.getByRole("alert")).toHaveTextContent("Source status is currently unavailable.");
   expect(screen.queryByText("Not loaded")).not.toBeInTheDocument();
+});
+
+it("summarises healthy source status and keeps precise unavailable detail", () => {
+  const available = { ...sourceStatuses, sources: sourceStatuses.sources.map((source) => ({ ...source, availability: "available" as const })) };
+  render(<SourceStatusPanel status={available} error={null} loading={false} />);
+  expect(screen.getByText(`${available.sources.length}/${available.sources.length} available`)).toBeInTheDocument();
+  expect(screen.getByText("Hydrology")).toBeInTheDocument();
+});
+
+it("shows dismissible first-use guidance and remembers dismissal", async () => {
+  window.localStorage.clear();
+  const first = render(<Onboarding />);
+  expect(screen.getByRole("heading", { name: "Explore public water data in context" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Start exploring" }));
+  expect(screen.queryByRole("heading", { name: "Explore public water data in context" })).not.toBeInTheDocument();
+  first.unmount();
+  render(<Onboarding />);
+  expect(screen.queryByRole("heading", { name: "Explore public water data in context" })).not.toBeInTheDocument();
 });
 
 it("shows source provenance and reservoir interpretation caveats", () => {
