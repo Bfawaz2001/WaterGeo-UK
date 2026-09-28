@@ -4,10 +4,10 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–11 are complete. Phase 11 adds bounded unified search,
-snapshot-consistent feature selection, reservoir trend charts, point clustering and
-a more usable responsive explorer. Public hosting and real-tenant Fabric validation
-remain pending.** The
+**Status: Phases 1–12 are complete. Phase 13 improves the explorer's visual system,
+map controls, search, feature details and first-use experience while preserving the
+reviewed source and snapshot contracts. Public hosting and real-tenant Fabric
+validation remain pending.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -55,6 +55,11 @@ from current indexed entities to snapshot-consistent detail, bounded point layer
 cluster at regional zooms, Hydrology cards separate observation from retrieval time,
 and reservoir selections show an accessible same-unit trend. See the
 [measured Phase 11 results](docs/performance/phase-11-product-experience.md).
+
+Phase 13 gives those workflows one coherent, dependency-light product design. The
+map remains the primary canvas; source status and technical metadata use progressive
+disclosure, while observation timing, caveats and provenance remain visible. See the
+[Phase 13 explorer design](docs/design/phase-13-explorer.md).
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
