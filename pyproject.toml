@@ -29,6 +29,9 @@ watergeo = "watergeo.cli:main"
 watergeo-export = "watergeo.exports:main"
 watergeo-demo-bootstrap = "watergeo.operations.demo_bootstrap:main"
 watergeo-demo-smoke = "watergeo.operations.demo_smoke:main"
+watergeo-with-db-ca = "watergeo.operations.database_ca:main"
+watergeo-render-digitalocean-app = "watergeo.operations.production_spec:main"
+watergeo-production-preflight = "watergeo.operations.production_preflight:main"
 
 [project.optional-dependencies]
 exports = ["pyarrow>=21,<24"]

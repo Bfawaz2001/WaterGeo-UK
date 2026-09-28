@@ -80,7 +80,7 @@ def test_published_image_is_multi_architecture_traceable_and_attested():
     publish = workflow["jobs"]["publish"]
     metadata = next(step for step in publish["steps"] if step.get("id") == "metadata")
     tags = metadata["with"]["tags"]
-    assert metadata["with"]["images"] == "ghcr.io/bfawaz2001/watergeo-uk"
+    assert metadata["with"]["images"] == "${{ matrix.image }}"
     assert "type=sha,prefix=sha-,format=long" in tags
     assert "type=ref,event=tag" in tags
     assert "latest" in tags and "refs/tags/v" in tags
@@ -90,11 +90,31 @@ def test_published_image_is_multi_architecture_traceable_and_attested():
     assert image["provenance"] == "mode=max"
     assert image["sbom"] == "true"
 
+    matrix = publish["strategy"]["matrix"]["include"]
+    assert matrix == [
+        {
+            "artifact": "api",
+            "dockerfile": "Dockerfile",
+            "image": "ghcr.io/bfawaz2001/watergeo-uk",
+        },
+        {
+            "artifact": "operator",
+            "dockerfile": "Dockerfile.operator",
+            "image": "ghcr.io/bfawaz2001/watergeo-uk-operator",
+        },
+        {
+            "artifact": "web",
+            "dockerfile": "Dockerfile.web",
+            "image": "ghcr.io/bfawaz2001/watergeo-uk-web",
+        },
+    ]
+
 
 def test_container_bases_are_digest_pinned_and_context_excludes_secrets():
     dockerfiles = [
         Path("Dockerfile"),
         Path("Dockerfile.operator"),
+        Path("Dockerfile.web"),
         Path("docker/postgres/Dockerfile"),
     ]
     from_lines = [
@@ -124,6 +144,8 @@ def test_operator_image_supports_production_jobs_without_routable_entrypoint():
     assert "COPY alembic.ini ./alembic.ini" in content
     assert "COPY migrations ./migrations" in content
     assert "COPY scripts/refresh_sources.py ./scripts/refresh_sources.py" in content
+    assert "COPY scripts/bootstrap_local_demo.py ./scripts/bootstrap_local_demo.py" in content
+    assert "chown watergeo:watergeo /app/data" in content
 
     # One immutable operator image supports durable refresh and portable export jobs.
     assert "--extra evidence-s3" in content

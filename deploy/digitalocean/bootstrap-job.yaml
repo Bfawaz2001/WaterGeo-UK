@@ -1,0 +1,60 @@
+  - name: bootstrap
+    kind: POST_DEPLOY
+    image:
+      registry_type: GHCR
+      registry: bfawaz2001
+      repository: watergeo-uk-operator
+      digest: __OPERATOR_IMAGE_DIGEST__
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-2gb
+    run_command: watergeo-with-db-ca watergeo-demo-bootstrap
+    envs:
+      - key: WATERGEO_SERVICE_ENVIRONMENT
+        scope: RUN_TIME
+        value: production
+      - key: WATERGEO_DB_HOST
+        scope: RUN_TIME
+        value: __DATABASE_PRIVATE_HOST__
+      - key: WATERGEO_DB_PORT
+        scope: RUN_TIME
+        value: '${watergeo-db.PORT}'
+      - key: WATERGEO_DB_NAME
+        scope: RUN_TIME
+        value: watergeo
+      - key: WATERGEO_INGESTION_USER
+        scope: RUN_TIME
+        value: watergeo_ingest
+      - key: WATERGEO_INGESTION_PASSWORD
+        scope: RUN_TIME
+        type: SECRET
+        value: __INGESTION_DATABASE_PASSWORD__
+      - key: WATERGEO_DB_SSLMODE
+        scope: RUN_TIME
+        value: verify-full
+      - key: WATERGEO_DB_CA_CERT
+        scope: RUN_TIME
+        type: SECRET
+        value: '${watergeo-db.CA_CERT}'
+      - key: WATERGEO_EVIDENCE_BACKEND
+        scope: RUN_TIME
+        value: s3
+      - key: WATERGEO_EVIDENCE_S3_ENDPOINT
+        scope: RUN_TIME
+        value: __EVIDENCE_ENDPOINT__
+      - key: WATERGEO_EVIDENCE_S3_REGION
+        scope: RUN_TIME
+        value: __EVIDENCE_REGION__
+      - key: WATERGEO_EVIDENCE_S3_BUCKET
+        scope: RUN_TIME
+        value: __EVIDENCE_BUCKET__
+      - key: WATERGEO_EVIDENCE_S3_PREFIX
+        scope: RUN_TIME
+        value: watergeo/evidence
+      - key: WATERGEO_EVIDENCE_S3_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+        value: __EVIDENCE_ACCESS_KEY__
+      - key: WATERGEO_EVIDENCE_S3_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: __EVIDENCE_SECRET_KEY__
