@@ -16,8 +16,18 @@ concurrency:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: api
+            dockerfile: Dockerfile
+          - artifact: operator
+            dockerfile: Dockerfile.operator
+          - artifact: web
+            dockerfile: Dockerfile.web
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -31,6 +41,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: false
           outputs: type=cacheonly
@@ -45,7 +56,20 @@ jobs:
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: api
+            dockerfile: Dockerfile
+            image: ghcr.io/bfawaz2001/watergeo-uk
+          - artifact: operator
+            dockerfile: Dockerfile.operator
+            image: ghcr.io/bfawaz2001/watergeo-uk-operator
+          - artifact: web
+            dockerfile: Dockerfile.web
+            image: ghcr.io/bfawaz2001/watergeo-uk-web
     permissions:
       contents: read
       packages: write
@@ -68,7 +92,7 @@ jobs:
         id: metadata
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
-          images: ghcr.io/bfawaz2001/watergeo-uk
+          images: ${{ matrix.image }}
           tags: |
             type=sha,prefix=sha-,format=long
             type=ref,event=tag
@@ -77,6 +101,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
