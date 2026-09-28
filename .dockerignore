@@ -12,7 +12,11 @@
 !docker/
 !docker/**
 !scripts/
+!scripts/bootstrap_local_demo.py
+!scripts/provision_production_database.py
 !scripts/refresh_sources.py
+!scripts/verify_production_database.py
+!scripts/verify_evidence_bucket.py
 !Dockerfile.operator
 !Dockerfile.web
 !deploy/
