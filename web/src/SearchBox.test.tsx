@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 
@@ -30,6 +30,43 @@ it("debounces bounded search, groups results and opens a selection", async () =>
   expect(search).toHaveBeenCalledWith("river", expect.any(AbortSignal));
   await userEvent.click(screen.getByRole("button", { name: /River Avon/ }));
   expect(select).toHaveBeenCalledWith(result);
+});
+
+it("supports keyboard navigation and selection without moving focus from search", async () => {
+  vi.spyOn(api, "search").mockResolvedValue({ query: "river", items: [result], truncated: false, available_kinds: ["hydrology"], unavailable_kinds: [] });
+  const select = vi.fn().mockResolvedValue(undefined);
+  render(<SearchBox onSelect={select} />);
+  const input = screen.getByRole("searchbox");
+  await userEvent.type(input, "river");
+  await act(() => vi.advanceTimersByTimeAsync(250));
+  await screen.findByRole("button", { name: /River Avon/ });
+  await userEvent.keyboard("{ArrowDown}");
+  expect(input).toHaveAttribute("aria-activedescendant", "watergeo-search-result-0");
+  expect(input).toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+  expect(select).toHaveBeenCalledWith(result);
+});
+
+it("clears a keyboard-highlighted result as soon as the query changes", async () => {
+  const second = { ...result, identity: "station-2", label: "River Avon — Second" };
+  const replacement = { ...result, identity: "station-b", label: "River B" };
+  vi.spyOn(api, "search")
+    .mockResolvedValueOnce({ query: "alpha", items: [result, second], truncated: false, available_kinds: ["hydrology"], unavailable_kinds: [] })
+    .mockResolvedValueOnce({ query: "bravo", items: [replacement], truncated: false, available_kinds: ["hydrology"], unavailable_kinds: [] });
+  render(<SearchBox onSelect={vi.fn()} />);
+  const input = screen.getByRole("searchbox");
+  await userEvent.type(input, "alpha");
+  await act(() => vi.advanceTimersByTimeAsync(250));
+  await screen.findByRole("button", { name: /River Avon — Second/ });
+  await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+  expect(input).toHaveAttribute("aria-activedescendant", "watergeo-search-result-1");
+
+  fireEvent.change(input, { target: { value: "bravo" } });
+  expect(input).not.toHaveAttribute("aria-activedescendant");
+  await act(() => vi.advanceTimersByTimeAsync(250));
+  await screen.findByRole("button", { name: /River B/ });
+  expect(input).not.toHaveAttribute("aria-activedescendant");
+  expect(input).toHaveFocus();
 });
 
 it("distinguishes no matches from an unavailable search", async () => {

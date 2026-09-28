@@ -27,15 +27,18 @@ function display(source: SourceStatuses["sources"][number]): { label: string; ki
 
 export function SourceStatusPanel({ status, error, loading }: Props) {
   const visible = status?.sources.filter((source) => source.source in LABELS) ?? [];
+  const needsAttention = Boolean(error) || visible.some((source) => {
+    const state = display(source);
+    return state.kind === "not-loaded" || state.kind === "stale" || state.kind === "unknown";
+  });
+  const available = visible.filter((source) => source.availability === "available").length;
   return (
-    <section className="panel-section status-section" aria-labelledby="status-heading">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Accepted evidence</p>
-          <h2 id="status-heading">Source status</h2>
-        </div>
-        {status && <time dateTime={status.checked_at}>{new Date(status.checked_at).toLocaleTimeString()}</time>}
-      </div>
+    <details className="panel-section status-section" open={needsAttention}>
+      <summary>
+        <span><span className="eyebrow">Accepted evidence</span><strong id="status-heading">Source status</strong></span>
+        <span className={needsAttention ? "status-summary attention" : "status-summary"}>{loading ? "Checking" : error ? "Unavailable" : `${available}/${visible.length} available`}</span>
+      </summary>
+      {status && <p className="status-checked">Checked <time dateTime={status.checked_at}>{new Date(status.checked_at).toLocaleTimeString()}</time></p>}
       {loading && <p role="status">Checking WaterGeo sources…</p>}
       {error && <p className="state-error" role="alert">{error}</p>}
       {visible.length > 0 && (
@@ -55,6 +58,6 @@ export function SourceStatusPanel({ status, error, loading }: Props) {
       {visible.some((source) => source.availability === "unavailable") && (
         <p className="status-guidance">No compatible local snapshot is loaded for sources marked Not loaded.</p>
       )}
-    </section>
+    </details>
   );
 }

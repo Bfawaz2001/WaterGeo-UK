@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { api } from "./api";
@@ -16,6 +16,7 @@ it("shows loading then source observations, with a station-scoped measurement fi
   render(<FeatureDrilldown selected={selected} />);
   expect(screen.getByRole("status")).toHaveTextContent("Loading");
   expect(await screen.findByText(/1.2 m/)).toBeInTheDocument();
+  expect(screen.getAllByTitle("Publisher measure identifier")[0]).toHaveTextContent("m1");
   expect(screen.getByText(/Publisher observed/).querySelector("time")).toHaveAttribute("datetime", "2026-01-01T00:00:00Z");
   await userEvent.selectOptions(screen.getByRole("combobox"), "level");
   expect(screen.queryByText("No accepted observation")).not.toBeInTheDocument();
@@ -47,6 +48,12 @@ it("renders an accessible reservoir trend from consistent percentage readings", 
   }} />);
   expect(await screen.findByRole("img", { name: /Reservoir storage percentage/ })).toHaveAccessibleName(/range 70.0 to 82.0 %/);
   expect(screen.getByText(/2 dated values/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /70 %,/ })).not.toBeInTheDocument();
+  const firstPoint = screen.getByRole("graphics-symbol", { name: /70 %,/ });
+  fireEvent.focus(firstPoint);
+  expect(screen.getByText(/70.0 %/)).toBeInTheDocument();
+  await userEvent.hover(screen.getByRole("graphics-symbol", { name: /82 %,/ }));
+  expect(screen.getByText(/82.0 %/)).toBeInTheDocument();
 });
 
 it("renders publisher classifications as labels with secondary notation", async () => {

@@ -56,7 +56,7 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
       <label>Measurement type at this station <select value={parameter} onChange={(event) => setParameter(event.target.value)}><option value="">All measures</option>{[...new Set(detail.measures.map((row) => row.parameter))].map((label) => <option key={label}>{label}</option>)}</select></label>
       {measures.length === 0 && <p>No accepted observations for this measurement type.</p>}
       <div className="observation-list">{measures.map((measure) => <article key={measure.measure_id}>
-        <strong>{measure.parameter}</strong>
+        <header><strong>{measure.parameter}</strong><code title="Publisher measure identifier">{measure.measure_id}</code></header>
         <span className="observation-value">{measure.latest_observation ? `${measure.latest_observation.value ?? "Missing"} ${measure.unit_name}` : "No accepted observation"}</span>
         {measure.latest_observation && <span>Publisher observed <time dateTime={measure.latest_observation.observed_at}>{new Date(measure.latest_observation.observed_at).toLocaleString()}</time></span>}
       </article>)}</div>

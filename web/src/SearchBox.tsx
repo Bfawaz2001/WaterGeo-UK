@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { api } from "./api";
 import type { SearchKind, SearchResult } from "./types";
+import { Icon, type IconName } from "./Icon";
 
 const KIND_LABELS: Record<SearchKind, string> = {
   hydrology: "Hydrology stations",
@@ -10,6 +11,10 @@ const KIND_LABELS: Record<SearchKind, string> = {
   "thames-discharge": "Thames discharge monitors",
   "water-body": "Water Bodies",
   "water-supply": "Water-supply areas",
+};
+const KIND_ICONS: Record<SearchKind, IconName> = {
+  hydrology: "hydrology", "water-quality": "water-quality", reservoirs: "reservoirs",
+  "thames-discharge": "thames-discharge", "water-body": "catchment", "water-supply": "water-supply",
 };
 
 interface Props {
@@ -24,6 +29,7 @@ export function SearchBox({ onSelect }: Props) {
   const [unavailableKinds, setUnavailableKinds] = useState<SearchKind[]>([]);
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error" | "selecting" | "selection-error">("idle");
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const selectionGeneration = useRef(0);
 
   useEffect(() => {
@@ -60,6 +66,7 @@ export function SearchBox({ onSelect }: Props) {
     }
     return grouped;
   }, [results]);
+  const orderedResults = useMemo(() => Array.from(groups.values()).flat(), [groups]);
 
   const choose = async (result: SearchResult) => {
     const generation = ++selectionGeneration.current;
@@ -95,7 +102,7 @@ export function SearchBox({ onSelect }: Props) {
     <div className="product-search" role="search">
       <label htmlFor="watergeo-search">Search WaterGeo</label>
       <div className="search-input-wrap">
-        <span aria-hidden="true">⌕</span>
+        <Icon name="search" />
         <input
           id="watergeo-search"
           type="search"
@@ -104,9 +111,11 @@ export function SearchBox({ onSelect }: Props) {
           autoComplete="off"
           aria-describedby={statusId}
           aria-expanded={open}
-          aria-controls="watergeo-search-results"
+        aria-controls="watergeo-search-results"
+          aria-activedescendant={activeIndex >= 0 ? `watergeo-search-result-${activeIndex}` : undefined}
           onChange={(event) => {
             const value = event.target.value;
+            setActiveIndex(-1);
             setTerm(value);
             if (value.trim().length < 2) {
               setResults([]);
@@ -117,7 +126,16 @@ export function SearchBox({ onSelect }: Props) {
             }
           }}
           onFocus={() => { if (term.trim().length >= 2) setOpen(true); }}
-          onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") { setOpen(false); setActiveIndex(-1); }
+            else if (event.key === "ArrowDown" && orderedResults.length > 0) {
+              event.preventDefault(); setOpen(true); setActiveIndex((value) => (value + 1) % orderedResults.length);
+            } else if (event.key === "ArrowUp" && orderedResults.length > 0) {
+              event.preventDefault(); setOpen(true); setActiveIndex((value) => value <= 0 ? orderedResults.length - 1 : value - 1);
+            } else if (event.key === "Enter" && activeIndex >= 0 && orderedResults[activeIndex]) {
+              event.preventDefault(); void choose(orderedResults[activeIndex]);
+            }
+          }}
         />
       </div>
       <span id={statusId} className="visually-hidden" role="status">{status}</span>
@@ -128,14 +146,17 @@ export function SearchBox({ onSelect }: Props) {
             <section key={kind} aria-labelledby={`search-group-${kind}`}>
               <h2 id={`search-group-${kind}`}>{KIND_LABELS[kind]}</h2>
               <ul>
-                {items.map((result) => (
+                {items.map((result) => {
+                  const index = orderedResults.indexOf(result);
+                  return (
                   <li key={`${result.kind}:${result.identity}`}>
-                    <button type="button" onClick={() => void choose(result)} disabled={state === "selecting"}>
-                      <strong>{result.label}</strong>
-                      <span>{result.context} · {result.publisher}</span>
+                    <button id={`watergeo-search-result-${index}`} className={activeIndex === index ? "active" : ""} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => void choose(result)} disabled={state === "selecting"}>
+                      <span className={`search-result-icon layer-${result.kind}`}><Icon name={KIND_ICONS[result.kind]} /></span>
+                      <span><strong>{result.label}</strong><small>{result.context} · {result.publisher}</small></span>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </section>
           ))}

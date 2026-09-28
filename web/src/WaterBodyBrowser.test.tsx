@@ -82,6 +82,6 @@ it("labels type filters as loaded-only and keeps continuation available", async 
   await screen.findByRole("button", { name: /River One/ });
   await userEvent.selectOptions(screen.getByRole("combobox"), "River");
   expect(screen.queryByRole("button", { name: /Lake Two/ })).not.toBeInTheDocument();
-  expect(screen.getByText(/1 matches within 2 loaded/)).toBeInTheDocument();
+  expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent?.includes("1 match within 2 loaded records") === true)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Load next 100" })).toBeEnabled();
 });

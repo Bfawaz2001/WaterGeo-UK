@@ -1,25 +1,26 @@
 import type { LayerId } from "./types";
+import { Icon, type IconName } from "./Icon";
 
-const LAYERS: Array<{ id: LayerId; label: string; description: string; group: "changing" | "context" }> = [
-  { id: "hydrology", label: "Hydrology stations", description: "Latest accepted EA snapshot", group: "changing" },
+const LAYERS: Array<{ id: LayerId; icon: IconName; label: string; description: string; group: "changing" | "context" }> = [
+  { id: "hydrology", icon: "hydrology", label: "Hydrology stations", description: "Latest accepted EA data", group: "changing" },
   {
     id: "water-quality",
-    label: "Water Quality sampling points",
+    icon: "water-quality", label: "Water Quality sampling points",
     description: "Publisher metadata, not results", group: "changing",
   },
   {
     id: "reservoirs",
-    label: "Severn Trent reservoirs",
+    icon: "reservoirs", label: "Severn Trent reservoirs",
     description: "Dated 2025 publisher edition", group: "changing",
   },
   {
     id: "thames-discharge",
-    label: "Thames Water discharge monitors",
+    icon: "thames-discharge", label: "Thames discharge monitors",
     description: "Near-real-time publisher indications", group: "changing",
   },
   {
     id: "water-supply",
-    label: "Water-supply lookup",
+    icon: "water-supply", label: "Water-supply lookup",
     description: "Click map; one reviewed area at a time", group: "context",
   },
 ];
@@ -52,8 +53,8 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
               checked={active.has(layer.id)}
               onChange={() => onToggle(layer.id)}
             />
-            <span className="layer-swatch" aria-hidden="true" />
-            <span>
+            <span className="layer-symbol" aria-hidden="true"><Icon name={layer.icon} /></span>
+            <span className="layer-copy">
               <strong>{layer.label}</strong>
               <small>{layer.description}</small>
               {active.has(layer.id) && layer.id !== "water-supply" && (
@@ -64,6 +65,7 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
                 </small>
               )}
             </span>
+            <span className="switch-track" aria-hidden="true"><span /></span>
           </label>
         ))}
         </div>

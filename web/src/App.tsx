@@ -11,6 +11,8 @@ import { useNearby, type ViewportQuery } from "./useNearby";
 import { WaterBodyBrowser } from "./WaterBodyBrowser";
 import { OverviewControl } from "./OverviewControl";
 import type { Overview } from "./overview";
+import { Icon } from "./Icon";
+import { Onboarding } from "./Onboarding";
 
 const MapView = lazy(async () => {
   const module = await import("./MapView");
@@ -168,19 +170,31 @@ export function App() {
     if (layer === "hydrology") {
       const item = nearby.hydrology.find((candidate) => candidate.station_id === identity);
       const dataset = nearby.provenance.hydrology;
-      if (item && dataset) setSelected({ kind: layer, item, dataset });
+      if (item && dataset) {
+        setSelected({ kind: layer, item, dataset });
+        if (item.longitude !== null && item.latitude !== null) setMapFocus({ key: `${layer}:${identity}`, longitude: item.longitude, latitude: item.latitude });
+      }
     } else if (layer === "water-quality") {
       const item = nearby.waterQuality.find((candidate) => candidate.sampling_point_id === identity);
       const dataset = nearby.provenance["water-quality"];
-      if (item && dataset) setSelected({ kind: layer, item, dataset });
+      if (item && dataset) {
+        setSelected({ kind: layer, item, dataset });
+        if (item.longitude !== null && item.latitude !== null) setMapFocus({ key: `${layer}:${identity}`, longitude: item.longitude, latitude: item.latitude });
+      }
     } else if (layer === "reservoirs") {
       const item = nearby.reservoirs.find((candidate) => candidate.reservoir_id === identity);
       const dataset = nearby.provenance.reservoirs;
-      if (item && dataset) setSelected({ kind: layer, item, dataset });
+      if (item && dataset) {
+        setSelected({ kind: layer, item, dataset });
+        setMapFocus({ key: `${layer}:${identity}`, longitude: item.longitude, latitude: item.latitude });
+      }
     } else if (layer === "thames-discharge") {
       const item = thamesDischarge.find((candidate) => candidate.site_id === identity);
       const dataset = nearby.provenance["thames-discharge"];
-      if (item && dataset) setSelected({ kind: layer, item, dataset });
+      if (item && dataset) {
+        setSelected({ kind: layer, item, dataset });
+        setMapFocus({ key: `${layer}:${identity}`, longitude: item.geometry.coordinates[0], latitude: item.geometry.coordinates[1] });
+      }
     }
   };
 
@@ -215,7 +229,10 @@ export function App() {
     setAreaError(undefined);
     void api
       .areaGeometry(area.source_id, controller.signal)
-      .then((item) => setSelected({ kind: "water-supply", item }))
+      .then((item) => {
+        setSelected({ kind: "water-supply", item });
+        setMapFocus({ key: `water-supply:${item.id}` });
+      })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setAreaError("The selected reviewed geometry could not be displayed.");
@@ -296,14 +313,14 @@ export function App() {
   return (
     <div className={`app-shell ${panelOpen ? "" : "controls-collapsed"}`}>
       <header className="topbar">
-        <button className="share-button panel-toggle" aria-expanded={panelOpen} aria-controls="explorer-controls" onClick={() => setPanelOpen((open) => !open)}>Layers & filters</button>
-        <div className="brand-mark" aria-hidden="true">WG</div>
+        <button className="share-button panel-toggle" aria-label="Layers & filters" aria-expanded={panelOpen} aria-controls="explorer-controls" onClick={() => setPanelOpen((open) => !open)}><Icon name="layers" /> <span>Layers & filters</span></button>
+        <div className="brand-mark" aria-hidden="true"><span>W</span></div>
         <div className="brand-copy">
           <span>WaterGeo UK</span>
-          <strong>Public water data explorer</strong>
+          <strong>Explore public UK water data</strong>
         </div>
         <SearchBox onSelect={openSearchResult} />
-        <button className="share-button" type="button" onClick={() => void copyShareUrl()} aria-label="Copy a shareable map URL">Copy view link</button>
+        <button className="share-button" type="button" onClick={() => void copyShareUrl()} aria-label="Copy a shareable map URL"><Icon name="copy" /> <span>Copy view</span></button>
       </header>
 
       <aside id="explorer-controls" className="control-panel" aria-label="Explorer controls" hidden={!panelOpen}>
@@ -356,6 +373,7 @@ export function App() {
       </aside>
 
       <main className="map-workspace">
+        <Onboarding />
         {viewport.radiusM === 0 && <p className="map-message" role="status">Preparing map viewport…</p>}
         <Suspense fallback={<div className="map-loading" role="status">Loading map renderer…</div>}>
           <MapView
@@ -396,7 +414,7 @@ export function App() {
       </main>
 
       <aside className="selection-region" aria-label="Selected feature information">
-        <DetailPanel selected={selected} onClose={() => setSelected(null)} />
+        <DetailPanel selected={selected} onClose={() => { setSelected(null); setMapFocus(null); }} />
       </aside>
     </div>
   );

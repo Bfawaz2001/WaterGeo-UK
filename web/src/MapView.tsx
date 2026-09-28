@@ -101,10 +101,10 @@ function addExplorerSources(map: MapLibreMap): void {
       clusterRadius: 44,
     });
     const colors: Record<string, string> = {
-      hydrology: "#176b87",
-      "water-quality": "#7253a3",
-      reservoirs: "#be5a36",
-      "thames-discharge": "#b32346",
+      hydrology: "#007f8b",
+      "water-quality": "#6c55a3",
+      reservoirs: "#c4682f",
+      "thames-discharge": "#c23857",
     };
     const color = colors[kind] ?? "#183c46";
     if (!map.getLayer(`${source}-clusters`)) {
@@ -114,11 +114,11 @@ function addExplorerSources(map: MapLibreMap): void {
         type: "circle",
         filter: ["has", "point_count"],
         paint: {
-          "circle-radius": ["step", ["get", "point_count"], 16, 20, 20, 60, 25],
+          "circle-radius": ["step", ["get", "point_count"], 17, 20, 21, 60, 26],
           "circle-color": color,
           "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 2,
-          "circle-opacity": 0.88,
+          "circle-stroke-width": 3,
+          "circle-opacity": 0.94,
         },
       });
       map.addLayer({
@@ -126,7 +126,7 @@ function addExplorerSources(map: MapLibreMap): void {
         source,
         type: "symbol",
         filter: ["has", "point_count"],
-        layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 11 },
+        layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12 },
         paint: { "text-color": "#ffffff" },
       });
     }
@@ -137,11 +137,11 @@ function addExplorerSources(map: MapLibreMap): void {
         type: "circle",
         filter: ["!", ["has", "point_count"]],
         paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4, 12, 8],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 5, 12, 8.5],
           "circle-color": color,
           "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 1.5,
-          "circle-opacity": 0.9,
+          "circle-stroke-width": 2,
+          "circle-opacity": 0.96,
         },
       });
     }
@@ -152,13 +152,13 @@ function addExplorerSources(map: MapLibreMap): void {
       id: "watergeo-area-fill",
       source: "watergeo-area",
       type: "fill",
-      paint: { "fill-color": "#167d6b", "fill-opacity": 0.24 },
+      paint: { "fill-color": "#11806f", "fill-opacity": 0.2 },
     });
     map.addLayer({
       id: "watergeo-area-line",
       source: "watergeo-area",
       type: "line",
-      paint: { "line-color": "#0a584c", "line-width": 2 },
+      paint: { "line-color": "#075c51", "line-width": 3 },
     });
   }
   if (!map.getSource("watergeo-water-body")) {
@@ -171,13 +171,28 @@ function addExplorerSources(map: MapLibreMap): void {
       source: "watergeo-water-body",
       type: "fill",
       filter: ["==", ["geometry-type"], "Polygon"],
-      paint: { "fill-color": "#276fba", "fill-opacity": 0.24 },
+      paint: { "fill-color": "#2578b8", "fill-opacity": 0.2 },
     });
     map.addLayer({
       id: "watergeo-water-body-line",
       source: "watergeo-water-body",
       type: "line",
       paint: { "line-color": "#174d83", "line-width": 2.5 },
+    });
+  }
+  if (!map.getSource("watergeo-selection")) {
+    map.addSource("watergeo-selection", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({
+      id: "watergeo-selection-halo",
+      source: "watergeo-selection",
+      type: "circle",
+      paint: { "circle-radius": 14, "circle-color": "#ffffff", "circle-opacity": 0.88, "circle-stroke-color": "#073f47", "circle-stroke-width": 3 },
+    });
+    map.addLayer({
+      id: "watergeo-selection-core",
+      source: "watergeo-selection",
+      type: "circle",
+      paint: { "circle-radius": 5, "circle-color": "#f2a63b", "circle-stroke-color": "#073f47", "circle-stroke-width": 1.5 },
     });
   }
 }
@@ -376,11 +391,20 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!focus || !map?.isStyleLoaded()) return;
+    if (!map?.isStyleLoaded()) return;
+    if (!focus) {
+      setData(map, "watergeo-selection", { type: "FeatureCollection", features: [] });
+      return;
+    }
     if (focus.longitude !== undefined && focus.latitude !== undefined) {
+      setData(map, "watergeo-selection", {
+        type: "FeatureCollection",
+        features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [focus.longitude, focus.latitude] } }],
+      });
       map.easeTo({ center: [focus.longitude, focus.latitude], zoom: Math.max(map.getZoom(), 11) });
       return;
     }
+    setData(map, "watergeo-selection", { type: "FeatureCollection", features: [] });
     const bounds = { west: 180, south: 90, east: -180, north: -90, found: false };
     const inspect = (value: unknown) => {
       if (!Array.isArray(value)) return;
@@ -414,8 +438,7 @@ export function MapView({
       <div ref={container} className="map-canvas" data-testid="map-canvas" />
       {mapMessage && <p className="map-message" role="status">{mapMessage}</p>}
       <p className="map-instruction">
-        Pan or zoom to refresh enabled point layers. Enable water supply, then click the map to
-        inspect the dated boundary snapshot.
+        Move the map to refresh nearby results. Water-supply lookup runs only when its layer is enabled.
       </p>
     </div>
   );
