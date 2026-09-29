@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, api } from "./api";
 import type {
   DatasetProvenance,
+  BathingWater,
+  FloodArea,
   HydrologyStation,
+  RainfallStation,
   LayerId,
   Reservoir,
   SamplingPoint,
@@ -19,6 +22,9 @@ export interface ViewportQuery {
 
 interface NearbyState {
   hydrology: HydrologyStation[];
+  rainfall: RainfallStation[];
+  bathingWaters: BathingWater[];
+  floodWarnings: FloodArea[];
   waterQuality: SamplingPoint[];
   reservoirs: Reservoir[];
   thamesDischarge: ThamesDischargeSite[];
@@ -29,6 +35,9 @@ interface NearbyState {
 
 const EMPTY: NearbyState = {
   hydrology: [],
+  rainfall: [],
+  bathingWaters: [],
+  floodWarnings: [],
   waterQuality: [],
   reservoirs: [],
   thamesDischarge: [],
@@ -60,13 +69,16 @@ export function useNearby(
     if (query.radiusM <= 0) return;
     const current = ++generation.current;
     const controller = new AbortController();
-    const requested = (["hydrology", "water-quality", "reservoirs", "thames-discharge"] as const).filter((layer) =>
+    const requested = (["hydrology", "rainfall", "water-quality", "flood-warnings", "bathing-waters", "reservoirs", "thames-discharge"] as const).filter((layer) =>
       layers.has(layer),
     );
     const timer = window.setTimeout(() => {
       setState((previous) => ({
         ...previous,
         hydrology: layers.has("hydrology") ? previous.hydrology : [],
+        rainfall: layers.has("rainfall") ? previous.rainfall : [],
+        bathingWaters: layers.has("bathing-waters") ? previous.bathingWaters : [],
+        floodWarnings: layers.has("flood-warnings") ? previous.floodWarnings : [],
         waterQuality: layers.has("water-quality") ? previous.waterQuality : [],
         reservoirs: layers.has("reservoirs") ? previous.reservoirs : [],
         thamesDischarge: layers.has("thames-discharge") ? previous.thamesDischarge : [],
@@ -81,6 +93,28 @@ export function useNearby(
             Math.min(query.radiusM, 100_000),
             controller.signal,
           );
+          return { layer, items: page.items, dataset: page.dataset } as const;
+        }
+        if (layer === "rainfall") {
+          const page = await api.rainfallNear(
+            query.longitude,
+            query.latitude,
+            Math.min(query.radiusM, 100_000),
+            controller.signal,
+          );
+          return { layer, items: page.items, dataset: page.dataset } as const;
+        }
+        if (layer === "bathing-waters") {
+          const page = await api.bathingWatersNear(
+            query.longitude,
+            query.latitude,
+            Math.min(query.radiusM, 200_000),
+            controller.signal,
+          );
+          return { layer, items: page.items, dataset: page.dataset } as const;
+        }
+        if (layer === "flood-warnings") {
+          const page = await api.floodAreas(controller.signal);
           return { layer, items: page.items, dataset: page.dataset } as const;
         }
         if (layer === "water-quality") {
@@ -147,6 +181,13 @@ export function useNearby(
             }
             next.provenance[layer] = result.value.dataset;
             if (layer === "hydrology") next.hydrology = result.value.items as HydrologyStation[];
+            if (layer === "rainfall") next.rainfall = result.value.items as RainfallStation[];
+            if (layer === "bathing-waters") {
+              next.bathingWaters = result.value.items as BathingWater[];
+            }
+            if (layer === "flood-warnings") {
+              next.floodWarnings = result.value.items as FloodArea[];
+            }
             if (layer === "water-quality") {
               next.waterQuality = result.value.items as SamplingPoint[];
             }

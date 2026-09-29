@@ -8,7 +8,7 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["@playwright/test"]
+    "types": ["@playwright/test", "node"]
   },
-  "include": ["e2e/**/*.ts"]
+  "include": ["e2e/**/*.ts", "e2e-static/**/*.ts", "playwright*.config.ts"]
 }

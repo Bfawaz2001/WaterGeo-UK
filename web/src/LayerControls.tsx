@@ -1,27 +1,40 @@
 import type { LayerId } from "./types";
 import { Icon, type IconName } from "./Icon";
 
-const LAYERS: Array<{ id: LayerId; icon: IconName; label: string; description: string; group: "changing" | "context" }> = [
-  { id: "hydrology", icon: "hydrology", label: "Hydrology stations", description: "Latest accepted EA data", group: "changing" },
+type LayerGroup = "monitoring" | "environment" | "companies";
+
+const LAYERS: Array<{ id: LayerId; icon: IconName; label: string; description: string; group: LayerGroup }> = [
+  { id: "hydrology", icon: "hydrology", label: "Hydrology stations", description: "Latest accepted EA data", group: "monitoring" },
+  { id: "rainfall", icon: "hydrology", label: "Rainfall gauges", description: "Latest accepted 15-minute accumulations", group: "monitoring" },
   {
     id: "water-quality",
     icon: "water-quality", label: "Water Quality sampling points",
-    description: "Publisher metadata, not results", group: "changing",
+    description: "Publisher metadata, not results", group: "monitoring",
+  },
+  {
+    id: "flood-warnings",
+    icon: "water-quality", label: "Flood warnings",
+    description: "EA severity; use the official service for safety", group: "environment",
+  },
+  {
+    id: "bathing-waters",
+    icon: "water-quality", label: "Bathing waters",
+    description: "Classification and sample context, not safety advice", group: "environment",
   },
   {
     id: "reservoirs",
     icon: "reservoirs", label: "Severn Trent reservoirs",
-    description: "Dated 2025 publisher edition", group: "changing",
+    description: "Dated 2025 publisher edition", group: "companies",
   },
   {
     id: "thames-discharge",
     icon: "thames-discharge", label: "Thames discharge monitors",
-    description: "Near-real-time publisher indications", group: "changing",
+    description: "Near-real-time publisher indications", group: "companies",
   },
   {
     id: "water-supply",
     icon: "water-supply", label: "Water-supply lookup",
-    description: "Click map; one reviewed area at a time", group: "context",
+    description: "Click map; one reviewed area at a time", group: "companies",
   },
 ];
 
@@ -43,8 +56,8 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
         </div>
         <span className="bounded-badge">Bounded</span>
       </div>
-      {(["changing", "context"] as const).map((group) => <div className="layer-group" key={group}>
-        <h3>{group === "changing" ? "Operational and observed" : "Geographic context"}</h3>
+      {(["monitoring", "environment", "companies"] as const).map((group) => <div className="layer-group" key={group}>
+        <h3>{group === "monitoring" ? "Monitoring" : group === "environment" ? "Environment" : "Water companies"}</h3>
         <div className="layer-list">
         {LAYERS.filter((layer) => layer.group === group).map((layer) => (
           <label className={`layer-option layer-${layer.id}`} key={layer.id}>

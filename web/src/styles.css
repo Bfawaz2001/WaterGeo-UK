@@ -420,3 +420,12 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+.static-snapshot-banner {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.45rem 1rem;
+  color: #f4fbf9;
+  background: #075c51;
+  font-size: 0.82rem;
+  text-align: center;
+}

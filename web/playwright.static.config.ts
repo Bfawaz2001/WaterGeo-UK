@@ -1,14 +1,13 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./e2e",
-  testIgnore: "static.spec.ts",
+  testDir: "./e2e-static",
   fullyParallel: false,
   retries: 0,
   workers: 1,
   reporter: "line",
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: "http://127.0.0.1:4174",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
@@ -16,9 +15,13 @@ export default defineConfig({
       : {}),
   },
   webServer: {
-    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173",
+    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4174",
+    url: "http://127.0.0.1:4174",
     reuseExistingServer: false,
-    env: { VITE_BASEMAP_STYLE_URL: "" },
+    env: {
+      VITE_BASEMAP_STYLE_URL: "",
+      VITE_WATERGEO_DATA_MODE: "static",
+      VITE_WATERGEO_STATIC_DATA_PATH: "/watergeo-data",
+    },
   },
 });
