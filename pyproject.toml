@@ -32,6 +32,7 @@ watergeo-demo-smoke = "watergeo.operations.demo_smoke:main"
 watergeo-with-db-ca = "watergeo.operations.database_ca:main"
 watergeo-render-digitalocean-app = "watergeo.operations.production_spec:main"
 watergeo-production-preflight = "watergeo.operations.production_preflight:main"
+watergeo-static-publish = "watergeo.static_publication:main"
 
 [project.optional-dependencies]
 exports = ["pyarrow>=21,<24"]
