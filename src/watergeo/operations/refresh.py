@@ -24,6 +24,7 @@ from watergeo.db import (
     catchment_ingestion,
     hydrology_history_ingestion,
     hydrology_ingestion,
+    phase15_ingestion,
     stream_reservoir_ingestion,
     thames_discharge_ingestion,
     water_quality_ingestion,
@@ -35,6 +36,7 @@ from watergeo.ingestion import (
     catchment_client,
     hydrology_client,
     hydrology_history_client,
+    phase15_client,
     stream_reservoir_client,
     thames_discharge_client,
     water_quality_client,
@@ -59,6 +61,10 @@ SOURCE_KEYS = {
     "water-quality-observations": 6,
     "stream-reservoir-levels": 7,
     "thames-discharge-status": 8,
+    "rainfall": 9,
+    "flood-monitoring": 10,
+    "bathing-waters": 11,
+    "company-performance": 12,
 }
 
 
@@ -188,6 +194,16 @@ def refresh(
                     directory = stream_reservoir_client.fetch_snapshot(root)
                 elif request.source == "thames-discharge-status":
                     directory = thames_discharge_client.fetch_snapshot(root)
+                elif request.source == "rainfall":
+                    directory = phase15_client.fetch_rainfall(root)
+                elif request.source == "flood-monitoring":
+                    directory = phase15_client.fetch_flood_monitoring(root)
+                elif request.source == "bathing-waters":
+                    directory = phase15_client.fetch_bathing_waters(root)
+                elif request.source == "company-performance":
+                    raise ValueError(
+                        "Company performance requires an explicitly accepted official edition"
+                    )
                 elif request.source == "water-quality-observations":
                     if (
                         request.sampling_point_id is None
@@ -229,6 +245,13 @@ def refresh(
                 stream_reservoir_client.read_snapshot(directory)
             elif request.source == "thames-discharge-status":
                 thames_discharge_client.read_snapshot(directory)
+            elif request.source in {
+                "rainfall",
+                "flood-monitoring",
+                "bathing-waters",
+                "company-performance",
+            }:
+                phase15_client.read_bundle(directory, phase15_client.normalizer(request.source))
             elif request.source == "water-quality-observations":
                 read_observations(directory)
             else:
@@ -264,6 +287,18 @@ def refresh(
             loaded = stream_reservoir_ingestion.load_snapshot(engine, directory)
         elif request.source == "thames-discharge-status":
             loaded = thames_discharge_ingestion.load_snapshot(engine, directory, evidence=evidence)
+        elif request.source in {
+            "rainfall",
+            "flood-monitoring",
+            "bathing-waters",
+            "company-performance",
+        }:
+            loaded = phase15_ingestion.load_snapshot(
+                engine,
+                directory,
+                phase15_client.normalizer(request.source),
+                evidence=evidence,
+            )
         elif request.source == "water-quality-observations":
             loaded = load_observations(engine, directory)
         else:

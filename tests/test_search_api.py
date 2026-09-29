@@ -44,7 +44,10 @@ def test_search_treats_sql_wildcards_as_literal_text() -> None:
     availability = MagicMock()
     availability.mappings.return_value.one.return_value = {
         "hydrology": False,
+        "rainfall": False,
         "water_quality": False,
+        "flood": False,
+        "bathing": False,
         "reservoirs": False,
         "thames_discharge": False,
         "water_body": False,
@@ -55,7 +58,10 @@ def test_search_treats_sql_wildcards_as_literal_text() -> None:
     assert response.items == []
     assert response.unavailable_kinds == [
         "hydrology",
+        "rainfall",
         "water-quality",
+        "flood-warnings",
+        "bathing-waters",
         "reservoirs",
         "thames-discharge",
         "water-body",

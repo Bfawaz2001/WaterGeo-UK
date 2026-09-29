@@ -10,6 +10,7 @@ from watergeo.core.datasets import (
 from watergeo.ingestion.catchments import PLAN_VERSION as CATCHMENT_PLAN_VERSION
 from watergeo.ingestion.catchments import VERSION as CATCHMENT_VERSION
 from watergeo.ingestion.hydrology import VERSION as HYDROLOGY_VERSION
+from watergeo.ingestion.phase15_sources import VERSION as PHASE15_VERSION
 from watergeo.ingestion.stream_reservoirs import VERSION as RESERVOIR_VERSION
 from watergeo.ingestion.thames_discharge import VERSION as THAMES_VERSION
 from watergeo.ingestion.water_quality import VERSION as WATER_QUALITY_VERSION
@@ -19,6 +20,21 @@ WITH
 hydrology_snapshot AS (
     SELECT id FROM watergeo.hydrology_snapshot
     WHERE normalization_version=:hydrology_version
+    ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
+),
+rainfall_snapshot AS (
+    SELECT id FROM watergeo.national_source_snapshot
+    WHERE source_key='rainfall' AND normalization_version=:phase15_version
+    ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
+),
+flood_snapshot AS (
+    SELECT id FROM watergeo.national_source_snapshot
+    WHERE source_key='flood-monitoring' AND normalization_version=:phase15_version
+    ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
+),
+bathing_snapshot AS (
+    SELECT id FROM watergeo.national_source_snapshot
+    WHERE source_key='bathing-waters' AND normalization_version=:phase15_version
     ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
 ),
 water_quality_snapshot AS (
@@ -57,6 +73,14 @@ matches AS (
        OR lower(COALESCE(h.labels->>0,'')) LIKE :prefix ESCAPE '\\'
 
     UNION ALL
+    SELECT 'rainfall',r.station_id,COALESCE(r.display_name,'Rainfall station ' || r.station_id),
+        'Rainfall gauge · publisher-reduced location','Environment Agency',r.snapshot_id,
+        public.ST_X(r.geom),public.ST_Y(r.geom),
+        CASE WHEN lower(r.station_id)=:term THEN 0 ELSE 1 END
+    FROM watergeo.rainfall_station r JOIN rainfall_snapshot s ON s.id=r.snapshot_id
+    WHERE lower(r.station_id)=:term OR lower(COALESCE(r.display_name,'')) LIKE :prefix ESCAPE '\\'
+
+    UNION ALL
     SELECT 'water-quality',q.sampling_point_id,COALESCE(q.pref_label,q.alt_label),
         'Water Quality sampling point','Environment Agency',q.snapshot_id,
         q.longitude,q.latitude,
@@ -65,6 +89,24 @@ matches AS (
     JOIN water_quality_snapshot s ON s.id=q.snapshot_id
     WHERE lower(q.sampling_point_id)=:term
        OR lower(COALESCE(q.pref_label,q.alt_label)) LIKE :prefix ESCAPE '\\'
+
+    UNION ALL
+    SELECT 'flood-warnings',f.area_id,f.label,'Flood area · ' || f.county,
+        'Environment Agency',f.snapshot_id,public.ST_X(f.centroid),public.ST_Y(f.centroid),
+        CASE WHEN lower(f.area_id)=:term THEN 0 ELSE 1 END
+    FROM watergeo.flood_area f JOIN flood_snapshot s ON s.id=f.snapshot_id
+    WHERE lower(f.area_id)=:term OR lower(f.label) LIKE :prefix ESCAPE '\\'
+
+    UNION ALL
+    SELECT 'bathing-waters',b.bathing_water_id,b.name,
+        'Bathing water · ' || COALESCE(
+            'classification ' || b.classification,
+            'classification not published'
+        ),
+        'Environment Agency',b.snapshot_id,public.ST_X(b.geom),public.ST_Y(b.geom),
+        CASE WHEN lower(b.bathing_water_id)=:term THEN 0 ELSE 1 END
+    FROM watergeo.bathing_water b JOIN bathing_snapshot s ON s.id=b.snapshot_id
+    WHERE lower(b.bathing_water_id)=:term OR lower(b.name) LIKE :prefix ESCAPE '\\'
 
     UNION ALL
     SELECT 'reservoirs',r.reservoir_id,r.name,'Reservoir level edition',
@@ -110,6 +152,12 @@ AVAILABILITY_SQL = text("""
 SELECT
     EXISTS(SELECT 1 FROM watergeo.hydrology_snapshot
         WHERE normalization_version=:hydrology_version) AS hydrology,
+    EXISTS(SELECT 1 FROM watergeo.national_source_snapshot
+        WHERE source_key='rainfall' AND normalization_version=:phase15_version) AS rainfall,
+    EXISTS(SELECT 1 FROM watergeo.national_source_snapshot
+        WHERE source_key='flood-monitoring' AND normalization_version=:phase15_version) AS flood,
+    EXISTS(SELECT 1 FROM watergeo.national_source_snapshot
+        WHERE source_key='bathing-waters' AND normalization_version=:phase15_version) AS bathing,
     EXISTS(SELECT 1 FROM watergeo.water_quality_snapshot
         WHERE normalization_version=:water_quality_version) AS water_quality,
     EXISTS(SELECT 1 FROM watergeo.stream_reservoir_snapshot
@@ -126,7 +174,10 @@ SELECT
 
 KIND_COLUMNS: dict[SearchKind, str] = {
     "hydrology": "hydrology",
+    "rainfall": "rainfall",
     "water-quality": "water_quality",
+    "flood-warnings": "flood",
+    "bathing-waters": "bathing",
     "reservoirs": "reservoirs",
     "thames-discharge": "thames_discharge",
     "water-body": "water_body",
@@ -146,6 +197,7 @@ class SearchQueries:
             "prefix": escaped + "%",
             "limit": limit + 1,
             "hydrology_version": HYDROLOGY_VERSION,
+            "phase15_version": PHASE15_VERSION,
             "water_quality_version": WATER_QUALITY_VERSION,
             "reservoir_version": RESERVOIR_VERSION,
             "thames_version": THAMES_VERSION,

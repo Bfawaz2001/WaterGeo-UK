@@ -7,7 +7,10 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 SearchKind = Literal[
     "hydrology",
+    "rainfall",
     "water-quality",
+    "flood-warnings",
+    "bathing-waters",
     "reservoirs",
     "thames-discharge",
     "water-body",
