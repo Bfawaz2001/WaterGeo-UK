@@ -1726,6 +1726,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "defusedxml" },
     { name = "fastapi" },
     { name = "httpx2" },
     { name = "psycopg", extra = ["binary"] },
@@ -1759,6 +1760,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.16,<2" },
     { name = "boto3", marker = "extra == 'evidence-s3'", specifier = ">=1.40,<2" },
+    { name = "defusedxml", specifier = ">=0.7,<1" },
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "httpx2", specifier = ">=2,<3" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
