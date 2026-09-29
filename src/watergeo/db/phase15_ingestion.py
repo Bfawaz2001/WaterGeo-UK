@@ -142,17 +142,10 @@ def load_snapshot(
             """),
             {"source": product.source, "hash": manifest["content_sha256"], "version": VERSION},
         ).scalar_one_or_none()
-        if existing is not None:
-            return {
-                "status": "existing",
-                "snapshot_id": str(existing),
-                "entity_count": len(product.entities),
-                "secondary_count": len(product.secondary),
-                "skipped_count": product.skipped_count,
-            }
-        identity = uuid4()
-        connection.execute(
-            text("""
+        identity = existing or uuid4()
+        if existing is None:
+            connection.execute(
+                text("""
                 INSERT INTO watergeo.national_source_snapshot
                     (id,source_key,retrieval_started_at,retrieval_completed_at,content_sha256,
                      normalized_sha256,normalization_version,entity_count,secondary_count,
@@ -160,21 +153,38 @@ def load_snapshot(
                 VALUES (:id,:source,:started,:completed,:content,:normalized,:version,
                     :entities,:secondary,:skipped,CAST(:manifest AS jsonb))
             """),
+                {
+                    "id": identity,
+                    "source": product.source,
+                    "started": manifest["retrieval_started_at"],
+                    "completed": manifest["retrieval_completed_at"],
+                    "content": manifest["content_sha256"],
+                    "normalized": product.sha256,
+                    "version": VERSION,
+                    "entities": len(product.entities),
+                    "secondary": len(product.secondary),
+                    "skipped": product.skipped_count,
+                    "manifest": json.dumps(manifest),
+                },
+            )
+            _insert_entities(connection, identity, product)
+        retrieval_id = uuid4()
+        connection.execute(
+            text("""
+                INSERT INTO watergeo.national_source_retrieval
+                    (id,snapshot_id,retrieval_started_at,retrieval_completed_at,
+                     content_sha256,manifest)
+                VALUES (:id,:snapshot,:started,:completed,:content,CAST(:manifest AS jsonb))
+            """),
             {
-                "id": identity,
-                "source": product.source,
+                "id": retrieval_id,
+                "snapshot": identity,
                 "started": manifest["retrieval_started_at"],
                 "completed": manifest["retrieval_completed_at"],
                 "content": manifest["content_sha256"],
-                "normalized": product.sha256,
-                "version": VERSION,
-                "entities": len(product.entities),
-                "secondary": len(product.secondary),
-                "skipped": product.skipped_count,
                 "manifest": json.dumps(manifest),
             },
         )
-        _insert_entities(connection, identity, product)
         stored = connection.execute(
             text(
                 "SELECT entity_count,secondary_count,skipped_count "
@@ -185,8 +195,9 @@ def load_snapshot(
         if stored != (len(product.entities), len(product.secondary), product.skipped_count):
             raise Phase15SourceError("Stored Phase 15 snapshot count mismatch")
     return {
-        "status": "inserted",
+        "status": "inserted" if existing is None else "existing",
         "snapshot_id": str(identity),
+        "retrieval_id": str(retrieval_id),
         "entity_count": len(product.entities),
         "secondary_count": len(product.secondary),
         "skipped_count": product.skipped_count,

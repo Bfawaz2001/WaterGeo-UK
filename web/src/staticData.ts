@@ -48,6 +48,17 @@ interface StaticItems {
   items: Array<Record<string, unknown>>;
 }
 
+export interface StaticPublicationMetadata {
+  publication_id: string;
+  generated_at: string;
+}
+
+export async function staticPublicationMetadata(
+  signal?: AbortSignal,
+): Promise<StaticPublicationMetadata> {
+  return await asset<StaticPublicationMetadata>("manifest.json", signal);
+}
+
 function distanceMetres(lon: number, lat: number, itemLon: number, itemLat: number): number {
   const radians = Math.PI / 180;
   const dLat = (itemLat - lat) * radians;

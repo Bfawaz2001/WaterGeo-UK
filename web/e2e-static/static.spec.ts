@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 const snapshot = "11111111-1111-4111-8111-111111111111";
+const generatedAt = "2026-09-29T09:19:00Z";
 const dataset = {
   snapshot_id: snapshot,
   publisher: "Environment Agency",
@@ -23,7 +24,11 @@ async function staticPublication(page: Page): Promise<void> {
         sources: [],
       });
     } else if (path.endsWith("/manifest.json")) {
-      await json(route, { sources: { "flood-warnings": dataset } });
+      await json(route, {
+        publication_id: "static-publication-a",
+        generated_at: generatedAt,
+        sources: { "flood-warnings": dataset },
+      });
     } else if (path.endsWith("/search-index.json")) {
       await json(route, {
         items: [
@@ -161,11 +166,17 @@ test("static production mode shows national layers, caveats and company facts", 
   await staticPublication(page);
   await page.goto("/");
   await expect(page.getByText("Static accepted snapshot")).toBeVisible();
+  await expect(page.locator(`time[datetime="${generatedAt}"]`)).toBeVisible();
   await page.getByRole("button", { name: "Start exploring" }).click();
+  await page.getByRole("checkbox", { name: /Hydrology stations/ }).check();
   await page.getByRole("checkbox", { name: /Rainfall gauges/ }).check();
   await page.getByRole("checkbox", { name: /Flood warnings/ }).check();
   await page.getByRole("checkbox", { name: /Bathing waters/ }).check();
   await page.getByText("Browse nearby results without the map").click();
+  await page.getByRole("button", { name: /Station: Static hydrology/ }).click();
+  await expect(page.getByRole("note")).toContainText(
+    "Detailed observations are available in API mode",
+  );
   await expect(page.getByRole("button", { name: /Rainfall: RF1/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Bathing water: Static beach/ })).toBeVisible();
   await page.getByRole("button", { name: /Flood area: Static flood area/ }).click();

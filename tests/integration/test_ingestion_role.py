@@ -85,6 +85,7 @@ def test_ingestion_role_is_least_privilege(
             "stream_reservoir",
             "stream_reservoir_level",
             "national_source_snapshot",
+            "national_source_retrieval",
             "rainfall_station",
             "flood_area",
             "flood_warning",

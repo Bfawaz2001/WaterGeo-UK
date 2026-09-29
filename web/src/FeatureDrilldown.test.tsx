@@ -86,3 +86,14 @@ it("renders publisher classifications as labels with secondary notation", async 
   expect(screen.getByText("Upper Trent")).toBeInTheDocument();
   expect(screen.queryByText(/\{"notation"/)).not.toBeInTheDocument();
 });
+
+it("explains API-only observations in static mode without requesting detail", () => {
+  vi.stubEnv("VITE_WATERGEO_DATA_MODE", "static");
+  const detail = vi.spyOn(api, "hydrologyDetail");
+  render(<FeatureDrilldown selected={selected} />);
+  expect(screen.getByRole("note")).toHaveTextContent(
+    "Detailed observations are available in API mode",
+  );
+  expect(detail).not.toHaveBeenCalled();
+  vi.unstubAllEnvs();
+});

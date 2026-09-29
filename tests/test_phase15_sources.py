@@ -1,9 +1,16 @@
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
+import httpx2 as httpx
 import pytest
 
-from watergeo.ingestion.phase15_client import create_bundle, read_bundle
+from watergeo.ingestion.phase15_client import (
+    create_bundle,
+    fetch_flood_monitoring,
+    fetch_rainfall,
+    read_bundle,
+)
 from watergeo.ingestion.phase15_sources import (
     EA_LICENCE,
     Phase15SourceError,
@@ -290,4 +297,62 @@ def test_malformed_json_keeps_exact_raw_evidence_and_retrieval_metadata(tmp_path
     retrieval = json.loads((directory / "retrieval.json").read_bytes())
     assert retrieval["responses"]["stations.json"]["sha256"]
     assert retrieval["responses"]["stations.json"]["bytes"] == len(body)
+    assert not (directory / "manifest.json").exists()
+
+
+def test_live_retrieval_timestamp_brackets_requests_and_preserves_checksums(tmp_path: Path) -> None:
+    stations, readings = rainfall_payloads()
+    request_times: list[datetime] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        request_times.append(datetime.now(UTC))
+        value = stations if request.url.path.endswith("/stations") else readings
+        return httpx.Response(200, json=value)
+
+    directory = fetch_rainfall(tmp_path, transport=httpx.MockTransport(respond))
+    manifest, product = read_bundle(
+        directory,
+        lambda values: normalize_rainfall(values["stations.json"], values["readings.json"]),
+    )
+    started = datetime.fromisoformat(manifest["retrieval_started_at"])
+    completed = datetime.fromisoformat(manifest["retrieval_completed_at"])
+    assert started <= min(request_times) <= max(request_times) <= completed
+    assert product.entities[0]["station_id"] == "R1"
+    for name, metadata in manifest["responses"].items():
+        assert metadata["sha256"]
+        assert metadata["bytes"] == (directory / name).stat().st_size
+
+
+def test_malformed_flood_warnings_are_persisted_before_decode(tmp_path: Path) -> None:
+    malformed = b'{"items":['
+
+    def respond(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=malformed, headers={"content-type": "application/json"})
+
+    with pytest.raises(Phase15SourceError, match="Malformed source JSON"):
+        fetch_flood_monitoring(tmp_path, transport=httpx.MockTransport(respond))
+    directory = next((tmp_path / "flood-monitoring").iterdir())
+    assert (directory / "warnings.json").read_bytes() == malformed
+    retrieval = json.loads((directory / "retrieval.json").read_bytes())
+    assert retrieval["evidence_state"] == "retrieving"
+    assert retrieval["responses"]["warnings.json"]["sha256"]
+    assert not (directory / "manifest.json").exists()
+
+
+def test_later_flood_request_failure_retains_partial_raw_evidence(tmp_path: Path) -> None:
+    warnings, _areas = flood_payloads()
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/floods"):
+            return httpx.Response(200, json=warnings)
+        if request.url.path.endswith("/A1"):
+            return httpx.Response(200, json={"items": {"notation": "A1"}})
+        return httpx.Response(503, json={"detail": "publisher unavailable"})
+
+    with pytest.raises(Phase15SourceError, match="status"):
+        fetch_flood_monitoring(tmp_path, transport=httpx.MockTransport(respond))
+    directory = next((tmp_path / "flood-monitoring").iterdir())
+    assert (directory / "warnings.json").is_file()
+    assert (directory / "area-A1.json").is_file()
+    assert not (directory / "polygon-A1.json").exists()
     assert not (directory / "manifest.json").exists()

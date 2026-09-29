@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs
 
@@ -9,6 +10,7 @@ import pytest
 from watergeo.static_publication import ApiReader, StaticPublicationError, build_publication
 
 SNAPSHOT = "00000000-0000-0000-0000-000000000015"
+RETRIEVAL = "00000000-0000-4000-8000-000000000016"
 COMMIT = "a" * 40
 
 
@@ -16,6 +18,7 @@ def dataset(name: str = "fixture") -> dict[str, str]:
     return {
         "dataset": name,
         "snapshot_id": SNAPSHOT,
+        "retrieval_id": RETRIEVAL,
         "publisher": "Fixture publisher",
         "retrieval_completed_at": "2026-09-28T10:00:00Z",
         "licence": "Open Government Licence",
@@ -42,6 +45,13 @@ def fixture_response(request: httpx.Request) -> httpx.Response:
                         "label": "Fixture flood area",
                         "county": "Fixture county",
                         "geometry": {"type": "Polygon", "coordinates": []},
+                        "river_or_sea": "River Fixture",
+                        "warning_id": "warning-1",
+                        "severity": "Flood Alert",
+                        "severity_level": 3,
+                        "time_raised": "2026-09-28T09:00:00Z",
+                        "time_message_changed": "2026-09-28T09:30:00Z",
+                        "time_severity_changed": "2026-09-28T09:15:00Z",
                     }
                 ],
             },
@@ -121,7 +131,33 @@ def fixture_response(request: httpx.Request) -> httpx.Response:
             200,
             json={
                 "dataset": dataset(path),
-                "items": [{identity: value, "name": value, "longitude": -1.0, "latitude": 52.0}],
+                "items": [
+                    {
+                        identity: value,
+                        "name": value,
+                        "display_name": "Fixture gauge"
+                        if path.endswith("rainfall/stations")
+                        else None,
+                        "classification": "Good" if path.endswith("bathing-waters") else None,
+                        "assessment_year": 2025 if path.endswith("bathing-waters") else None,
+                        "latest_sample_uri": "https://example.invalid/sample/1"
+                        if path.endswith("bathing-waters")
+                        else None,
+                        "latest_risk_prediction": {"level": "normal"}
+                        if path.endswith("bathing-waters")
+                        else None,
+                        "latest_observed_at": "2026-09-28T09:45:00Z"
+                        if path.endswith("rainfall/stations")
+                        else None,
+                        "latest_value": 1.25 if path.endswith("rainfall/stations") else None,
+                        "latest_unit": "mm" if path.endswith("rainfall/stations") else None,
+                        "latest_period_seconds": 900
+                        if path.endswith("rainfall/stations")
+                        else None,
+                        "longitude": -1.0,
+                        "latitude": 52.0,
+                    }
+                ],
                 "next_after_id": None,
             },
         )
@@ -134,10 +170,19 @@ def reader() -> ApiReader:
 
 def test_publication_is_deterministic_complete_and_refuses_overwrite(tmp_path: Path) -> None:
     api = reader()
-    first = build_publication(api, tmp_path / "first", COMMIT)
-    second = build_publication(api, tmp_path / "second", COMMIT)
-    assert first == second
+    first = build_publication(
+        api, tmp_path / "first", COMMIT, generated_at=datetime(2026, 9, 29, 5, 19, tzinfo=UTC)
+    )
+    second = build_publication(
+        api, tmp_path / "second", COMMIT, generated_at=datetime(2026, 9, 29, 6, 19, tzinfo=UTC)
+    )
     assert first["publication_id"] == second["publication_id"]
+    assert first["generated_at"] != second["generated_at"]
+    assert (
+        first["sources"]["rainfall"]["retrieval_completed_at"]
+        == (second["sources"]["rainfall"]["retrieval_completed_at"])
+    )
+    assert first["files"] == second["files"]
     assert str(tmp_path) not in json.dumps(first)
     assert first["sources"]["rainfall"]["snapshot_id"] == SNAPSHOT
     assert set(first["sources"]) == {
@@ -228,12 +273,25 @@ def test_optional_analytical_outputs_preserve_snapshot_metadata(tmp_path: Path) 
         "analytics/rainfall.parquet",
         "analytics/bathing-waters.parquet",
         "analytics/flood-areas.parquet",
+        "analytics/flood-warnings.parquet",
         "analytics/company-performance.parquet",
     }
     assert expected <= set(manifest["files"])
     rainfall = parquet.read_table(tmp_path / "analytics/analytics/rainfall.parquet")
     assert rainfall.column("snapshot_id").to_pylist() == [SNAPSHOT]
+    assert rainfall.column("retrieval_id").to_pylist() == [RETRIEVAL]
+    assert rainfall.column("station_id").to_pylist() == ["RF1"]
+    assert rainfall.column("latest_value").to_pylist() == [1.25]
+    assert rainfall.column("latest_period_seconds").to_pylist() == [900]
     assert json.loads(rainfall.schema.metadata[b"geo"])["version"] == "1.1.0"
+    bathing = parquet.read_table(tmp_path / "analytics/analytics/bathing-waters.parquet")
+    assert bathing.column("classification").to_pylist() == ["Good"]
+    assert bathing.column("assessment_year").to_pylist() == [2025]
+    flood = parquet.read_table(tmp_path / "analytics/analytics/flood-areas.parquet")
+    assert flood.column("river_or_sea").to_pylist() == ["River Fixture"]
+    warnings = parquet.read_table(tmp_path / "analytics/analytics/flood-warnings.parquet")
+    assert warnings.column("warning_id").to_pylist() == ["warning-1"]
+    assert warnings.column("severity_level").to_pylist() == [3]
     performance = parquet.read_table(tmp_path / "analytics/analytics/company-performance.parquet")
     assert performance.column("value").to_pylist() == [0]
     api.close()

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError, api } from "./api";
 import { dataMode } from "./config";
+import { staticPublicationMetadata } from "./staticData";
 import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
@@ -59,6 +60,7 @@ export function App() {
   const bathingWaters = nearby.bathingWaters ?? [];
   const floodWarnings = nearby.floodWarnings ?? [];
   const [sourceStatus, setSourceStatus] = useState<SourceStatuses | null>(null);
+  const [staticGeneratedAt, setStaticGeneratedAt] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [selected, setSelected] = useState<SelectedFeature | null>(null);
   const [mapFocus, setMapFocus] = useState<{ key: string; longitude?: number; latitude?: number } | null>(null);
@@ -82,6 +84,19 @@ export function App() {
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (mode !== "static") return;
+    const controller = new AbortController();
+    void staticPublicationMetadata(controller.signal)
+      .then((manifest) => setStaticGeneratedAt(manifest.generated_at))
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setStatusError("Static publication metadata is currently unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [mode]);
 
   useEffect(() => () => {
     lookupController.current?.abort();
@@ -399,8 +414,8 @@ export function App() {
       {mode === "static" && (
         <p className="static-snapshot-banner" role="status">
           Static accepted snapshot
-          {sourceStatus && (
-            <> · published <time dateTime={sourceStatus.checked_at}>{new Date(sourceStatus.checked_at).toLocaleString()}</time></>
+          {staticGeneratedAt && (
+            <> · published <time dateTime={staticGeneratedAt}>{new Date(staticGeneratedAt).toLocaleString()}</time></>
           )}. Point-in-polygon lookup requires API mode; search can open published supply areas.
         </p>
       )}

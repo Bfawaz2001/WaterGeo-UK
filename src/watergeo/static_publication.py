@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urlencode
@@ -178,34 +179,31 @@ def _write_geoparquet(
     relative: str,
     dataset: dict[str, Any],
     features: list[dict[str, Any]],
+    columns: Sequence[str],
 ) -> dict[str, Any]:
     import pyarrow as pa
     import pyarrow.parquet as pq
 
-    rows = [
-        {
+    rows = []
+    for feature in features:
+        properties = feature.get("properties", {})
+        if not isinstance(properties, dict):
+            raise StaticPublicationError("Invalid analytical feature properties")
+        row = {
             "source_id": str(feature["id"]),
             "snapshot_id": dataset["snapshot_id"],
+            "retrieval_id": dataset.get("retrieval_id"),
             "publisher": dataset["publisher"],
             "retrieved_at": dataset.get("retrieval_completed_at") or dataset.get("retrieved_at"),
             "licence": dataset.get("licence") or dataset.get("licence_name"),
-            "properties_json": encode(feature.get("properties", {})).decode(),
+            "properties_json": encode(properties).decode(),
             "geometry": shape(feature["geometry"]).wkb,
         }
-        for feature in features
-    ]
-    schema = pa.schema(
-        [
-            ("source_id", pa.string()),
-            ("snapshot_id", pa.string()),
-            ("publisher", pa.string()),
-            ("retrieved_at", pa.string()),
-            ("licence", pa.string()),
-            ("properties_json", pa.string()),
-            ("geometry", pa.binary()),
-        ]
-    )
-    table = pa.Table.from_pylist(rows, schema=schema)
+        for column in columns:
+            value = properties.get(column)
+            row[column] = encode(value).decode() if isinstance(value, (dict, list)) else value
+        rows.append(row)
+    table = pa.Table.from_pylist(rows)
     geometry_types = sorted({feature["geometry"]["type"] for feature in features})
     geo = {
         "version": "1.1.0",
@@ -231,23 +229,103 @@ def _write_analytics(
     import pyarrow as pa
     import pyarrow.parquet as pq
 
-    for directory in ("rainfall", "bathing-waters"):
+    analytical_columns = {
+        "rainfall": (
+            "station_id",
+            "display_name",
+            "latest_observed_at",
+            "latest_value",
+            "latest_unit",
+            "latest_period_seconds",
+        ),
+        "bathing-waters": (
+            "bathing_water_id",
+            "name",
+            "classification",
+            "assessment_year",
+            "latest_sample_uri",
+            "latest_risk_prediction",
+        ),
+    }
+    for directory, columns in analytical_columns.items():
         collection = json.loads((staging / f"datasets/{directory}/items.geojson").read_text())
         relative = f"analytics/{directory}.parquet"
         files[relative] = _write_geoparquet(
-            staging, relative, datasets[directory], collection["features"]
+            staging, relative, datasets[directory], collection["features"], columns
         )
     flood = json.loads((staging / "datasets/flood-warnings/areas.geojson").read_text())
+    unique_areas = {feature["properties"]["area_id"]: feature for feature in flood["features"]}
     files["analytics/flood-areas.parquet"] = _write_geoparquet(
         staging,
         "analytics/flood-areas.parquet",
         datasets["flood-warnings"],
-        flood["features"],
+        list(unique_areas.values()),
+        ("area_id", "label", "county", "river_or_sea"),
     )
+    warning_rows = [
+        {
+            "snapshot_id": datasets["flood-warnings"]["snapshot_id"],
+            "retrieval_id": datasets["flood-warnings"].get("retrieval_id"),
+            "publisher": datasets["flood-warnings"]["publisher"],
+            "retrieved_at": datasets["flood-warnings"]["retrieval_completed_at"],
+            "licence": datasets["flood-warnings"]["licence"],
+            **{
+                field: feature["properties"].get(field)
+                for field in (
+                    "area_id",
+                    "warning_id",
+                    "severity",
+                    "severity_level",
+                    "time_raised",
+                    "time_message_changed",
+                    "time_severity_changed",
+                )
+            },
+        }
+        for feature in flood["features"]
+        if feature["properties"].get("warning_id") is not None
+    ]
+    warning_schema = pa.schema(
+        [
+            ("snapshot_id", pa.string()),
+            ("retrieval_id", pa.string()),
+            ("publisher", pa.string()),
+            ("retrieved_at", pa.string()),
+            ("licence", pa.string()),
+            ("area_id", pa.string()),
+            ("warning_id", pa.string()),
+            ("severity", pa.string()),
+            ("severity_level", pa.int64()),
+            ("time_raised", pa.string()),
+            ("time_message_changed", pa.string()),
+            ("time_severity_changed", pa.string()),
+        ]
+    )
+    warning_table = pa.Table.from_pylist(
+        warning_rows, schema=warning_schema
+    ).replace_schema_metadata(
+        {
+            b"watergeo": encode(
+                {
+                    "publication_version": PUBLICATION_VERSION,
+                    "dataset": datasets["flood-warnings"],
+                }
+            )
+        }
+    )
+    warning_path = staging / "analytics/flood-warnings.parquet"
+    pq.write_table(warning_table, warning_path, compression="zstd")
+    warning_body = warning_path.read_bytes()
+    files["analytics/flood-warnings.parquet"] = {
+        "bytes": len(warning_body),
+        "sha256": hashlib.sha256(warning_body).hexdigest(),
+        "count": len(warning_rows),
+    }
     performance = json.loads((staging / "datasets/company-performance/companies.json").read_text())
     rows = [
         {
             "snapshot_id": datasets["company-performance"]["snapshot_id"],
+            "retrieval_id": datasets["company-performance"].get("retrieval_id"),
             "publisher": datasets["company-performance"]["publisher"],
             "retrieved_at": datasets["company-performance"]["retrieval_completed_at"],
             "licence": datasets["company-performance"]["licence"],
@@ -281,7 +359,12 @@ def _write_analytics(
 
 
 def build_publication(
-    api: ApiReader, destination: Path, commit: str, *, analytics: bool = False
+    api: ApiReader,
+    destination: Path,
+    commit: str,
+    *,
+    analytics: bool = False,
+    generated_at: datetime | None = None,
 ) -> dict[str, Any]:
     if destination.exists():
         raise StaticPublicationError("Publication destination already exists")
@@ -464,32 +547,31 @@ def build_publication(
             _write_analytics(staging, datasets, files)
 
         statuses = api.get("/v1/sources/status")
-        retrievals = [
-            value
-            for dataset in datasets.values()
-            if isinstance(
-                (value := dataset.get("retrieval_completed_at") or dataset.get("retrieved_at")),
-                str,
-            )
-        ]
-        generated_at = max(retrievals)
-        statuses["checked_at"] = generated_at
         files["source-status.json"] = _write(staging, "source-status.json", statuses)
         search.sort(key=lambda row: (str(row["label"]).casefold(), row["kind"], row["identity"]))
-        files["search-index.json"] = _write(
-            staging, "search-index.json", {"generated_at": generated_at, "items": search}
-        )
+        files["search-index.json"] = _write(staging, "search-index.json", {"items": search})
         identity_material = {
             "version": PUBLICATION_VERSION,
             "commit": commit,
-            "sources": {name: value["snapshot_id"] for name, value in sorted(datasets.items())},
-            "files": {name: metadata["sha256"] for name, metadata in sorted(files.items())},
+            "sources": {
+                name: {
+                    "snapshot_id": value["snapshot_id"],
+                    "retrieval_id": value.get("retrieval_id"),
+                }
+                for name, value in sorted(datasets.items())
+            },
+            "files": {
+                name: metadata["sha256"]
+                for name, metadata in sorted(files.items())
+                if name != "source-status.json"
+            },
         }
         publication_id = hashlib.sha256(encode(identity_material)).hexdigest()
+        publication_generated_at = (generated_at or datetime.now(UTC)).isoformat()
         manifest = {
             "publication_version": PUBLICATION_VERSION,
             "publication_id": publication_id,
-            "generated_at": generated_at,
+            "generated_at": publication_generated_at,
             "watergeo_commit": commit,
             "data_mode": "static_snapshot",
             "sources": datasets,

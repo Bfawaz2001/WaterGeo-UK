@@ -236,6 +236,84 @@ def test_phase15_atomic_load_spatial_api_search_and_status(engines, tmp_path: Pa
                 "flood_warning",
                 "flood_area",
                 "rainfall_station",
+                "national_source_retrieval",
                 "national_source_snapshot",
             ):
                 connection.execute(text(f"DELETE FROM watergeo.{table}"))  # noqa: S608
+
+
+def test_identical_content_records_new_retrieval_and_advances_freshness(
+    engines, tmp_path: Path
+) -> None:
+    stations, readings = rainfall_payloads()
+    normalize = lambda value: normalize_rainfall(  # noqa: E731
+        value["stations.json"], value["readings.json"]
+    )
+    first_bundle = create_bundle(
+        "rainfall",
+        {
+            "stations.json": ("https://example.invalid/stations", body(stations), {}),
+            "readings.json": ("https://example.invalid/readings", body(readings), {}),
+        },
+        normalize,
+        root=tmp_path,
+    )
+    second_bundle = create_bundle(
+        "rainfall",
+        {
+            "stations.json": ("https://example.invalid/stations", body(stations), {}),
+            "readings.json": ("https://example.invalid/readings", body(readings), {}),
+        },
+        normalize,
+        root=tmp_path,
+    )
+    first = load_snapshot(engines[0], first_bundle, normalize)
+    second = load_snapshot(engines[0], second_bundle, normalize)
+    try:
+        assert first["status"] == "inserted"
+        assert second["status"] == "existing"
+        assert second["snapshot_id"] == first["snapshot_id"]
+        assert second["retrieval_id"] != first["retrieval_id"]
+        with engines[1].connect() as connection:
+            snapshots = connection.execute(
+                text("""
+                    SELECT count(*),min(content_sha256),max(content_sha256)
+                    FROM watergeo.national_source_snapshot WHERE source_key='rainfall'
+                """)
+            ).one()
+            retrievals = connection.execute(
+                text("""
+                    SELECT id,retrieval_completed_at FROM watergeo.national_source_retrieval
+                    WHERE snapshot_id=:snapshot ORDER BY retrieval_completed_at,id
+                """),
+                {"snapshot": first["snapshot_id"]},
+            ).all()
+        assert snapshots[0] == 1
+        assert snapshots[1] == snapshots[2]
+        assert len(retrievals) == 2
+        assert retrievals[1].retrieval_completed_at > retrievals[0].retrieval_completed_at
+        with TestClient(create_app()) as client:
+            dataset = client.get("/v1/rainfall/dataset").json()
+            status = next(
+                row
+                for row in client.get("/v1/sources/status").json()["sources"]
+                if row["source"] == "rainfall"
+            )
+        assert dataset["snapshot_id"] == first["snapshot_id"]
+        assert dataset["retrieval_id"] == second["retrieval_id"]
+        assert dataset["content_sha256"] == snapshots[1]
+        assert status["retrieved_at"] == dataset["retrieval_completed_at"]
+    finally:
+        with engines[2].begin() as connection:
+            connection.execute(
+                text("DELETE FROM watergeo.rainfall_station WHERE snapshot_id=:snapshot"),
+                {"snapshot": first["snapshot_id"]},
+            )
+            connection.execute(
+                text("DELETE FROM watergeo.national_source_retrieval WHERE snapshot_id=:snapshot"),
+                {"snapshot": first["snapshot_id"]},
+            )
+            connection.execute(
+                text("DELETE FROM watergeo.national_source_snapshot WHERE id=:snapshot"),
+                {"snapshot": first["snapshot_id"]},
+            )

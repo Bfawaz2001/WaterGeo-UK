@@ -11,6 +11,7 @@ from watergeo.ingestion.phase15_sources import (
     EA_LICENCE,
     FLOOD_ROOT,
     OFWAT_WCPR_URL,
+    VERSION,
 )
 
 PRODUCTS = {
@@ -72,17 +73,22 @@ class Phase15Queries:
     def dataset(self, source: str, snapshot_id: UUID | None = None) -> Dataset:
         if source not in PRODUCTS:
             raise Phase15Unavailable
-        clause = (
-            "id=:id"
-            if snapshot_id
-            else "source_key=:source ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1"
-        )
+        clause = "s.id=:id" if snapshot_id else "s.source_key=:source"
         parameters: dict[str, Any] = {"id": snapshot_id} if snapshot_id else {"source": source}
         with self.engine.connect() as connection:
             row = (
                 connection.execute(
-                    text(f"SELECT * FROM watergeo.national_source_snapshot WHERE {clause}"),  # noqa: S608
-                    parameters,
+                    text(f"""
+                        SELECT s.*,r.id AS retrieval_id,
+                            r.retrieval_started_at AS accepted_retrieval_started_at,
+                            r.retrieval_completed_at AS accepted_retrieval_completed_at
+                        FROM watergeo.national_source_snapshot s
+                        JOIN watergeo.national_source_retrieval r ON r.snapshot_id=s.id
+                        WHERE {clause}
+                            AND s.normalization_version=:version
+                        ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1
+                    """),  # noqa: S608
+                    {**parameters, "version": VERSION},
                 )
                 .mappings()
                 .one_or_none()
@@ -92,14 +98,15 @@ class Phase15Queries:
         metadata = PRODUCTS[source]
         return Dataset(
             snapshot_id=row["id"],
+            retrieval_id=row["retrieval_id"],
             source=source,
             publisher=metadata["publisher"],
             source_url=metadata["source_url"],
             licence="Open Government Licence 3.0",
             licence_url=EA_LICENCE,
             attribution=metadata["attribution"],
-            retrieval_started_at=row["retrieval_started_at"],
-            retrieval_completed_at=row["retrieval_completed_at"],
+            retrieval_started_at=row["accepted_retrieval_started_at"],
+            retrieval_completed_at=row["accepted_retrieval_completed_at"],
             content_sha256=row["content_sha256"],
             normalized_sha256=row["normalized_sha256"],
             normalization_version=row["normalization_version"],

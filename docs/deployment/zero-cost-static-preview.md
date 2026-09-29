@@ -36,6 +36,12 @@ by this phase.
 
 Static mode provides bounded browser filtering over the published snapshot. It cannot
 reproduce server-side history retrieval, arbitrary national database queries or live
-refresh. Those controls are disabled or labelled. Every view shows publication and
-source retrieval time. Migrating to the Phase 14 profile changes the frontend mode to
+refresh. Hydrology observations, Water Quality detail metadata and reservoir reading
+history are explicitly labelled as API-only drill-downs. Publisher observation/publication
+time, WaterGeo source retrieval time and static manifest `generated_at` remain separate;
+the explorer's “published” label uses only the manifest value. Migrating to the Phase 14 profile changes the frontend mode to
 `api` and supplies the same governed products through FastAPI/PostGIS.
+
+Identical governed inputs and commit produce the same canonical files and publication ID.
+A later build has a new `generated_at` in its manifest without changing that identity.
+No complete real multi-source static bundle has yet been claimed or deployed.

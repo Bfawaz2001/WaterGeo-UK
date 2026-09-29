@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 
 import { ApiError, api, clearApiCaches } from "./api";
+import { staticPublicationMetadata } from "./staticData";
 
 afterEach(() => {
   clearApiCaches();
@@ -23,6 +24,24 @@ it("selects static mode and loads source status from the publication", async () 
   await expect(api.sourceStatuses()).resolves.toMatchObject({ sources: [] });
   expect(fetcher).toHaveBeenCalledWith(
     "/watergeo-data/source-status.json",
+    expect.objectContaining({ credentials: "same-origin", redirect: "error" }),
+  );
+});
+
+it("loads publication generation time separately from source status check time", async () => {
+  const fetcher = vi.fn().mockResolvedValue(
+    response({
+      publication_id: "publication-a",
+      generated_at: "2026-09-29T05:19:00Z",
+    }),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  await expect(staticPublicationMetadata()).resolves.toEqual({
+    publication_id: "publication-a",
+    generated_at: "2026-09-29T05:19:00Z",
+  });
+  expect(fetcher).toHaveBeenCalledWith(
+    "/watergeo-data/manifest.json",
     expect.objectContaining({ credentials: "same-origin", redirect: "error" }),
   );
 });

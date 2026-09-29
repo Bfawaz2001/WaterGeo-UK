@@ -23,19 +23,22 @@ hydrology_snapshot AS (
     ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
 ),
 rainfall_snapshot AS (
-    SELECT id FROM watergeo.national_source_snapshot
-    WHERE source_key='rainfall' AND normalization_version=:phase15_version
-    ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
+    SELECT s.id FROM watergeo.national_source_retrieval r
+    JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+    WHERE s.source_key='rainfall' AND s.normalization_version=:phase15_version
+    ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1
 ),
 flood_snapshot AS (
-    SELECT id FROM watergeo.national_source_snapshot
-    WHERE source_key='flood-monitoring' AND normalization_version=:phase15_version
-    ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
+    SELECT s.id FROM watergeo.national_source_retrieval r
+    JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+    WHERE s.source_key='flood-monitoring' AND s.normalization_version=:phase15_version
+    ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1
 ),
 bathing_snapshot AS (
-    SELECT id FROM watergeo.national_source_snapshot
-    WHERE source_key='bathing-waters' AND normalization_version=:phase15_version
-    ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1
+    SELECT s.id FROM watergeo.national_source_retrieval r
+    JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+    WHERE s.source_key='bathing-waters' AND s.normalization_version=:phase15_version
+    ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1
 ),
 water_quality_snapshot AS (
     SELECT id FROM watergeo.water_quality_snapshot
@@ -152,12 +155,17 @@ AVAILABILITY_SQL = text("""
 SELECT
     EXISTS(SELECT 1 FROM watergeo.hydrology_snapshot
         WHERE normalization_version=:hydrology_version) AS hydrology,
-    EXISTS(SELECT 1 FROM watergeo.national_source_snapshot
-        WHERE source_key='rainfall' AND normalization_version=:phase15_version) AS rainfall,
-    EXISTS(SELECT 1 FROM watergeo.national_source_snapshot
-        WHERE source_key='flood-monitoring' AND normalization_version=:phase15_version) AS flood,
-    EXISTS(SELECT 1 FROM watergeo.national_source_snapshot
-        WHERE source_key='bathing-waters' AND normalization_version=:phase15_version) AS bathing,
+    EXISTS(SELECT 1 FROM watergeo.national_source_retrieval r
+        JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+        WHERE s.source_key='rainfall' AND s.normalization_version=:phase15_version) AS rainfall,
+    EXISTS(SELECT 1 FROM watergeo.national_source_retrieval r
+        JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+        WHERE s.source_key='flood-monitoring'
+            AND s.normalization_version=:phase15_version) AS flood,
+    EXISTS(SELECT 1 FROM watergeo.national_source_retrieval r
+        JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+        WHERE s.source_key='bathing-waters'
+            AND s.normalization_version=:phase15_version) AS bathing,
     EXISTS(SELECT 1 FROM watergeo.water_quality_snapshot
         WHERE normalization_version=:water_quality_version) AS water_quality,
     EXISTS(SELECT 1 FROM watergeo.stream_reservoir_snapshot

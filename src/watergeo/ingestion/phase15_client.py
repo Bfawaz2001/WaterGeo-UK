@@ -39,6 +39,12 @@ def _write(path: Path, body: bytes) -> None:
         os.fsync(stream.fileno())
 
 
+def _replace(path: Path, body: bytes) -> None:
+    temporary = path.with_name(f".{path.name}.{uuid4()}.tmp")
+    _write(temporary, body)
+    os.replace(temporary, path)
+
+
 def _get(client: httpx.Client, url: str) -> tuple[bytes, dict[str, str]]:
     with client.stream("GET", url, follow_redirects=False) as response:
         if response.status_code != 200:
@@ -56,6 +62,80 @@ def _get(client: httpx.Client, url: str) -> tuple[bytes, dict[str, str]]:
     return bytes(body), {key: response.headers[key] for key in HEADERS if key in response.headers}
 
 
+class EvidenceBundle:
+    """Persist each bounded response before any publisher-schema interpretation."""
+
+    def __init__(self, source: str, root: Path):
+        self.source = source
+        self.directory = root / source / str(uuid4())
+        self.directory.mkdir(parents=True, exist_ok=False)
+        self.started = datetime.now(UTC)
+        self.responses: dict[str, dict[str, Any]] = {}
+        self.total = 0
+        self._record_retrieval("retrieving")
+
+    def _record_retrieval(self, state: str, completed: datetime | None = None) -> dict[str, Any]:
+        retrieval = {
+            "evidence_state": state,
+            "source": self.source,
+            "retrieval_started_at": self.started.isoformat(),
+            **({"retrieval_completed_at": completed.isoformat()} if completed else {}),
+            "responses": self.responses,
+        }
+        _replace(self.directory / "retrieval.json", encoded(retrieval))
+        return retrieval
+
+    def add(self, name: str, url: str, body: bytes, headers: Mapping[str, str]) -> None:
+        if (
+            name != Path(name).name
+            or not name.endswith(".json")
+            or name in self.responses
+            or len(body) > MAX_FILE_BYTES
+        ):
+            raise Phase15SourceError("Invalid evidence response")
+        self.total += len(body)
+        if self.total > MAX_TOTAL_BYTES:
+            raise Phase15SourceError("Evidence bundle exceeded size budget")
+        _write(self.directory / name, body)
+        self.responses[name] = {
+            "url": url,
+            "bytes": len(body),
+            "sha256": hashlib.sha256(body).hexdigest(),
+            "headers": dict(headers),
+        }
+        self._record_retrieval("retrieving")
+
+    def fetch(self, client: httpx.Client, name: str, url: str) -> bytes:
+        body, headers = _get(client, url)
+        self.add(name, url, body, headers)
+        return body
+
+    def validate(self, normalize: Callable[[dict[str, dict[str, Any]]], NormalizedProduct]) -> Path:
+        completed = datetime.now(UTC)
+        retrieval = self._record_retrieval("retrieved", completed)
+        decoded = {
+            name: decode((self.directory / name).read_bytes()) for name in sorted(self.responses)
+        }
+        product = normalize(decoded)
+        if product.source != self.source:
+            raise Phase15SourceError("Evidence source and normalized product differ")
+        content_sha256 = hashlib.sha256(
+            encoded({name: value["sha256"] for name, value in self.responses.items()})
+        ).hexdigest()
+        manifest = {
+            **retrieval,
+            "evidence_state": "validated",
+            "normalization_version": VERSION,
+            "content_sha256": content_sha256,
+            "normalized_sha256": product.sha256,
+            "entity_count": len(product.entities),
+            "secondary_count": len(product.secondary),
+            "skipped_count": product.skipped_count,
+        }
+        _write(self.directory / "manifest.json", encoded(manifest))
+        return self.directory
+
+
 def create_bundle(
     source: str,
     responses: Mapping[str, tuple[str, bytes, Mapping[str, str]]],
@@ -63,52 +143,10 @@ def create_bundle(
     *,
     root: Path = ROOT,
 ) -> Path:
-    directory = root / source / str(uuid4())
-    directory.mkdir(parents=True, exist_ok=False)
-    started = datetime.now(UTC)
-    response_manifest: dict[str, Any] = {}
-    total = 0
+    bundle = EvidenceBundle(source, root)
     for name, (url, body, headers) in sorted(responses.items()):
-        if name != Path(name).name or not name.endswith(".json") or len(body) > MAX_FILE_BYTES:
-            raise Phase15SourceError("Invalid evidence response")
-        total += len(body)
-        if total > MAX_TOTAL_BYTES:
-            raise Phase15SourceError("Evidence bundle exceeded size budget")
-        _write(directory / name, body)
-        response_manifest[name] = {
-            "url": url,
-            "bytes": len(body),
-            "sha256": hashlib.sha256(body).hexdigest(),
-            "headers": dict(headers),
-        }
-    completed = datetime.now(UTC)
-    retrieval = {
-        "evidence_state": "retrieved",
-        "source": source,
-        "retrieval_started_at": started.isoformat(),
-        "retrieval_completed_at": completed.isoformat(),
-        "responses": response_manifest,
-    }
-    _write(directory / "retrieval.json", encoded(retrieval))
-    decoded = {name: decode((directory / name).read_bytes()) for name in sorted(response_manifest)}
-    product = normalize(decoded)
-    if product.source != source:
-        raise Phase15SourceError("Evidence source and normalized product differ")
-    content_sha256 = hashlib.sha256(
-        encoded({name: value["sha256"] for name, value in response_manifest.items()})
-    ).hexdigest()
-    manifest = {
-        **retrieval,
-        "evidence_state": "validated",
-        "normalization_version": VERSION,
-        "content_sha256": content_sha256,
-        "normalized_sha256": product.sha256,
-        "entity_count": len(product.entities),
-        "secondary_count": len(product.secondary),
-        "skipped_count": product.skipped_count,
-    }
-    _write(directory / "manifest.json", encoded(manifest))
-    return directory
+        bundle.add(name, url, body, headers)
+    return bundle.validate(normalize)
 
 
 def read_bundle(
@@ -178,13 +216,12 @@ def fetch_rainfall(root: Path = ROOT, *, transport: httpx.BaseTransport | None =
             f"{FLOOD_ROOT}/data/readings?parameter=rainfall&latest&_view=full&_limit=10000"
         ),
     }
+    bundle = EvidenceBundle("rainfall", root)
     with httpx.Client(transport=transport, trust_env=False, timeout=120) as client:
-        responses = {name: (url, *_get(client, url)) for name, url in urls.items()}
-    return create_bundle(
-        "rainfall",
-        responses,
-        lambda value: normalize_rainfall(value["stations.json"], value["readings.json"]),
-        root=root,
+        for name, url in urls.items():
+            bundle.fetch(client, name, url)
+    return bundle.validate(
+        lambda value: normalize_rainfall(value["stations.json"], value["readings.json"])
     )
 
 
@@ -192,14 +229,10 @@ def fetch_bathing_waters(
     root: Path = ROOT, *, transport: httpx.BaseTransport | None = None
 ) -> Path:
     url = f"{BATHING_ROOT}?_pageSize=1000"
+    bundle = EvidenceBundle("bathing-waters", root)
     with httpx.Client(transport=transport, trust_env=False, timeout=120) as client:
-        body, headers = _get(client, url)
-    return create_bundle(
-        "bathing-waters",
-        {"bathing-waters.json": (url, body, headers)},
-        lambda value: normalize_bathing(value["bathing-waters.json"]),
-        root=root,
-    )
+        bundle.fetch(client, "bathing-waters.json", url)
+    return bundle.validate(lambda value: normalize_bathing(value["bathing-waters.json"]))
 
 
 def _flood_product(value: dict[str, dict[str, Any]]) -> NormalizedProduct:
@@ -225,31 +258,18 @@ def fetch_flood_monitoring(
     root: Path = ROOT, *, transport: httpx.BaseTransport | None = None
 ) -> Path:
     warnings_url = f"{FLOOD_ROOT}/id/floods?_limit=1000"
+    bundle = EvidenceBundle("flood-monitoring", root)
     with httpx.Client(transport=transport, trust_env=False, timeout=120) as client:
-        warnings_body, warnings_headers = _get(client, warnings_url)
+        warnings_body = bundle.fetch(client, "warnings.json", warnings_url)
         warnings = decode(warnings_body)
         warning_items = _ea_items(warnings)
         area_ids = sorted({text_area_id(item) for item in warning_items})
-        responses: dict[str, tuple[str, bytes, Mapping[str, str]]] = {
-            "warnings.json": (warnings_url, warnings_body, warnings_headers)
-        }
         for area_id in area_ids:
             area_url = f"{FLOOD_ROOT}/id/floodAreas/{area_id}"
-            area_body, area_headers = _get(client, area_url)
+            bundle.fetch(client, f"area-{area_id}.json", area_url)
             polygon_url = f"{FLOOD_ROOT}/id/floodAreas/{area_id}/polygon"
-            polygon_body, polygon_headers = _get(client, polygon_url)
-            responses[f"area-{area_id}.json"] = (area_url, area_body, area_headers)
-            responses[f"polygon-{area_id}.json"] = (
-                polygon_url,
-                polygon_body,
-                polygon_headers,
-            )
-    return create_bundle(
-        "flood-monitoring",
-        responses,
-        _flood_product,
-        root=root,
-    )
+            bundle.fetch(client, f"polygon-{area_id}.json", polygon_url)
+    return bundle.validate(_flood_product)
 
 
 def _ea_items(payload: dict[str, Any]) -> list[dict[str, Any]]:

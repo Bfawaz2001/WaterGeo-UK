@@ -13,6 +13,9 @@ no real Fabric tenant execution is claimed.
 | Reviewed water-supply area | GeoJSON Feature; GeoParquet WKB row | Exact feature inspection; notebook analysis |
 | Water-supply overview | PMTiles/MVT `water_supply` layer | Fabric Map or WaterGeo overview |
 | Thames Water discharge status | Point GeoJSON; GeoParquet WKB and typed status columns | Snapshot analysis, Lakehouse ingestion and Power BI reference points |
+| Phase 15 rainfall and bathing waters | GeoParquet WKB with typed measure/classification columns | Lakehouse spatial and freshness analysis |
+| Phase 15 flood monitoring | Flood-area GeoParquet plus separate warning Parquet | Spatial areas without losing warning rows |
+| Ofwat company performance | Parquet with company, period, measure, value-state and publication columns | Regulatory trend analysis |
 | Export dataset/provenance | JSON manifest; Parquet schema metadata and row fields | Snapshot identification, hashes, licensing |
 | Hydrology, Water Quality, reservoirs, Water Bodies | Existing bounded API and SDK | Future dedicated exports; no new file exporter claimed |
 
@@ -22,6 +25,14 @@ source notices and reviewed transformation metadata. Geometry is binary WKB, not
 Delta spatial type. A Spark write can make a Delta table while retaining this binary
 column, but it does not automatically retain GeoParquet schema metadata: keep the
 manifest alongside it and preserve provenance columns.
+
+Phase 15 analytical files also carry `retrieval_id`, `retrieved_at`, publisher and licence.
+Rainfall exposes station identity, display name, observation time, value, unit and declared
+period. Bathing waters expose identity, classification, assessment year, sample relation and
+publisher risk/advice JSON. Flood areas and warnings are separate files so multiple warnings
+cannot be collapsed into one geometry row. Company performance preserves missing and
+not-applicable states separately from numeric zero. PyArrow remains an optional export
+dependency; no Fabric runtime dependency is added.
 
 ## Lakehouse / OneLake example
 

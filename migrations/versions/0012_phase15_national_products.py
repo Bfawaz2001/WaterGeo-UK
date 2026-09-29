@@ -32,6 +32,19 @@ def upgrade() -> None:
         CREATE INDEX national_source_snapshot_current
             ON watergeo.national_source_snapshot (source_key, retrieval_completed_at DESC, id DESC);
 
+        CREATE TABLE watergeo.national_source_retrieval (
+            id uuid PRIMARY KEY,
+            snapshot_id uuid NOT NULL REFERENCES watergeo.national_source_snapshot(id),
+            retrieval_started_at timestamptz NOT NULL,
+            retrieval_completed_at timestamptz NOT NULL
+                CHECK (retrieval_completed_at >= retrieval_started_at),
+            content_sha256 text NOT NULL CHECK (content_sha256 ~ '^[0-9a-f]{64}$'),
+            manifest jsonb NOT NULL CHECK (jsonb_typeof(manifest)='object')
+        );
+        CREATE INDEX national_source_retrieval_current
+            ON watergeo.national_source_retrieval
+            (retrieval_completed_at DESC, id DESC, snapshot_id);
+
         CREATE TABLE watergeo.rainfall_station (
             snapshot_id uuid NOT NULL REFERENCES watergeo.national_source_snapshot(id),
             station_id text COLLATE "C" NOT NULL,
@@ -131,11 +144,13 @@ def upgrade() -> None:
             CHECK ((value_state='reported') = (value IS NOT NULL))
         );
 
-        GRANT SELECT ON watergeo.national_source_snapshot, watergeo.rainfall_station,
+        GRANT SELECT ON watergeo.national_source_snapshot, watergeo.national_source_retrieval,
+            watergeo.rainfall_station,
             watergeo.flood_area, watergeo.flood_warning, watergeo.bathing_water,
             watergeo.company_performance_company, watergeo.company_performance_measure
             TO watergeo_app;
-        GRANT SELECT, INSERT ON watergeo.national_source_snapshot, watergeo.rainfall_station,
+        GRANT SELECT, INSERT ON watergeo.national_source_snapshot,
+            watergeo.national_source_retrieval, watergeo.rainfall_station,
             watergeo.flood_area, watergeo.flood_warning, watergeo.bathing_water,
             watergeo.company_performance_company, watergeo.company_performance_measure
             TO watergeo_ingest;
@@ -150,5 +165,6 @@ def downgrade() -> None:
         DROP TABLE watergeo.flood_warning;
         DROP TABLE watergeo.flood_area;
         DROP TABLE watergeo.rainfall_station;
+        DROP TABLE watergeo.national_source_retrieval;
         DROP TABLE watergeo.national_source_snapshot;
     """)

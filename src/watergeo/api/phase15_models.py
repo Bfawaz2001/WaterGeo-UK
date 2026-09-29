@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 class Dataset(BaseModel):
     snapshot_id: UUID
+    retrieval_id: UUID
     source: str
     publisher: str
     source_url: str

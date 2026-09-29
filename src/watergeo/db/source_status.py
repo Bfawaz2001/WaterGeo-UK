@@ -224,26 +224,37 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
             SELECT id AS snapshot_id,content_sha256,retrieval_started_at,
                 retrieval_completed_at AS retrieved_at,site_count AS observation_count,
                 0 AS missing_value_count FROM latest""",
-        "rainfall": """SELECT id AS snapshot_id,content_sha256,retrieval_started_at,
-            retrieval_completed_at AS retrieved_at,entity_count AS observation_count,
-            0 AS missing_value_count FROM watergeo.national_source_snapshot
-            WHERE source_key='rainfall' AND normalization_version=:phase15_version
-            ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1""",
-        "flood-monitoring": """SELECT id AS snapshot_id,content_sha256,retrieval_started_at,
-            retrieval_completed_at AS retrieved_at,secondary_count AS observation_count,
-            0 AS missing_value_count FROM watergeo.national_source_snapshot
-            WHERE source_key='flood-monitoring' AND normalization_version=:phase15_version
-            ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1""",
-        "bathing-waters": """SELECT id AS snapshot_id,content_sha256,retrieval_started_at,
-            retrieval_completed_at AS retrieved_at,entity_count AS observation_count,
-            0 AS missing_value_count FROM watergeo.national_source_snapshot
-            WHERE source_key='bathing-waters' AND normalization_version=:phase15_version
-            ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1""",
-        "company-performance": """SELECT id AS snapshot_id,content_sha256,retrieval_started_at,
-            retrieval_completed_at AS retrieved_at,secondary_count AS observation_count,
-            0 AS missing_value_count FROM watergeo.national_source_snapshot
-            WHERE source_key='company-performance' AND normalization_version=:phase15_version
-            ORDER BY retrieval_completed_at DESC,id DESC LIMIT 1""",
+        "rainfall": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.entity_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='rainfall' AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
+        "flood-monitoring": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.secondary_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='flood-monitoring'
+                AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
+        "bathing-waters": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.entity_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='bathing-waters'
+                AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
+        "company-performance": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.secondary_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='company-performance'
+                AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
     }
     parameters = {
         "water_quality_version": WATER_QUALITY_VERSION,

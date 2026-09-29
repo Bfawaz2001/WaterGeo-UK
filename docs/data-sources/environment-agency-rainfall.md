@@ -8,12 +8,14 @@
 - **Identity:** station `notation`, which the publisher documents as the unique item notation;
   `stationReference` is retained in raw evidence but is not unique in the live national response.
   Measure URI is the reading identity.
-- **Measurement:** accumulated rainfall with the publisher-declared unit and positive period.
-  The accepted live response contained `mm` measures at 900 and 3,600 seconds. `dateTime`
-  is the observation time; WaterGeo retrieval time remains separate.
+- **Measurement:** the publisher describes its rainfall series as 15-minute accumulated
+  rainfall, while each measure also declares its own unit and period. WaterGeo retains that
+  declared period rather than assuming 15 minutes. The accepted live response contained
+  `mm` measures at 900 and 3,600 seconds. `dateTime` is the observation time; WaterGeo
+  retrieval time remains separate.
 - **Geography:** publisher WGS84 latitude/longitude. The publisher says names may be absent and positions are reduced to a 100 m grid. WaterGeo retains that precision and does not infer names or locations.
 
-The API describes roughly 1,000 telemetry gauges and states that data transfer is typically once or twice daily, but can increase during high rainfall. Neither the 15-minute measurement period nor WaterGeo's hourly retrieval is a freshness guarantee.
+The API describes roughly 1,000 telemetry gauges and states that data transfer is typically once or twice daily, but can increase during high rainfall. Publisher transfer cadence, measure period, observation time, WaterGeo retrieval time and static publication time are separate; none alone is a freshness guarantee.
 
 ## WaterGeo contract
 
