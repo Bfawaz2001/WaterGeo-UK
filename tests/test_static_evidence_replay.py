@@ -167,6 +167,10 @@ def test_complete_replay_publishes_every_required_source(
             called.append("disposed")
 
     monkeypatch.setattr(
+        "watergeo.operations.static_replay.IngestionSettings",
+        lambda: object(),
+    )
+    monkeypatch.setattr(
         "watergeo.operations.static_replay.create_database_engine", lambda settings: Engine()
     )
 
