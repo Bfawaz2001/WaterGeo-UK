@@ -14,3 +14,6 @@ Company performance has no point geometry. It may attach to a selected water-sup
 
 Ofwat editions are publication-driven. There is no polling workflow. An operator prepares and reviews one bounded JSON evidence bundle from the official machine-readable edition, including its checksum and crosswalk, before loading it. Static JSON and optional Parquet preserve the edition, period, measure definitions and provenance.
 
+No company-performance rows were loaded during the 29 September 2026 local acceptance:
+the exact official workbook-to-evidence preparation remains a deliberate operator step,
+so WaterGeo does not guess column meanings or claim an accepted row count.

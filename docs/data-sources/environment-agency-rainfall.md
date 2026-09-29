@@ -8,7 +8,9 @@
 - **Identity:** station `notation`, which the publisher documents as the unique item notation;
   `stationReference` is retained in raw evidence but is not unique in the live national response.
   Measure URI is the reading identity.
-- **Measurement:** accumulated rainfall in `mm` over a publisher-declared 900-second period. `dateTime` is the observation time; WaterGeo retrieval time remains separate.
+- **Measurement:** accumulated rainfall with the publisher-declared unit and positive period.
+  The accepted live response contained `mm` measures at 900 and 3,600 seconds. `dateTime`
+  is the observation time; WaterGeo retrieval time remains separate.
 - **Geography:** publisher WGS84 latitude/longitude. The publisher says names may be absent and positions are reduced to a 100 m grid. WaterGeo retains that precision and does not infer names or locations.
 
 The API describes roughly 1,000 telemetry gauges and states that data transfer is typically once or twice daily, but can increase during high rainfall. Neither the 15-minute measurement period nor WaterGeo's hourly retrieval is a freshness guarantee.
@@ -23,3 +25,11 @@ evidence, excludes them from canonical station/latest associations, and records 
 skipped count. Any other malformed identity still fails closed.
 
 Hosted refresh is hourly at `:27` UTC and remains opt-in through `WATERGEO_RAINFALL_SCHEDULE_ENABLED`. Static publication is a separate daily snapshot policy.
+
+## Local acceptance on 29 September 2026
+
+The bounded official response produced 1,044 stations, 934 latest measure readings and
+928 stations with an associated latest observation. Of those stations, 1,041 had
+publisher coordinates. Two publisher artifacts were retained in raw evidence and
+recorded as skipped: the empty root station record and one reading without a returned
+station association.

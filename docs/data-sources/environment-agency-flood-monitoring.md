@@ -24,3 +24,9 @@ The current warning feed is transient. The publisher describes a roughly 15-minu
 WaterGeo is not an emergency warning service and offers no service guarantee. Users must use the [official flood warning service](https://check-for-flooding.service.gov.uk/) for safety decisions. The API, explorer and static publication repeat this caveat and expose retrieval time and attribution.
 
 The raw warnings response and every referenced area and polygon response are durably written before validation. Only a complete accepted bundle can load atomically. Hosted retrieval runs at `:02/:17/:32/:47` UTC only when `WATERGEO_FLOOD_SCHEDULE_ENABLED=true`; the public static profile remains a daily snapshot.
+
+## Local acceptance on 29 September 2026
+
+The bounded official response produced 19 warnings and 19 referenced flood areas with
+geometry. All were accepted; three areas used the reviewed structure-repair policy and
+none were skipped.
