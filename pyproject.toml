@@ -35,6 +35,7 @@ watergeo-render-digitalocean-app = "watergeo.operations.production_spec:main"
 watergeo-production-preflight = "watergeo.operations.production_preflight:main"
 watergeo-static-publish = "watergeo.static_publication:main"
 watergeo-prepare-company-performance = "watergeo.operations.company_performance:main"
+watergeo-static-evidence-package = "watergeo.operations.static_evidence_package:main"
 
 [project.optional-dependencies]
 exports = ["pyarrow>=21,<24"]

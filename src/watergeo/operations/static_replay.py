@@ -7,32 +7,28 @@ from pathlib import Path
 from watergeo.core.config import IngestionSettings
 from watergeo.db.engine import create_database_engine
 from watergeo.operations.refresh import RefreshRequest, refresh
-
-REQUIRED = {
-    "ofwat",
-    "hydrology",
-    "catchments",
-    "water-quality",
-    "stream-reservoir-levels",
-    "thames-discharge-status",
-    "rainfall",
-    "flood-monitoring",
-    "bathing-waters",
-    "company-performance",
-}
+from watergeo.operations.static_evidence import (
+    REPLAY_VERSION,
+    REQUIRED_SOURCES,
+    validate_package_directory,
+)
 
 
 def replay(plan_path: Path) -> None:
     root = plan_path.resolve().parent
     value = json.loads(plan_path.read_bytes())
-    if not isinstance(value, dict) or value.get("version") != "watergeo-static-replay-v1":
+    if not isinstance(value, dict) or value.get("version") != REPLAY_VERSION:
         raise ValueError("Invalid static evidence replay plan")
     sources = value.get("sources")
     if not isinstance(sources, list) or not all(isinstance(row, dict) for row in sources):
         raise ValueError("Invalid static evidence source list")
     names = [row.get("source") for row in sources]
-    if len(names) != len(set(names)) or set(names) != REQUIRED:
+    if len(names) != len(set(names)) or set(names) != set(REQUIRED_SOURCES):
         raise ValueError("Static evidence plan must contain every required source exactly once")
+    expected_plan = root / "replay.json"
+    if plan_path.resolve() != expected_plan.resolve():
+        raise ValueError("Static replay must use the governed package replay.json")
+    validate_package_directory(root)
     engine = create_database_engine(IngestionSettings())
     try:
         for row in sources:

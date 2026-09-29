@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: static-preview-build
@@ -18,7 +17,7 @@ jobs:
     if: >-
       github.repository == 'Bfawaz2001/WaterGeo-UK' &&
       github.ref == 'refs/heads/main' &&
-      vars.WATERGEO_STATIC_EVIDENCE_RUN_ID != '' &&
+      vars.WATERGEO_STATIC_EVIDENCE_RELEASE_ID != '' &&
       vars.WATERGEO_STATIC_EVIDENCE_SHA256 != '' &&
       (
         github.event_name == 'workflow_dispatch' ||
@@ -57,14 +56,41 @@ jobs:
                   destination.write(f"{key}={value}\n")
           PY
       - run: docker compose up --build --wait db
-      - name: Download reviewed accepted evidence artifact
+      - name: Download checksum-pinned reviewed evidence release asset
         env:
-          GH_TOKEN: ${{ github.token }}
-          EVIDENCE_RUN_ID: ${{ vars.WATERGEO_STATIC_EVIDENCE_RUN_ID }}
+          GH_TOKEN: ${{ secrets.WATERGEO_STATIC_EVIDENCE_TOKEN }}
+          EVIDENCE_RELEASE_ID: ${{ vars.WATERGEO_STATIC_EVIDENCE_RELEASE_ID }}
           EVIDENCE_SHA256: ${{ vars.WATERGEO_STATIC_EVIDENCE_SHA256 }}
         run: |
+          : "${GH_TOKEN:?WATERGEO_STATIC_EVIDENCE_TOKEN is required}"
+          if ! [[ "$EVIDENCE_RELEASE_ID" =~ ^[0-9]+$ ]]; then
+            echo "WATERGEO_STATIC_EVIDENCE_RELEASE_ID must be a numeric release ID" >&2
+            exit 1
+          fi
+          if ! [[ "$EVIDENCE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "WATERGEO_STATIC_EVIDENCE_SHA256 must be a lowercase SHA-256" >&2
+            exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/evidence-download"
-          gh run download "$EVIDENCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name watergeo-accepted-evidence --dir "$RUNNER_TEMP/evidence-download"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$EVIDENCE_RELEASE_ID" > "$RUNNER_TEMP/evidence-download/release.json"
+          asset_id="$(python - "$RUNNER_TEMP/evidence-download/release.json" <<'PY'
+          import json
+          import os
+          import sys
+
+          release = json.load(open(sys.argv[1], encoding="utf-8"))
+          assets = [asset for asset in release.get("assets", []) if asset.get("name") == "accepted-evidence.tar.gz"]
+          expected = os.environ["EVIDENCE_SHA256"]
+          if release.get("draft") is not True or str(release.get("id")) != os.environ["EVIDENCE_RELEASE_ID"]:
+              raise SystemExit("Configured evidence release is not the exact reviewed draft")
+          if len(assets) != 1 or assets[0].get("state") != "uploaded" or assets[0].get("size", 0) > 1073741824:
+              raise SystemExit("Draft release must contain one bounded uploaded accepted-evidence.tar.gz")
+          if assets[0].get("digest") not in (None, f"sha256:{expected}"):
+              raise SystemExit("Release asset digest does not match the configured checksum")
+          print(assets[0]["id"])
+          PY
+          )"
+          gh api -H "Accept: application/octet-stream" "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" > "$RUNNER_TEMP/evidence-download/accepted-evidence.tar.gz"
           printf '%s  %s\n' "$EVIDENCE_SHA256" "$RUNNER_TEMP/evidence-download/accepted-evidence.tar.gz" | sha256sum --check --strict
           uv run --locked python scripts/extract_static_evidence.py "$RUNNER_TEMP/evidence-download/accepted-evidence.tar.gz" "$RUNNER_TEMP/accepted-evidence"
       - name: Replay accepted source products

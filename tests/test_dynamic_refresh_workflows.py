@@ -129,8 +129,9 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
     assert "github.repository == 'Bfawaz2001/WaterGeo-UK'" in condition
     assert "github.ref == 'refs/heads/main'" in condition
     assert "vars.WATERGEO_STATIC_PUBLICATION_ENABLED == 'true'" in condition
+    assert "vars.WATERGEO_STATIC_EVIDENCE_RELEASE_ID != ''" in condition
     assert "github.event_name == 'workflow_dispatch'" in condition
-    assert workflow["permissions"] == {"contents": "read", "actions": "read"}
+    assert workflow["permissions"] == {"contents": "read"}
     text = Path(".github/workflows/static-preview-build.yml").read_text()
     assert "watergeo-static-publish" in text
     assert "actions/upload-artifact" in text
@@ -138,18 +139,25 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
     assert "deploy" not in text.lower()
     assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in text
     assert "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0" in text
+    assert "secrets.WATERGEO_STATIC_EVIDENCE_TOKEN" in text
+    assert "${GH_TOKEN:?WATERGEO_STATIC_EVIDENCE_TOKEN is required}" in text
+    assert 'release.get("draft") is not True' in text
+    assert "WATERGEO_STATIC_EVIDENCE_RUN_ID" not in text
+    assert '[[ "$EVIDENCE_RELEASE_ID" =~ ^[0-9]+$ ]]' in text
+    assert '[[ "$EVIDENCE_SHA256" =~ ^[0-9a-f]{64}$ ]]' in text
 
 
 def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
     path = Path(".github/workflows/static-pages.yml")
     workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)  # noqa: S506
     assert workflow["on"] == {"workflow_dispatch": ""}
-    assert workflow["permissions"] == {"contents": "read", "actions": "read"}
+    assert workflow["permissions"] == {"contents": "read"}
     build = workflow["jobs"]["build"]
-    assert build["permissions"] == {"contents": "read", "actions": "read", "pages": "read"}
+    assert build["permissions"] == {"contents": "read", "pages": "read"}
     condition = " ".join(build["if"].split())
     assert "github.repository == 'Bfawaz2001/WaterGeo-UK'" in condition
     assert "github.ref == 'refs/heads/main'" in condition
+    assert "vars.WATERGEO_STATIC_EVIDENCE_RELEASE_ID != ''" in condition
     deploy = workflow["jobs"]["deploy"]
     assert deploy["permissions"] == {"pages": "write", "id-token": "write"}
     assert deploy["environment"]["name"] == "github-pages"
@@ -167,6 +175,13 @@ def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
     }
     for action, (commit, version) in expected_actions.items():
         assert f"{action}@{commit} # {version}" in text
+    assert "secrets.WATERGEO_STATIC_EVIDENCE_TOKEN" in text
+    assert "${GH_TOKEN:?WATERGEO_STATIC_EVIDENCE_TOKEN is required}" in text
+    assert 'release.get("draft") is not True' in text
+    assert "releases/assets/$asset_id" in text
+    assert "WATERGEO_STATIC_EVIDENCE_RUN_ID" not in text
+    assert '[[ "$EVIDENCE_RELEASE_ID" =~ ^[0-9]+$ ]]' in text
+    assert '[[ "$EVIDENCE_SHA256" =~ ^[0-9a-f]{64}$ ]]' in text
     assert "schedule:" not in text
 
 
