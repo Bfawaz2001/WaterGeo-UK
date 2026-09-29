@@ -165,7 +165,7 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /v1/sources/status` | Accepted source availability, retrieval/observation ages and explicit freshness policy. |
 | `GET /v1/search?q=river&limit=24` | Bounded current-snapshot prefix/identity search across nine explorer entity types. |
 | `GET /v1/rainfall/dataset` | Latest accepted rainfall snapshot, licence, provenance and precision caveat. |
-| `GET /v1/rainfall/stations[/near]` | Paginated or bounded nearby EA rainfall gauges and latest 15-minute accumulation. |
+| `GET /v1/rainfall/stations[/near]` | Paginated or bounded nearby EA rainfall gauges and latest publisher-period accumulation. |
 | `GET /v1/flood-monitoring/dataset` | Latest accepted operational flood snapshot and emergency-service caveat. |
 | `GET /v1/flood-monitoring/areas` | Official flood-area geometry with exact publisher warning severity where present. |
 | `GET /v1/bathing-waters[/near]` | Publisher bathing-water identity, classification and sample/advice relations. |
