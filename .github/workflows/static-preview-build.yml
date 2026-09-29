@@ -1,0 +1,104 @@
+name: Build governed static preview
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "19 5 * * *"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: static-preview-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      github.repository == 'Bfawaz2001/WaterGeo-UK' &&
+      github.ref == 'refs/heads/main' &&
+      vars.WATERGEO_STATIC_EVIDENCE_RUN_ID != '' &&
+      vars.WATERGEO_STATIC_EVIDENCE_SHA256 != '' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'schedule' &&
+          vars.WATERGEO_STATIC_PUBLICATION_ENABLED == 'true'
+        )
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: static-preview-build
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.13"
+          python-version: "3.12"
+          enable-cache: false
+      - uses: actions/setup-node@1e60f620b9541d81079c8d0b9a984cbe2d3b5400 # v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: uv sync --locked --extra exports
+      - name: Generate disposable database credentials
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+          with open(os.environ["GITHUB_ENV"], "a") as destination:
+              for key in ("POSTGRES_PASSWORD", "WATERGEO_DB_PASSWORD", "WATERGEO_MIGRATION_PASSWORD", "WATERGEO_INGESTION_PASSWORD"):
+                  value = secrets.token_hex(24)
+                  print(f"::add-mask::{value}")
+                  destination.write(f"{key}={value}\n")
+          PY
+      - run: docker compose up --build --wait db
+      - name: Download reviewed accepted evidence artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVIDENCE_RUN_ID: ${{ vars.WATERGEO_STATIC_EVIDENCE_RUN_ID }}
+          EVIDENCE_SHA256: ${{ vars.WATERGEO_STATIC_EVIDENCE_SHA256 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence-download"
+          gh run download "$EVIDENCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name watergeo-accepted-evidence --dir "$RUNNER_TEMP/evidence-download"
+          printf '%s  %s\n' "$EVIDENCE_SHA256" "$RUNNER_TEMP/evidence-download/accepted-evidence.tar.gz" | sha256sum --check --strict
+          uv run --locked python scripts/extract_static_evidence.py "$RUNNER_TEMP/evidence-download/accepted-evidence.tar.gz" "$RUNNER_TEMP/accepted-evidence"
+      - name: Replay accepted source products
+        run: uv run --locked python scripts/replay_static_sources.py "$RUNNER_TEMP/accepted-evidence/replay.json"
+      - run: docker compose --profile app up --build --wait api
+      - name: Build immutable data publication
+        run: uv run --locked watergeo-static-publish --output "$RUNNER_TEMP/watergeo-data" --analytics
+      - name: Build static explorer
+        working-directory: web
+        env:
+          VITE_WATERGEO_DATA_MODE: static
+          VITE_WATERGEO_STATIC_DATA_PATH: /watergeo-data
+          VITE_BASEMAP_STYLE_URL: ""
+        run: |
+          npm ci
+          mkdir -p public/watergeo-data
+          cp -R "$RUNNER_TEMP/watergeo-data/." public/watergeo-data/
+          npm run lint
+          npm run typecheck
+          npm test -- --run
+          npm run build
+          npm run test:e2e:static
+      - name: Verify immutable artifact contains data and explorer
+        run: |
+          test -f web/dist/index.html
+          test -f web/dist/watergeo-data/manifest.json
+          uv run --locked python -m json.tool web/dist/watergeo-data/manifest.json >/dev/null
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: watergeo-static-preview-${{ github.sha }}
+          path: web/dist
+          retention-days: 14
+          if-no-files-found: error
+          include-hidden-files: false
+      - name: Remove disposable database
+        if: always()
+        run: docker compose --profile app down --volumes
