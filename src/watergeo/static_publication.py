@@ -200,6 +200,7 @@ def _publication_report(
     ]
     report: dict[str, Any] = {
         "report_version": "watergeo-publication-report-v1",
+        "scope": "data_bundle",
         "publication_id": manifest["publication_id"],
         "generated_at": manifest["generated_at"],
         "watergeo": {
@@ -216,7 +217,7 @@ def _publication_report(
         "hosting": {
             "provider": "github_pages",
             "site_limit_bytes": 1024 * 1024 * 1024,
-            "within_site_limit": False,
+            "data_bundle_within_site_limit": False,
         },
     }
     content_bytes = sum(value["bytes"] for value in known_assets.values())
@@ -226,7 +227,9 @@ def _publication_report(
         if report["total_publication_bytes"] == total:
             break
         report["total_publication_bytes"] = total
-        report["hosting"]["within_site_limit"] = total <= report["hosting"]["site_limit_bytes"]
+        report["hosting"]["data_bundle_within_site_limit"] = (
+            total <= report["hosting"]["site_limit_bytes"]
+        )
     else:
         raise StaticPublicationError("Publication report size did not stabilize")
     return report

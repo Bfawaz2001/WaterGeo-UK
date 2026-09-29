@@ -39,7 +39,7 @@ jobs:
           version: "0.12.13"
           python-version: "3.12"
           enable-cache: false
-      - uses: actions/setup-node@1e60f620b9541d81079c8d0b9a984cbe2d3b5400 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: web/.nvmrc
           cache: npm
@@ -94,7 +94,7 @@ jobs:
           test -f web/dist/watergeo-data/publication-report.json
           uv run --locked python -m json.tool web/dist/watergeo-data/manifest.json >/dev/null
           uv run --locked python -m watergeo.operations.public_artifact web/dist
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: watergeo-static-preview-${{ github.sha }}
           path: web/dist

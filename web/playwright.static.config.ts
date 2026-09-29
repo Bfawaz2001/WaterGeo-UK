@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-const basePath = process.env.VITE_BASE_PATH || "/";
+const basePath = process.env.VITE_BASE_PATH || "/WaterGeo-UK/";
 const normalizedBase = basePath === "/" ? "/" : `/${basePath.replace(/^\/+|\/+$/gu, "")}/`;
 const baseURL = `http://127.0.0.1:4174${normalizedBase}`;
 
@@ -19,13 +19,16 @@ export default defineConfig({
       : {}),
   },
   webServer: {
-    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4174",
+    command:
+      "node scripts/static-e2e-assets.mjs prepare && npm run build && " +
+      "node scripts/static-e2e-assets.mjs cleanup && npm run preview -- --host 127.0.0.1 --port 4174",
     url: baseURL,
     reuseExistingServer: false,
     env: {
       VITE_BASEMAP_STYLE_URL: "",
       VITE_WATERGEO_DATA_MODE: "static",
       VITE_BASE_PATH: normalizedBase,
+      VITE_WATERGEO_STATIC_DATA_PATH: `${normalizedBase}watergeo-data`,
     },
   },
 });

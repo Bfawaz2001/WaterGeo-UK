@@ -9,6 +9,7 @@ from watergeo.ingestion.phase15_client import read_bundle
 from watergeo.ingestion.phase15_sources import EA_LICENCE, normalize_company_performance
 from watergeo.operations.company_performance import (
     CompanyPerformancePreparationError,
+    main,
     prepare,
 )
 
@@ -23,6 +24,35 @@ HEADERS = [
     "Definition",
     "Definition source",
 ]
+
+
+def xlsx_archive(
+    path: Path,
+    sheet_xml: str,
+    sheet: str = "Reviewed data",
+    shared_strings_xml: str | None = None,
+) -> None:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr(
+            "xl/workbook.xml",
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            f'<sheets><sheet name="{sheet}" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        )
+        archive.writestr(
+            "xl/_rels/workbook.xml.rels",
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Target="worksheets/sheet1.xml" '
+            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"/>'
+            "</Relationships>",
+        )
+        archive.writestr(
+            "xl/worksheets/sheet1.xml",
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            f"<sheetData>{sheet_xml}</sheetData></worksheet>",
+        )
+        if shared_strings_xml is not None:
+            archive.writestr("xl/sharedStrings.xml", shared_strings_xml)
 
 
 def xlsx(path: Path, rows: list[list[object]], sheet: str = "Reviewed data") -> None:
@@ -42,24 +72,7 @@ def xlsx(path: Path, rows: list[list[object]], sheet: str = "Reviewed data") -> 
         cells = "".join(cell(column, number, value) for column, value in enumerate(row, 1))
         rendered_rows.append(f'<row r="{number}">{cells}</row>')
     sheet_xml = "".join(rendered_rows)
-    with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr(
-            "xl/workbook.xml",
-            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-            f'<sheets><sheet name="{sheet}" sheetId="1" r:id="rId1"/></sheets></workbook>',
-        )
-        archive.writestr(
-            "xl/_rels/workbook.xml.rels",
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-            '<Relationship Id="rId1" Target="worksheets/sheet1.xml" '
-            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"/>'
-            "</Relationships>",
-        )
-        archive.writestr(
-            "xl/worksheets/sheet1.xml",
-            f'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>{sheet_xml}</sheetData></worksheet>',
-        )
+    xlsx_archive(path, sheet_xml, sheet)
 
 
 def review(path: Path) -> None:
@@ -191,3 +204,76 @@ def test_rejects_changed_sheet_columns_and_unreviewed_values(tmp_path: Path) -> 
     )
     with pytest.raises(CompanyPerformancePreparationError, match="numeric performance"):
         prepare(bad_value, contract, tmp_path / "bad-output")
+
+
+@pytest.mark.parametrize("raw_value", ["nan", "inf", "-inf"])
+def test_cli_rejects_non_finite_performance_values(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], raw_value: str
+) -> None:
+    workbook = tmp_path / f"{raw_value}.xlsx"
+    contract = tmp_path / "review.json"
+    review(contract)
+    xlsx(
+        workbook,
+        [
+            HEADERS,
+            [
+                "ANH",
+                "Anglian Water",
+                "2024-25",
+                "M1",
+                "Measure",
+                raw_value,
+                "count",
+                "Definition",
+                "Table",
+            ],
+        ],
+    )
+
+    result = main(
+        [
+            str(workbook),
+            "--review",
+            str(contract),
+            "--output-root",
+            str(tmp_path / "output"),
+        ]
+    )
+
+    assert result == 1
+    rejected = json.loads(capsys.readouterr().err)
+    assert rejected["status"] == "rejected"
+    assert rejected["rejected"] == 1
+    assert "Invalid numeric performance value" in rejected["error"]
+
+
+def test_rejects_negative_shared_string_index(tmp_path: Path) -> None:
+    workbook = tmp_path / "negative-shared-string.xlsx"
+    contract = tmp_path / "review.json"
+    review(contract)
+    xlsx_archive(
+        workbook,
+        '<row r="1"><c r="A1" t="s"><v>-1</v></c></row>',
+        shared_strings_xml=(
+            '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            "<si><t>Company ID</t></si></sst>"
+        ),
+    )
+
+    with pytest.raises(CompanyPerformancePreparationError, match="shared workbook string"):
+        prepare(workbook, contract, tmp_path / "output")
+
+
+def test_rejects_duplicate_cell_position(tmp_path: Path) -> None:
+    workbook = tmp_path / "duplicate-cell.xlsx"
+    contract = tmp_path / "review.json"
+    review(contract)
+    xlsx_archive(
+        workbook,
+        '<row r="1"><c r="A1" t="inlineStr"><is><t>Company ID</t></is></c>'
+        '<c r="A1" t="inlineStr"><is><t>Replacement</t></is></c></row>',
+    )
+
+    with pytest.raises(CompanyPerformancePreparationError, match="duplicate cell position"):
+        prepare(workbook, contract, tmp_path / "output")

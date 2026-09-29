@@ -136,6 +136,8 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
     assert "actions/upload-artifact" in text
     assert "python -m watergeo.operations.public_artifact web/dist" in text
     assert "deploy" not in text.lower()
+    assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in text
+    assert "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0" in text
 
 
 def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
@@ -154,8 +156,17 @@ def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
     text = path.read_text()
     assert "VITE_BASE_PATH: /WaterGeo-UK/" in text
     assert "python -m watergeo.operations.public_artifact web/dist" in text
-    assert "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b" in text
-    assert "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e" in text
+    expected_actions = {
+        "actions/setup-node": ("820762786026740c76f36085b0efc47a31fe5020", "v7.0.0"),
+        "actions/configure-pages": ("45bfe0192ca1faeb007ade9deae92b16b8254a0d", "v6.0.0"),
+        "actions/upload-pages-artifact": (
+            "fc324d3547104276b827a68afc52ff2a11cc49c9",
+            "v5.0.0",
+        ),
+        "actions/deploy-pages": ("368f82528645a54fb793d4d04e342629a3f51346", "v5.0.1"),
+    }
+    for action, (commit, version) in expected_actions.items():
+        assert f"{action}@{commit} # {version}" in text
     assert "schedule:" not in text
 
 

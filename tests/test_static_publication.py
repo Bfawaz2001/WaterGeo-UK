@@ -187,6 +187,7 @@ def test_publication_is_deterministic_complete_and_refuses_overwrite(tmp_path: P
     assert first["sources"]["rainfall"]["snapshot_id"] == SNAPSHOT
     report = json.loads((tmp_path / "first" / "publication-report.json").read_text())
     assert report["publication_id"] == first["publication_id"]
+    assert report["scope"] == "data_bundle"
     assert report["generated_at"] == first["generated_at"]
     assert report["watergeo"]["commit"] == COMMIT
     assert report["total_file_count"] == len(first["files"]) + 2
@@ -194,7 +195,8 @@ def test_publication_is_deterministic_complete_and_refuses_overwrite(tmp_path: P
         path.stat().st_size for path in (tmp_path / "first").rglob("*") if path.is_file()
     )
     assert report["products"]["rainfall"]["counts"]["items.json"] == 1
-    assert report["hosting"]["within_site_limit"] is True
+    assert report["hosting"]["data_bundle_within_site_limit"] is True
+    assert "within_site_limit" not in report["hosting"]
     assert set(first["sources"]) == {
         "hydrology",
         "water-quality",

@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 import re
 import sys
 import zipfile
@@ -175,6 +176,10 @@ def _workbook_rows(path: Path, sheet_name: str) -> list[list[str]]:
             column = 0
             for character in match.group(1):
                 column = column * 26 + ord(character) - 64
+            if column in values:
+                raise CompanyPerformancePreparationError(
+                    "Workbook row contains a duplicate cell position"
+                )
             kind = cell.attrib.get("t")
             value_node = cell.find("m:v", NS)
             if kind == "inlineStr":
@@ -183,7 +188,10 @@ def _workbook_rows(path: Path, sheet_name: str) -> list[list[str]]:
                 value = ""
             elif kind == "s":
                 try:
-                    value = shared[int(value_node.text or "")]
+                    index = int(value_node.text or "")
+                    if index < 0:
+                        raise IndexError
+                    value = shared[index]
                 except (ValueError, IndexError) as error:
                     raise CompanyPerformancePreparationError(
                         "Invalid shared workbook string"
@@ -244,6 +252,10 @@ def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path,
                 raise CompanyPerformancePreparationError(
                     f"Invalid numeric performance value at row {row_number}"
                 ) from error
+            if not math.isfinite(value):
+                raise CompanyPerformancePreparationError(
+                    f"Invalid numeric performance value at row {row_number}"
+                )
             state = "reported"
         item = {**source, "value": value, "value_state": state}
         items.append(item)

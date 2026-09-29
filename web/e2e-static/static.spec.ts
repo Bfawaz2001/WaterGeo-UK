@@ -210,3 +210,39 @@ test("static production mode shows national layers, caveats and company facts", 
   expect(failedAssets).toEqual([]);
   expect(criticalConsole).toEqual([]);
 });
+
+test("Pages build serves its real static publication assets", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
+
+  await page.goto("./?zoom=5.5&lon=-2.5&lat=54.5");
+  await page.getByRole("button", { name: "Start exploring" }).click();
+
+  const assets = await page.evaluate(async () => {
+    const names = [
+      "manifest.json",
+      "source-status.json",
+      "search-index.json",
+      "publication-report.json",
+    ];
+    return await Promise.all(
+      names.map(async (name) => {
+        const response = await fetch(new URL(`watergeo-data/${name}`, window.location.href));
+        return { name, status: response.status, value: (await response.json()) as unknown };
+      }),
+    );
+  });
+
+  for (const asset of assets) expect(asset.status, asset.name).toBe(200);
+  const manifest = assets.find((asset) => asset.name === "manifest.json")?.value as {
+    publication_id: string;
+  };
+  await page.getByText("Publication details").click();
+  await expect(page.getByText(`Publication ${manifest.publication_id}`)).toBeVisible();
+  expect(requests).toContain("/WaterGeo-UK/watergeo-data/manifest.json");
+  expect(requests).toContain("/WaterGeo-UK/watergeo-data/source-status.json");
+  expect(requests).toContain("/WaterGeo-UK/watergeo-data/search-index.json");
+  expect(requests).toContain("/WaterGeo-UK/watergeo-data/publication-report.json");
+  expect(requests.some((path) => path.startsWith("/watergeo-data/"))).toBe(false);
+  expect(requests.some((path) => path.startsWith("/v1/"))).toBe(false);
+});

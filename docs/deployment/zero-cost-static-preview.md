@@ -32,12 +32,16 @@ artifact-only scheduled/manual validation and now runs the same public-artifact 
 
 Each data bundle includes `publication-report.json` with the publication identity and
 time, WaterGeo commit/version, total bytes/files, product and analytical sizes/counts,
-largest assets, and a 1 GiB GitHub Pages site-limit assessment. Canonical hashes remain
-in `manifest.json`; the report links to that map rather than copying it.
+largest assets, and a preliminary 1 GiB limit assessment scoped explicitly to the data
+bundle. Canonical hashes remain in `manifest.json`; the report links to that map rather
+than copying it. The data-only result does not prove that the complete site fits the
+Pages limit. The final `python -m watergeo.operations.public_artifact web/dist` check,
+after HTML, JavaScript, CSS, icons and data have been assembled, is authoritative for
+complete-site size.
 
-Reject a release if the report exceeds the Pages site limit, required provenance or
-licensing is missing, hashes fail, a required asset returns 404, the Pages base-path
-test fails, the artifact guard fails, or static browser acceptance fails.
+Reject a release if the data bundle exceeds the preliminary limit, required provenance
+or licensing is missing, hashes fail, a required asset returns 404, the Pages base-path
+test fails, the final-site artifact guard fails, or static browser acceptance fails.
 
 ## Activate after review
 
