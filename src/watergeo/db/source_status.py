@@ -12,6 +12,7 @@ from watergeo.ingestion.catchments import PLAN_VERSION
 from watergeo.ingestion.catchments import VERSION as CATCHMENT_VERSION
 from watergeo.ingestion.hydrology import VERSION as HYDROLOGY_VERSION
 from watergeo.ingestion.hydrology_history import VERSION as HISTORY_VERSION
+from watergeo.ingestion.phase15_sources import VERSION as PHASE15_VERSION
 from watergeo.ingestion.stream_reservoirs import EDITION as STREAM_RESERVOIR_EDITION
 from watergeo.ingestion.stream_reservoirs import VERSION as STREAM_RESERVOIR_VERSION
 from watergeo.ingestion.thames_discharge import API_VERSION as THAMES_API_VERSION
@@ -88,6 +89,33 @@ def describe(
             "threshold, not a publisher SLA or evidence of water quality or bathing safety. "
             "Publisher status timestamps omit a timezone offset.",
         ),
+        "rainfall": (
+            "dynamic_snapshot",
+            PHASE15_VERSION,
+            "EA Flood Monitoring API 0.9",
+            "Latest accepted retrieval, not a publisher SLA. Measurement periods and "
+            "publisher transfer times are distinct.",
+        ),
+        "flood-monitoring": (
+            "dynamic_snapshot",
+            PHASE15_VERSION,
+            "EA Flood Monitoring API 0.9",
+            "Not an emergency warning service. Use the official Environment Agency flood "
+            "service for safety decisions.",
+        ),
+        "bathing-waters": (
+            "dynamic_snapshot",
+            PHASE15_VERSION,
+            "Linked Data API 0.2",
+            "Seasonal publisher product. Classification, sample context and advice are "
+            "separate; WaterGeo does not make a safe-to-swim judgement.",
+        ),
+        "company-performance": (
+            "versioned_release",
+            PHASE15_VERSION,
+            "WCPR 2024-25 / PR24 V6.0",
+            "Publication-period regulatory facts; retrieval age does not imply a new edition.",
+        ),
     }
     semantics, version, source_version, caveat = contracts[source]
     values: dict[str, Any] = dict(row or {})
@@ -126,6 +154,15 @@ def describe(
         values["retrieval_freshness"] = freshness(
             values["snapshot_age_seconds"], settings.thames_discharge_retrieval_max_age_seconds
         )
+    elif source in {"rainfall", "flood-monitoring", "bathing-waters"}:
+        limits = {
+            "rainfall": settings.rainfall_retrieval_max_age_seconds,
+            "flood-monitoring": settings.flood_retrieval_max_age_seconds,
+            "bathing-waters": settings.bathing_waters_retrieval_max_age_seconds,
+        }
+        limit = limits[source]
+        values["retrieval_max_age_seconds"] = limit
+        values["retrieval_freshness"] = freshness(values["snapshot_age_seconds"], limit)
     else:
         values["retrieval_freshness"] = "not_applicable" if row else "unknown"
     for bound in ("oldest", "newest"):
@@ -187,6 +224,37 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
             SELECT id AS snapshot_id,content_sha256,retrieval_started_at,
                 retrieval_completed_at AS retrieved_at,site_count AS observation_count,
                 0 AS missing_value_count FROM latest""",
+        "rainfall": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.entity_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='rainfall' AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
+        "flood-monitoring": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.secondary_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='flood-monitoring'
+                AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
+        "bathing-waters": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.entity_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='bathing-waters'
+                AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
+        "company-performance": """SELECT s.id AS snapshot_id,s.content_sha256,
+            r.retrieval_started_at,r.retrieval_completed_at AS retrieved_at,
+            s.secondary_count AS observation_count,0 AS missing_value_count
+            FROM watergeo.national_source_retrieval r
+            JOIN watergeo.national_source_snapshot s ON s.id=r.snapshot_id
+            WHERE s.source_key='company-performance'
+                AND s.normalization_version=:phase15_version
+            ORDER BY r.retrieval_completed_at DESC,r.id DESC LIMIT 1""",
     }
     parameters = {
         "water_quality_version": WATER_QUALITY_VERSION,
@@ -199,6 +267,7 @@ def source_statuses(engine: Engine, settings: Settings) -> SourceStatuses:
         "stream_reservoir_version": STREAM_RESERVOIR_VERSION,
         "stream_edition": STREAM_RESERVOIR_EDITION,
         "thames_discharge_version": THAMES_DISCHARGE_VERSION,
+        "phase15_version": PHASE15_VERSION,
     }
     # Snapshot metadata and observation summaries must describe the same database view.
     with engine.connect().execution_options(isolation_level="REPEATABLE READ") as connection:

@@ -18,12 +18,15 @@ export const DEFAULT_STATE: ExplorerState = {
 
 const LAYERS = new Set<LayerId>([
   "hydrology",
+  "rainfall",
   "water-quality",
+  "flood-warnings",
+  "bathing-waters",
   "reservoirs",
   "thames-discharge",
   "water-supply",
 ]);
-const SELECTION = /^(hydrology|water-quality|reservoirs|thames-discharge|water-supply|water-body):.{1,160}$/u;
+const SELECTION = /^(hydrology|rainfall|water-quality|flood-warnings|bathing-waters|reservoirs|thames-discharge|water-supply|water-body):.{1,160}$/u;
 
 export function parseWaterSupplyId(value: string): number | null {
   if (!/^[0-9]+$/u.test(value)) return null;

@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError, api } from "./api";
+import { dataMode } from "./config";
+import { staticPublicationMetadata } from "./staticData";
 import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
 import { SearchBox } from "./SearchBox";
-import type { AreaPage, AreaSummary, LayerId, SearchResult, SelectedFeature, SourceStatuses, ThamesAlertStatus } from "./types";
+import type { AreaFeature, AreaPage, AreaSummary, CompanyPerformance, LayerId, NationalDetail, SearchResult, SelectedFeature, SourceStatuses, ThamesAlertStatus } from "./types";
 import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlState";
 import { useNearby, type ViewportQuery } from "./useNearby";
 import { WaterBodyBrowser } from "./WaterBodyBrowser";
@@ -22,6 +24,9 @@ const MapView = lazy(async () => {
 function selectionKey(selected: SelectedFeature | null): string | null {
   if (!selected) return null;
   if (selected.kind === "hydrology") return `hydrology:${selected.item.station_id}`;
+  if (selected.kind === "rainfall") return `rainfall:${selected.item.station_id}`;
+  if (selected.kind === "bathing-waters") return `bathing-waters:${selected.item.bathing_water_id}`;
+  if (selected.kind === "flood-warnings") return `flood-warnings:${selected.item.area_id}`;
   if (selected.kind === "water-quality") return `water-quality:${selected.item.sampling_point_id}`;
   if (selected.kind === "reservoirs") return `reservoirs:${selected.item.reservoir_id}`;
   if (selected.kind === "thames-discharge") return `thames-discharge:${selected.item.site_id}`;
@@ -30,6 +35,7 @@ function selectionKey(selected: SelectedFeature | null): string | null {
 }
 
 export function App() {
+  const mode = dataMode();
   const initial = useMemo(() => parseExplorerState(window.location.search), []);
   const [layers, setLayers] = useState(initial.layers);
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 740);
@@ -50,7 +56,11 @@ export function App() {
     () => nearby.thamesDischarge ?? [],
     [nearby.thamesDischarge],
   );
+  const rainfall = nearby.rainfall ?? [];
+  const bathingWaters = nearby.bathingWaters ?? [];
+  const floodWarnings = nearby.floodWarnings ?? [];
   const [sourceStatus, setSourceStatus] = useState<SourceStatuses | null>(null);
+  const [staticGeneratedAt, setStaticGeneratedAt] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [selected, setSelected] = useState<SelectedFeature | null>(null);
   const [mapFocus, setMapFocus] = useState<{ key: string; longitude?: number; latitude?: number } | null>(null);
@@ -74,6 +84,19 @@ export function App() {
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (mode !== "static") return;
+    const controller = new AbortController();
+    void staticPublicationMetadata(controller.signal)
+      .then((manifest) => setStaticGeneratedAt(manifest.generated_at))
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setStatusError("Static publication metadata is currently unavailable.");
+        }
+      });
+    return () => controller.abort();
+  }, [mode]);
 
   useEffect(() => () => {
     lookupController.current?.abort();
@@ -174,6 +197,31 @@ export function App() {
         setSelected({ kind: layer, item, dataset });
         if (item.longitude !== null && item.latitude !== null) setMapFocus({ key: `${layer}:${identity}`, longitude: item.longitude, latitude: item.latitude });
       }
+    } else if (layer === "rainfall") {
+      const item = rainfall.find((candidate) => candidate.station_id === identity);
+      const dataset = nearby.provenance.rainfall;
+      if (item && dataset) {
+        setSelected({ kind: layer, item, dataset });
+        setMapFocus({
+          key: `${layer}:${identity}`,
+          ...(item.longitude === null ? {} : { longitude: item.longitude }),
+          ...(item.latitude === null ? {} : { latitude: item.latitude }),
+        });
+      }
+    } else if (layer === "bathing-waters") {
+      const item = bathingWaters.find((candidate) => candidate.bathing_water_id === identity);
+      const dataset = nearby.provenance["bathing-waters"];
+      if (item && dataset) {
+        setSelected({ kind: layer, item, dataset });
+        setMapFocus({ key: `${layer}:${identity}`, longitude: item.longitude, latitude: item.latitude });
+      }
+    } else if (layer === "flood-warnings") {
+      const item = floodWarnings.find((candidate) => candidate.area_id === identity);
+      const dataset = nearby.provenance["flood-warnings"];
+      if (item && dataset) {
+        setSelected({ kind: layer, item, dataset });
+        setMapFocus({ key: `${layer}:${identity}` });
+      }
     } else if (layer === "water-quality") {
       const item = nearby.waterQuality.find((candidate) => candidate.sampling_point_id === identity);
       const dataset = nearby.provenance["water-quality"];
@@ -221,6 +269,32 @@ export function App() {
       });
   };
 
+  const selectSupplyArea = async (item: AreaFeature, signal: AbortSignal) => {
+    let performance: NationalDetail<CompanyPerformance> | null = null;
+    const acronym = item.properties.company_acronym;
+    if (acronym) {
+      try {
+        const companies = await api.companyPerformanceCompanies(signal);
+        const company = companies.items.find(
+          (candidate) => candidate.boundary_company_acronym === acronym,
+        );
+        if (company) {
+          performance = await api.companyPerformance(
+            company.company_id,
+            companies.dataset.snapshot_id,
+            signal,
+          );
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") throw error;
+      }
+    }
+    if (!signal.aborted) {
+      setSelected({ kind: "water-supply", item, performance });
+      setMapFocus({ key: `water-supply:${item.id}` });
+    }
+  };
+
   const chooseArea = (area: AreaSummary) => {
     lookupController.current?.abort();
     const controller = new AbortController();
@@ -229,10 +303,7 @@ export function App() {
     setAreaError(undefined);
     void api
       .areaGeometry(area.source_id, controller.signal)
-      .then((item) => {
-        setSelected({ kind: "water-supply", item });
-        setMapFocus({ key: `water-supply:${item.id}` });
-      })
+      .then((item) => selectSupplyArea(item, controller.signal))
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setAreaError("The selected reviewed geometry could not be displayed.");
@@ -269,6 +340,25 @@ export function App() {
       enable("hydrology");
       setSelected({ kind: "hydrology", item: detail, dataset: detail.dataset });
       focusPoint(detail.longitude, detail.latitude);
+    } else if (result.kind === "rainfall") {
+      const detail = await api.rainfallDetail(result.identity, result.snapshot_id, controller.signal);
+      if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
+      enable("rainfall");
+      setSelected({ kind: "rainfall", item: detail.item, dataset: detail.dataset });
+      focusPoint(detail.item.longitude, detail.item.latitude);
+    } else if (result.kind === "bathing-waters") {
+      const detail = await api.bathingWaterDetail(result.identity, result.snapshot_id, controller.signal);
+      if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
+      enable("bathing-waters");
+      setSelected({ kind: "bathing-waters", item: detail.item, dataset: detail.dataset });
+      focusPoint(detail.item.longitude, detail.item.latitude);
+    } else if (result.kind === "flood-warnings") {
+      const page = await api.floodAreas(controller.signal, false);
+      const item = page.items.find((candidate) => candidate.area_id === result.identity);
+      if (page.dataset.snapshot_id !== result.snapshot_id || !item) throw new ApiError(503, "Search snapshot changed");
+      enable("flood-warnings");
+      setSelected({ kind: "flood-warnings", item, dataset: page.dataset });
+      focusPoint(null, null);
     } else if (result.kind === "water-quality") {
       const detail = await api.samplingPointDetail(result.identity, result.snapshot_id, controller.signal);
       if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
@@ -305,8 +395,7 @@ export function App() {
       const item = await api.areaGeometry(sourceId, controller.signal);
       if (item.properties.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
       enable("water-supply");
-      setSelected({ kind: "water-supply", item });
-      focusPoint(null, null);
+      await selectSupplyArea(item, controller.signal);
     }
   };
 
@@ -322,6 +411,14 @@ export function App() {
         <SearchBox onSelect={openSearchResult} />
         <button className="share-button" type="button" onClick={() => void copyShareUrl()} aria-label="Copy a shareable map URL"><Icon name="copy" /> <span>Copy view</span></button>
       </header>
+      {mode === "static" && (
+        <p className="static-snapshot-banner" role="status">
+          Static accepted snapshot
+          {staticGeneratedAt && (
+            <> · published <time dateTime={staticGeneratedAt}>{new Date(staticGeneratedAt).toLocaleString()}</time></>
+          )}. Point-in-polygon lookup requires API mode; search can open published supply areas.
+        </p>
+      )}
 
       <aside id="explorer-controls" className="control-panel" aria-label="Explorer controls" hidden={!panelOpen}>
         <OverviewControl onChange={setOverview} />
@@ -329,6 +426,9 @@ export function App() {
           active={layers}
           counts={{
             hydrology: nearby.hydrology.length,
+            rainfall: rainfall.length,
+            "bathing-waters": bathingWaters.length,
+            "flood-warnings": floodWarnings.length,
             "water-quality": nearby.waterQuality.length,
             reservoirs: nearby.reservoirs.length,
             "thames-discharge": thamesDischarge.length,
@@ -359,6 +459,9 @@ export function App() {
           <p>Current bounded results only; maximum 100 per source.</p>
           <ul className="result-list nearby-list">
             {layers.has("hydrology") && nearby.hydrology.map((item) => <li key={`h:${item.station_id}`}><button onClick={() => selectPoint("hydrology", item.station_id)}>Station: {item.labels[0] ?? item.station_id}</button></li>)}
+            {layers.has("rainfall") && rainfall.map((item) => <li key={`rf:${item.station_id}`}><button onClick={() => selectPoint("rainfall", item.station_id)}>Rainfall: {item.display_name ?? item.station_id}</button></li>)}
+            {layers.has("bathing-waters") && bathingWaters.map((item) => <li key={`b:${item.bathing_water_id}`}><button onClick={() => selectPoint("bathing-waters", item.bathing_water_id)}>Bathing water: {item.name}</button></li>)}
+            {layers.has("flood-warnings") && floodWarnings.map((item) => <li key={`f:${item.area_id}`}><button onClick={() => selectPoint("flood-warnings", item.area_id)}>Flood area: {item.label} · {item.severity}</button></li>)}
             {layers.has("water-quality") && nearby.waterQuality.map((item) => <li key={`q:${item.sampling_point_id}`}><button onClick={() => selectPoint("water-quality", item.sampling_point_id)}>Sampling point: {item.pref_label ?? item.alt_label}</button></li>)}
             {layers.has("reservoirs") && nearby.reservoirs.map((item) => <li key={`r:${item.reservoir_id}`}><button onClick={() => selectPoint("reservoirs", item.reservoir_id)}>Reservoir: {item.name}</button></li>)}
             {layers.has("thames-discharge") && thamesDischarge.map((item) => <li key={`t:${item.site_id}`}><button onClick={() => selectPoint("thames-discharge", item.site_id)}>Thames monitor: {item.location_name} · {item.alert_status}</button></li>)}
@@ -382,6 +485,9 @@ export function App() {
             initial={initial}
             activeLayers={layers}
             hydrology={nearby.hydrology}
+            rainfall={rainfall}
+            bathingWaters={bathingWaters}
+            floodWarnings={floodWarnings}
             waterQuality={nearby.waterQuality}
             reservoirs={nearby.reservoirs}
             thamesDischarge={thamesDischarge}

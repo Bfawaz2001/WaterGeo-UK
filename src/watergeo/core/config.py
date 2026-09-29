@@ -64,12 +64,18 @@ class Settings(DatabaseSettings):
     hydrology_observation_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
     water_quality_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
     thames_discharge_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
+    rainfall_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
+    flood_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
+    bathing_waters_retrieval_max_age_seconds: int | None = Field(default=None, ge=1, le=31536000)
 
     @field_validator(
         "hydrology_retrieval_max_age_seconds",
         "hydrology_observation_max_age_seconds",
         "water_quality_retrieval_max_age_seconds",
         "thames_discharge_retrieval_max_age_seconds",
+        "rainfall_retrieval_max_age_seconds",
+        "flood_retrieval_max_age_seconds",
+        "bathing_waters_retrieval_max_age_seconds",
         mode="before",
     )
     @classmethod

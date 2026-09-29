@@ -15,8 +15,11 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { FALLBACK_STYLE, basemapStyle } from "./config";
 import type {
   AreaFeature,
+  BathingWater,
+  FloodArea,
   GeoJSONFeatureCollection,
   HydrologyStation,
+  RainfallStation,
   LayerId,
   Reservoir,
   SamplingPoint,
@@ -33,7 +36,9 @@ addProtocol("pmtiles", tileProtocol.tile);
 
 const SOURCE_LAYERS = {
   hydrology: "watergeo-hydrology",
+  rainfall: "watergeo-rainfall",
   "water-quality": "watergeo-water-quality",
+  "bathing-waters": "watergeo-bathing-waters",
   reservoirs: "watergeo-reservoirs",
   "thames-discharge": "watergeo-thames-discharge",
 } as const;
@@ -44,6 +49,9 @@ interface Props {
   initial: { longitude: number; latitude: number; zoom: number };
   activeLayers: Set<LayerId>;
   hydrology: HydrologyStation[];
+  rainfall?: RainfallStation[];
+  bathingWaters?: BathingWater[];
+  floodWarnings?: FloodArea[];
   waterQuality: SamplingPoint[];
   reservoirs: Reservoir[];
   thamesDischarge?: ThamesDischargeSite[];
@@ -102,7 +110,9 @@ function addExplorerSources(map: MapLibreMap): void {
     });
     const colors: Record<string, string> = {
       hydrology: "#007f8b",
+      rainfall: "#2766aa",
       "water-quality": "#6c55a3",
+      "bathing-waters": "#00a3b8",
       reservoirs: "#c4682f",
       "thames-discharge": "#c23857",
     };
@@ -145,6 +155,24 @@ function addExplorerSources(map: MapLibreMap): void {
         },
       });
     }
+  }
+  if (!map.getSource("watergeo-flood-warnings")) {
+    map.addSource("watergeo-flood-warnings", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    map.addLayer({
+      id: "watergeo-flood-warnings-fill",
+      source: "watergeo-flood-warnings",
+      type: "fill",
+      paint: { "fill-color": "#c33b32", "fill-opacity": 0.28 },
+    });
+    map.addLayer({
+      id: "watergeo-flood-warnings-line",
+      source: "watergeo-flood-warnings",
+      type: "line",
+      paint: { "line-color": "#8b211b", "line-width": 2 },
+    });
   }
   if (!map.getSource("watergeo-area")) {
     map.addSource("watergeo-area", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -203,6 +231,9 @@ export function MapView({
   initial,
   activeLayers,
   hydrology,
+  rainfall = [],
+  bathingWaters = [],
+  floodWarnings = [],
   waterQuality,
   reservoirs,
   thamesDischarge = [],
@@ -276,7 +307,10 @@ export function MapView({
       const clusterLayers = Object.values(SOURCE_LAYERS)
         .map((layer) => `${layer}-clusters`)
         .filter((layer) => map.getLayer(layer));
-      const layerIds = [...pointLayers, ...clusterLayers];
+      const floodLayers = map.getLayer("watergeo-flood-warnings-fill")
+        ? ["watergeo-flood-warnings-fill"]
+        : [];
+      const layerIds = [...pointLayers, ...clusterLayers, ...floodLayers];
       const feature = map.queryRenderedFeatures(event.point, { layers: layerIds })[0];
       if (!feature) {
         if (callbacks.current.activeLayers.has("water-supply")) {
@@ -337,6 +371,21 @@ export function MapView({
     addExplorerSources(map);
     setData(
       map,
+      SOURCE_LAYERS.rainfall,
+      pointCollection(
+        rainfall.map((item) => ({
+          geometry:
+            item.longitude === null || item.latitude === null
+              ? null
+              : { type: "Point", coordinates: [item.longitude, item.latitude] },
+          id: item.station_id,
+          label: item.display_name ?? `Rainfall station ${item.station_id}`,
+        })),
+        "rainfall",
+      ),
+    );
+    setData(
+      map,
       SOURCE_LAYERS.hydrology,
       pointCollection(
         hydrology.map((item) => ({
@@ -345,6 +394,18 @@ export function MapView({
           label: item.labels[0] ?? item.station_id,
         })),
         "hydrology",
+      ),
+    );
+    setData(
+      map,
+      SOURCE_LAYERS["bathing-waters"],
+      pointCollection(
+        bathingWaters.map((item) => ({
+          geometry: { type: "Point", coordinates: [item.longitude, item.latitude] },
+          id: item.bathing_water_id,
+          label: item.name,
+        })),
+        "bathing-waters",
       ),
     );
     setData(
@@ -380,6 +441,18 @@ export function MapView({
       ),
     );
     setData(map, "watergeo-area", area ?? { type: "FeatureCollection", features: [] });
+    setData(map, "watergeo-flood-warnings", {
+      type: "FeatureCollection",
+      features: floodWarnings.map((item) => ({
+        type: "Feature",
+        id: item.area_id,
+        geometry: item.geometry,
+        properties: { identity: item.area_id, label: item.label, kind: "flood-warnings" },
+      })),
+    });
+    const floodVisibility = activeLayers.has("flood-warnings") ? "visible" : "none";
+    map.setLayoutProperty("watergeo-flood-warnings-fill", "visibility", floodVisibility);
+    map.setLayoutProperty("watergeo-flood-warnings-line", "visibility", floodVisibility);
     setData(map, "watergeo-water-body", waterBody ?? { type: "FeatureCollection", features: [] });
     for (const [kind, layer] of Object.entries(SOURCE_LAYERS)) {
       const visibility = activeLayers.has(kind as LayerId) ? "visible" : "none";
@@ -387,7 +460,7 @@ export function MapView({
       map.setLayoutProperty(`${layer}-clusters`, "visibility", visibility);
       map.setLayoutProperty(`${layer}-cluster-count`, "visibility", visibility);
     }
-  }, [activeLayers, area, hydrology, reservoirs, styleRevision, thamesDischarge, waterBody, waterQuality]);
+  }, [activeLayers, area, bathingWaters, floodWarnings, hydrology, rainfall, reservoirs, styleRevision, thamesDischarge, waterBody, waterQuality]);
 
   useEffect(() => {
     const map = mapRef.current;

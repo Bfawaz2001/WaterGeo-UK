@@ -40,13 +40,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ["playwright.config.ts"],
+    files: ["playwright*.config.ts"],
     languageOptions: {
       globals: globals.node,
     },
   },
   {
-    files: ["e2e/**/*.ts"],
+    files: ["e2e/**/*.ts", "e2e-static/**/*.ts"],
     languageOptions: {
       globals: {
         ...globals.browser,

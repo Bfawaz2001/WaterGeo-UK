@@ -1,12 +1,19 @@
-import { apiBasePath } from "./config";
+import { apiBasePath, dataMode } from "./config";
+import { clearStaticCaches, StaticDataError, staticRequest } from "./staticData";
 import type {
   AreaFeature,
   AreaPage,
   CatchmentDataset,
+  CompanyPerformance,
+  DatasetProvenance,
+  BathingWater,
+  FloodArea,
   GeoJSONFeatureCollection,
   HydrologyDetail,
   HydrologyStation,
+  RainfallStation,
   NearbyPage,
+  NationalDetail,
   Reservoir,
   ReservoirDetail,
   SearchResponse,
@@ -72,6 +79,15 @@ async function request<T>(
   path: string,
   options: { signal?: AbortSignal | undefined; immutable?: boolean | undefined; responseKind?: "json" | "geojson" } = {},
 ): Promise<T> {
+  if (dataMode() === "static") {
+    try {
+      return await staticRequest<T>(path, options.signal);
+    } catch (error) {
+      if (error instanceof StaticDataError) throw new ApiError(error.status, error.message);
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+      throw new ApiError(0, "The static WaterGeo snapshot could not be loaded");
+    }
+  }
   const url = pathFor(path);
   if (options.immutable && immutableCache.has(url)) return immutableCache.get(url) as T;
   if (!options.signal && pending.has(url)) return pending.get(url) as Promise<T>;
@@ -168,6 +184,46 @@ export const api = {
     request<{ dataset: { snapshot_id: string }; items: Array<{ observed_at: string; current_percentage: number; current_level: number; current_level_unit: string }>; next_after: string | null }>(`/v1/severn-trent/reservoir-levels/reservoirs/${encodeURIComponent(id)}/readings?${query({ snapshot_id: snapshot, limit: 100 })}`, { signal }),
   sourceStatuses: (signal?: AbortSignal) =>
     request<SourceStatuses>("/v1/sources/status", { signal }),
+  companyPerformanceCompanies: (signal: AbortSignal) =>
+    request<NearbyPage<Pick<CompanyPerformance, "company_id" | "company_name" | "boundary_company_acronym">>>(
+      "/v1/company-performance/companies",
+      { signal },
+    ),
+  companyPerformance: (id: string, snapshot: string, signal: AbortSignal) =>
+    request<NationalDetail<CompanyPerformance>>(
+      withQuery(`/v1/company-performance/companies/${encodeURIComponent(id)}`, {
+        snapshot_id: snapshot,
+      }),
+      { signal },
+    ),
+  rainfallDetail: (id: string, snapshot: string, signal: AbortSignal) =>
+    request<NationalDetail<RainfallStation>>(
+      withQuery(`/v1/rainfall/stations/${encodeURIComponent(id)}`, { snapshot_id: snapshot }),
+      { signal },
+    ),
+  bathingWaterDetail: (id: string, snapshot: string, signal: AbortSignal) =>
+    request<NationalDetail<BathingWater>>(
+      withQuery(`/v1/bathing-waters/${encodeURIComponent(id)}`, { snapshot_id: snapshot }),
+      { signal },
+    ),
+
+  rainfallNear: (lon: number, lat: number, radius: number, signal: AbortSignal) =>
+    request<NearbyPage<RainfallStation>>(
+      `/v1/rainfall/stations/near?${query({ lon, lat, radius_m: radius, limit: 100 })}`,
+      { signal },
+    ),
+
+  bathingWatersNear: (lon: number, lat: number, radius: number, signal: AbortSignal) =>
+    request<NearbyPage<BathingWater>>(
+      `/v1/bathing-waters/near?${query({ lon, lat, radius_m: radius, limit: 100 })}`,
+      { signal },
+    ),
+
+  floodAreas: (signal: AbortSignal, warningsOnly = true) =>
+    request<{ dataset: DatasetProvenance; items: FloodArea[] }>(
+      `/v1/flood-monitoring/areas?${query({ warnings_only: String(warningsOnly) })}`,
+      { signal },
+    ),
 
   hydrologyNear: async (lon: number, lat: number, radius: number, signal: AbortSignal) =>
     await request<NearbyPage<HydrologyStation>>(
@@ -259,4 +315,5 @@ export const api = {
 export function clearApiCaches(): void {
   immutableCache.clear();
   pending.clear();
+  clearStaticCaches();
 }

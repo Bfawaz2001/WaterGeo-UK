@@ -1,6 +1,14 @@
 import type { Geometry } from "geojson";
 
-export type LayerId = "hydrology" | "water-quality" | "reservoirs" | "thames-discharge" | "water-supply";
+export type LayerId =
+  | "hydrology"
+  | "rainfall"
+  | "water-quality"
+  | "flood-warnings"
+  | "bathing-waters"
+  | "reservoirs"
+  | "thames-discharge"
+  | "water-supply";
 
 export interface PointGeometry {
   type: "Point";
@@ -105,6 +113,50 @@ export interface ThamesDischargeDetail extends ThamesDischargeSite {
   dataset: DatasetProvenance;
 }
 
+export interface RainfallStation {
+  station_id: string;
+  publisher_uri: string;
+  display_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  grid_reference: string | null;
+  latest_observed_at: string | null;
+  latest_value_mm: number | null;
+  latest_value: number | null;
+  latest_unit: string | null;
+  latest_period_seconds: number | null;
+  distance_m: number | null;
+}
+
+export interface BathingWater {
+  bathing_water_id: string;
+  publisher_uri: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  classification: string | null;
+  assessment_year: number | null;
+  latest_sample_uri: string | null;
+  latest_risk_prediction: unknown;
+  distance_m: number | null;
+}
+
+export interface FloodArea {
+  area_id: string;
+  label: string;
+  description: string;
+  county: string;
+  river_or_sea: string | null;
+  geometry: Geometry;
+  warning_id: string | null;
+  severity: string | null;
+  severity_level: number | null;
+  message: string | null;
+  time_raised: string | null;
+  time_message_changed: string | null;
+  time_severity_changed: string | null;
+}
+
 export type SearchKind = LayerId | "water-body";
 
 export interface SearchResult {
@@ -131,6 +183,27 @@ export interface NearbyPage<T> {
   items: T[];
   next_after_id: string | null;
   spatial_exclusion_note?: string | null;
+}
+
+export interface NationalDetail<T> {
+  dataset: DatasetProvenance;
+  item: T;
+}
+
+export interface CompanyPerformance {
+  company_id: string;
+  company_name: string;
+  boundary_company_acronym: string | null;
+  measures: Array<{
+    reporting_period: string;
+    measure_code: string;
+    measure_name: string;
+    value: number | null;
+    value_state: "reported" | "missing" | "not_applicable";
+    unit: string | null;
+    definition: string | null;
+    publication: string;
+  }>;
 }
 
 export interface AreaSummary {
@@ -237,7 +310,14 @@ export type SelectedFeature =
   | { kind: "water-quality"; item: SamplingPoint; dataset: DatasetProvenance }
   | { kind: "reservoirs"; item: Reservoir; dataset: DatasetProvenance }
   | { kind: "thames-discharge"; item: ThamesDischargeSite; dataset: DatasetProvenance }
-  | { kind: "water-supply"; item: AreaFeature }
+  | { kind: "rainfall"; item: RainfallStation; dataset: DatasetProvenance }
+  | { kind: "bathing-waters"; item: BathingWater; dataset: DatasetProvenance }
+  | { kind: "flood-warnings"; item: FloodArea; dataset: DatasetProvenance }
+  | {
+      kind: "water-supply";
+      item: AreaFeature;
+      performance?: NationalDetail<CompanyPerformance> | null;
+    }
   | {
       kind: "water-body";
       item: WaterBodyDetail;

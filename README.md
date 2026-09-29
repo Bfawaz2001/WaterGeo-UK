@@ -4,9 +4,10 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phases 1–13 are complete. Phase 14 is preparing the first hosted public
-preview without claiming that external infrastructure exists yet. Public hosting and
-real-tenant Fabric validation remain pending.** The
+**Status: Phase 14's full hosted deployment capability is complete, but no paid hosted
+runtime is provisioned. Phase 15 expands national source coverage and adds a zero-cost
+static publication profile. Public deployment and real-tenant Fabric validation remain
+pending.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -60,12 +61,20 @@ map remains the primary canvas; source status and technical metadata use progres
 disclosure, while observation timing, caveats and provenance remain visible. See the
 [Phase 13 explorer design](docs/design/phase-13-explorer.md).
 
+Phase 15 adds governed Environment Agency rainfall, flood-monitoring and bathing-water
+products plus a generic Ofwat company-performance model. The same accepted snapshots
+feed FastAPI/PostGIS, an optional analytical export and a vendor-neutral static explorer
+bundle. The static build is repository capability only: no Pages project, public URL or
+schedule has been enabled. See the [source portfolio](docs/data-sources/source-portfolio.md),
+[refresh policy](docs/guides/data-refresh-policy.md) and
+[zero-cost preview contract](docs/deployment/zero-cost-static-preview.md).
+
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
 
 ## Run the complete local demo
 
-After starting PostgreSQL and migrating to `0011`, one command inspects the database,
+After starting PostgreSQL and migrating to `0012`, one command inspects the database,
 preserves compatible snapshots, replays retained verified evidence where available,
 and loads only missing accepted demo sources:
 
@@ -154,7 +163,13 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /ready` | HTTP 200: PostGIS is available and the migration revision matches; otherwise HTTP 503 with a generic response. |
 | `GET /v1/water-supply/dataset` | Release, source identity, attribution, licence, counts and caveats. |
 | `GET /v1/sources/status` | Accepted source availability, retrieval/observation ages and explicit freshness policy. |
-| `GET /v1/search?q=river&limit=24` | Bounded current-snapshot prefix/identity search across six explorer entity types. |
+| `GET /v1/search?q=river&limit=24` | Bounded current-snapshot prefix/identity search across nine explorer entity types. |
+| `GET /v1/rainfall/dataset` | Latest accepted rainfall snapshot, licence, provenance and precision caveat. |
+| `GET /v1/rainfall/stations[/near]` | Paginated or bounded nearby EA rainfall gauges and latest publisher-period accumulation. |
+| `GET /v1/flood-monitoring/dataset` | Latest accepted operational flood snapshot and emergency-service caveat. |
+| `GET /v1/flood-monitoring/areas` | Official flood-area geometry with exact publisher warning severity where present. |
+| `GET /v1/bathing-waters[/near]` | Publisher bathing-water identity, classification and sample/advice relations. |
+| `GET /v1/company-performance/companies/{company_id}` | Generic publication-period Ofwat measures with explicit missing/N/A states. |
 | `GET /v1/severn-trent/reservoir-levels/dataset` | Pinned 2025 company reservoir-level edition and provenance. |
 | `GET /v1/severn-trent/reservoir-levels/reservoirs` | Keyset-paginated reservoir locations and latest edition reading. |
 | `GET /v1/severn-trent/reservoir-levels/reservoirs/near` | Bounded WGS84 distance search over publisher points. |

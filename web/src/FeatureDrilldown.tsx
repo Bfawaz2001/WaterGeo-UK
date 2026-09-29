@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api } from "./api";
+import { dataMode } from "./config";
 import { MetadataValue } from "./MetadataValue";
 import { TrendChart } from "./TrendChart";
 import type { HydrologyMeasure, ReservoirReading, SelectedFeature } from "./types";
@@ -11,10 +12,12 @@ type Drilldown =
   | { kind: "water-quality"; rows: Array<{ id: string; value: unknown }> };
 
 export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
+  const staticMode = dataMode() === "static";
   const [detail, setDetail] = useState<Drilldown | null>(null);
   const [error, setError] = useState(false);
   const [parameter, setParameter] = useState("");
   useEffect(() => {
+    if (staticMode) return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -44,8 +47,9 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
       } catch { if (!controller.signal.aborted) setError(true); }
     })();
     return () => controller.abort();
-  }, [selected]);
+  }, [selected, staticMode]);
   if (selected.kind === "water-supply" || selected.kind === "water-body" || selected.kind === "thames-discharge") return null;
+  if (staticMode) return <p className="caveat" role="note">Detailed observations are available in API mode; this static publication contains the mapped snapshot summary.</p>;
   if (error) return <p className="state-error" role="alert">Details unavailable or snapshot changed. Reselect a current result to retry.</p>;
   if (!detail) return <p role="status">Loading source details…</p>;
 

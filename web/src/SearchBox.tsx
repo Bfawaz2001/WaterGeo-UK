@@ -6,14 +6,18 @@ import { Icon, type IconName } from "./Icon";
 
 const KIND_LABELS: Record<SearchKind, string> = {
   hydrology: "Hydrology stations",
+  rainfall: "Rainfall gauges",
   "water-quality": "Water Quality sampling points",
+  "flood-warnings": "Flood areas",
+  "bathing-waters": "Bathing waters",
   reservoirs: "Reservoirs",
   "thames-discharge": "Thames discharge monitors",
   "water-body": "Water Bodies",
   "water-supply": "Water-supply areas",
 };
 const KIND_ICONS: Record<SearchKind, IconName> = {
-  hydrology: "hydrology", "water-quality": "water-quality", reservoirs: "reservoirs",
+  hydrology: "hydrology", rainfall: "hydrology", "water-quality": "water-quality",
+  "flood-warnings": "water-quality", "bathing-waters": "water-quality", reservoirs: "reservoirs",
   "thames-discharge": "thames-discharge", "water-body": "catchment", "water-supply": "water-supply",
 };
 
