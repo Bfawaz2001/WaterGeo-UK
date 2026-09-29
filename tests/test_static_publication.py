@@ -185,6 +185,16 @@ def test_publication_is_deterministic_complete_and_refuses_overwrite(tmp_path: P
     assert first["files"] == second["files"]
     assert str(tmp_path) not in json.dumps(first)
     assert first["sources"]["rainfall"]["snapshot_id"] == SNAPSHOT
+    report = json.loads((tmp_path / "first" / "publication-report.json").read_text())
+    assert report["publication_id"] == first["publication_id"]
+    assert report["generated_at"] == first["generated_at"]
+    assert report["watergeo"]["commit"] == COMMIT
+    assert report["total_file_count"] == len(first["files"]) + 2
+    assert report["total_publication_bytes"] == sum(
+        path.stat().st_size for path in (tmp_path / "first").rglob("*") if path.is_file()
+    )
+    assert report["products"]["rainfall"]["counts"]["items.json"] == 1
+    assert report["hosting"]["within_site_limit"] is True
     assert set(first["sources"]) == {
         "hydrology",
         "water-quality",
@@ -294,4 +304,7 @@ def test_optional_analytical_outputs_preserve_snapshot_metadata(tmp_path: Path) 
     assert warnings.column("severity_level").to_pylist() == [3]
     performance = parquet.read_table(tmp_path / "analytics/analytics/company-performance.parquet")
     assert performance.column("value").to_pylist() == [0]
+    report = json.loads((tmp_path / "analytics/publication-report.json").read_text())
+    assert report["analytics"]["files"] == 5
+    assert report["analytics"]["counts"]["company-performance.parquet"] == 1
     api.close()

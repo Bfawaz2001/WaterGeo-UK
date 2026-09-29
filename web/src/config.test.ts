@@ -6,6 +6,7 @@ import {
   apiBasePath,
   basemapStyle,
   dataMode,
+  deploymentBasePath,
   staticDataPath,
 } from "./config";
 
@@ -23,12 +24,24 @@ describe("explorer configuration", () => {
     expect(basemapStyle("")).toBe(FALLBACK_STYLE);
   });
 
-  it("validates API and static data modes and same-origin static paths", () => {
+  it("derives root and repository static paths from the deployment base", () => {
     expect(dataMode(undefined)).toBe("api");
     expect(dataMode("static")).toBe("static");
     expect(() => dataMode("hybrid")).toThrow("api or static");
-    expect(staticDataPath(undefined)).toBe("/watergeo-data");
-    expect(staticDataPath("/snapshot/")).toBe("/snapshot");
-    expect(() => staticDataPath("https://example.test/data")).toThrow("same-origin");
+    expect(deploymentBasePath("/")).toBe("/");
+    expect(deploymentBasePath("/WaterGeo-UK/")).toBe("/WaterGeo-UK/");
+    expect(deploymentBasePath("/WaterGeo-UK")).toBe("/WaterGeo-UK/");
+    expect(staticDataPath(undefined, "/")).toBe("/watergeo-data");
+    expect(staticDataPath(undefined, "/WaterGeo-UK/")).toBe("/WaterGeo-UK/watergeo-data");
+    expect(staticDataPath("/snapshot/", "/WaterGeo-UK/")).toBe("/snapshot");
+  });
+
+  it("rejects external and cross-origin static paths", () => {
+    for (const value of ["data", "//example.test/data", "https://example.test/data", "/data?x=1", "/data#x", "/\\host/data"]) {
+      expect(() => staticDataPath(value, "/")).toThrow("same-origin absolute path");
+    }
+    expect(() => deploymentBasePath("https://example.test/WaterGeo-UK/")).toThrow(
+      "same-origin absolute path",
+    );
   });
 });

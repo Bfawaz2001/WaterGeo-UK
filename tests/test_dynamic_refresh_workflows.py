@@ -134,7 +134,29 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
     text = Path(".github/workflows/static-preview-build.yml").read_text()
     assert "watergeo-static-publish" in text
     assert "actions/upload-artifact" in text
+    assert "python -m watergeo.operations.public_artifact web/dist" in text
     assert "deploy" not in text.lower()
+
+
+def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
+    path = Path(".github/workflows/static-pages.yml")
+    workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)  # noqa: S506
+    assert workflow["on"] == {"workflow_dispatch": ""}
+    assert workflow["permissions"] == {"contents": "read", "actions": "read"}
+    build = workflow["jobs"]["build"]
+    assert build["permissions"] == {"contents": "read", "actions": "read", "pages": "read"}
+    condition = " ".join(build["if"].split())
+    assert "github.repository == 'Bfawaz2001/WaterGeo-UK'" in condition
+    assert "github.ref == 'refs/heads/main'" in condition
+    deploy = workflow["jobs"]["deploy"]
+    assert deploy["permissions"] == {"pages": "write", "id-token": "write"}
+    assert deploy["environment"]["name"] == "github-pages"
+    text = path.read_text()
+    assert "VITE_BASE_PATH: /WaterGeo-UK/" in text
+    assert "python -m watergeo.operations.public_artifact web/dist" in text
+    assert "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b" in text
+    assert "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e" in text
+    assert "schedule:" not in text
 
 
 @pytest.mark.parametrize("value", ["43 2 * * * *", "60 2 * * *", "43 24 * * *", "*/0 * * * *"])

@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import importlib.metadata
 import json
 import shutil
 import subprocess
@@ -153,6 +154,82 @@ def _write(staging: Path, relative: str, value: Any) -> dict[str, Any]:
         if isinstance(collection, list):
             count = len(collection)
     return {"bytes": len(body), "sha256": hashlib.sha256(body).hexdigest(), "count": count}
+
+
+def _publication_report(
+    staging: Path, manifest: dict[str, Any], manifest_bytes: bytes
+) -> dict[str, Any]:
+    files = manifest["files"]
+
+    def summary(prefix: str) -> dict[str, Any]:
+        selected = {name: value for name, value in files.items() if name.startswith(prefix)}
+        return {
+            "bytes": sum(value["bytes"] for value in selected.values()),
+            "files": len(selected),
+            "counts": {
+                name.removeprefix(prefix): value["count"]
+                for name, value in selected.items()
+                if value.get("count") is not None
+            },
+        }
+
+    products = {
+        name: summary(f"datasets/{name}/")
+        for name in sorted(
+            {
+                path.split("/", 2)[1]
+                for path in files
+                if path.startswith("datasets/") and path.count("/") >= 2
+            }
+        )
+    }
+    analytics = summary("analytics/")
+    known_assets = {
+        **files,
+        "manifest.json": {
+            "bytes": len(manifest_bytes),
+            "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "count": None,
+        },
+    }
+    largest = [
+        {"path": name, "bytes": value["bytes"]}
+        for name, value in sorted(
+            known_assets.items(), key=lambda item: (-item[1]["bytes"], item[0])
+        )[:10]
+    ]
+    report: dict[str, Any] = {
+        "report_version": "watergeo-publication-report-v1",
+        "publication_id": manifest["publication_id"],
+        "generated_at": manifest["generated_at"],
+        "watergeo": {
+            "commit": manifest["watergeo_commit"],
+            "version": importlib.metadata.version("watergeo-uk"),
+        },
+        "manifest": "manifest.json",
+        "manifest_hashes": "manifest.json#/files",
+        "total_publication_bytes": 0,
+        "total_file_count": len(known_assets) + 1,
+        "products": products,
+        "analytics": analytics,
+        "largest_assets": largest,
+        "hosting": {
+            "provider": "github_pages",
+            "site_limit_bytes": 1024 * 1024 * 1024,
+            "within_site_limit": False,
+        },
+    }
+    content_bytes = sum(value["bytes"] for value in known_assets.values())
+    for _ in range(10):
+        body = encode(report)
+        total = content_bytes + len(body)
+        if report["total_publication_bytes"] == total:
+            break
+        report["total_publication_bytes"] = total
+        report["hosting"]["within_site_limit"] = total <= report["hosting"]["site_limit_bytes"]
+    else:
+        raise StaticPublicationError("Publication report size did not stabilize")
+    return report
 
 
 def _point_product(
@@ -582,7 +659,11 @@ def build_publication(
                 "WaterGeo is not an emergency flood-warning or bathing-safety service.",
             ],
         }
-        (staging / "manifest.json").write_bytes(encode(manifest))
+        manifest_bytes = encode(manifest)
+        (staging / "manifest.json").write_bytes(manifest_bytes)
+        (staging / "publication-report.json").write_bytes(
+            encode(_publication_report(staging, manifest, manifest_bytes))
+        )
         shutil.move(staging, destination)
     return manifest
 

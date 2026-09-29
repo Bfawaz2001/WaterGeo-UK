@@ -1,16 +1,14 @@
-name: Build governed static preview
+name: Publish governed static beta to GitHub Pages
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "19 5 * * *"
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: static-preview-build
+  group: static-pages
   cancel-in-progress: false
 
 jobs:
@@ -19,16 +17,13 @@ jobs:
       github.repository == 'Bfawaz2001/WaterGeo-UK' &&
       github.ref == 'refs/heads/main' &&
       vars.WATERGEO_STATIC_EVIDENCE_RUN_ID != '' &&
-      vars.WATERGEO_STATIC_EVIDENCE_SHA256 != '' &&
-      (
-        github.event_name == 'workflow_dispatch' ||
-        (
-          github.event_name == 'schedule' &&
-          vars.WATERGEO_STATIC_PUBLICATION_ENABLED == 'true'
-        )
-      )
+      vars.WATERGEO_STATIC_EVIDENCE_SHA256 != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+      pages: read
     environment: static-preview-build
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -44,6 +39,7 @@ jobs:
           node-version-file: web/.nvmrc
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - run: uv sync --locked --extra exports
       - name: Generate disposable database credentials
         run: |
@@ -72,11 +68,11 @@ jobs:
       - run: docker compose --profile app up --build --wait api
       - name: Build immutable data publication
         run: uv run --locked watergeo-static-publish --output "$RUNNER_TEMP/watergeo-data" --analytics
-      - name: Build static explorer
+      - name: Build and accept Pages site
         working-directory: web
         env:
+          VITE_BASE_PATH: /WaterGeo-UK/
           VITE_WATERGEO_DATA_MODE: static
-          VITE_WATERGEO_STATIC_DATA_PATH: /watergeo-data
           VITE_BASEMAP_STYLE_URL: ""
         run: |
           npm ci
@@ -87,20 +83,34 @@ jobs:
           npm test -- --run
           npm run build
           npm run test:e2e:static
-      - name: Verify immutable artifact contains data and explorer
+          cp dist/index.html dist/404.html
+      - name: Validate public artifact
         run: |
           test -f web/dist/index.html
+          test -f web/dist/404.html
           test -f web/dist/watergeo-data/manifest.json
           test -f web/dist/watergeo-data/publication-report.json
-          uv run --locked python -m json.tool web/dist/watergeo-data/manifest.json >/dev/null
+          uv run --locked python -m json.tool web/dist/watergeo-data/publication-report.json >/dev/null
           uv run --locked python -m watergeo.operations.public_artifact web/dist
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
-          name: watergeo-static-preview-${{ github.sha }}
           path: web/dist
-          retention-days: 14
-          if-no-files-found: error
-          include-hidden-files: false
       - name: Remove disposable database
         if: always()
         run: docker compose --profile app down --volumes
+
+  deploy:
+    if: github.repository == 'Bfawaz2001/WaterGeo-UK' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy immutable static beta
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
