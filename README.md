@@ -4,10 +4,11 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phase 16 makes the governed static explorer launch-ready for a zero-cost
-GitHub Pages public beta, including repository-subpath builds, publication reporting,
-artifact safety checks and Pages-style browser acceptance. Pages is not enabled, no
-public URL exists, and real-tenant Fabric validation remains pending.** The
+**Status: Phase 16A made the governed static explorer launch-capable, and Phase 16B
+adds deterministic complete-evidence packaging plus a checksum-pinned private draft
+release bridge for a zero-cost GitHub Pages beta. The official WCPR 2024–25 workbook
+still requires manual download and review, so no complete real publication candidate
+or public WaterGeo URL exists. Pages remains disabled.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -69,10 +70,12 @@ schedule has been enabled. See the [source portfolio](docs/data-sources/source-p
 [refresh policy](docs/guides/data-refresh-policy.md) and
 [zero-cost preview contract](docs/deployment/zero-cost-static-preview.md).
 
-Phase 16 adds a manual, main-only GitHub Pages workflow and a deterministic
-operator-reviewed Ofwat workbook preparation command. Activation remains a repository
-owner action after review; no workflow schedule, Pages setting or public deployment is
-enabled by the repository change.
+Phase 16A adds a manual, main-only GitHub Pages workflow and a deterministic
+operator-reviewed Ofwat workbook preparation command. Phase 16B adds the
+`watergeo-static-evidence-package` operator command and pins private reviewed evidence
+by draft-release ID and SHA-256. Activation remains a repository-owner action after a
+complete real candidate passes review; no Pages setting or public deployment is enabled
+by the repository change.
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.

@@ -34,10 +34,14 @@ by ingestion. Numeric zero remains reported zero; configured missing and N/A tok
 become distinct states. The command reports company, period, measure, row, missing,
 N/A and rejected counts.
 
-The official Ofwat publication page confirmed a 1.42 MB machine-readable 2024–25 file,
-but rejected automated retrieval with HTTP 403 during Phase 16. Its worksheet and
-header structure therefore remain unverified. Before a real edition can be accepted,
-an operator must download it from Ofwat, inspect its data dictionary, create and review
-the exact JSON contract and crosswalk, run the command, and review the summary and
-generated JSON. WaterGeo does not guess those meanings or claim a real accepted row
-count.
+The official Ofwat publication page confirms a 1.42 MB machine-readable 2024–25 file.
+Local searches in `~/Downloads`, `~/Downloads/WaterGeo-Phase16B` and `~/Desktop` found
+neither that workbook nor its data dictionary. The single bounded official retrieval
+attempt on 29 September 2026 returned HTTP 403. No unofficial mirror was used.
+
+The worksheet, headers, value vocabularies and row counts therefore remain unverified,
+and WaterGeo has not accepted this edition. An operator must manually download both
+official files from the links above, inspect the workbook and dictionary, create and
+review the exact JSON contract and crosswalk, run the command, and independently review
+its summary and generated JSON. WaterGeo does not guess those meanings or claim a real
+accepted row count.
