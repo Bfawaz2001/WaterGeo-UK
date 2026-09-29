@@ -51,6 +51,7 @@ interface StaticItems {
 export interface StaticPublicationMetadata {
   publication_id: string;
   generated_at: string;
+  watergeo_commit?: string;
 }
 
 export async function staticPublicationMetadata(

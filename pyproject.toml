@@ -12,6 +12,7 @@ license = "MIT"
 authors = [{ name = "Bilal Fawaz" }]
 dependencies = [
     "alembic>=1.16,<2",
+    "defusedxml>=0.7,<1",
     "fastapi>=0.115,<1",
     "httpx2>=2,<3",
     "psycopg[binary]>=3.2,<4",
@@ -33,6 +34,7 @@ watergeo-with-db-ca = "watergeo.operations.database_ca:main"
 watergeo-render-digitalocean-app = "watergeo.operations.production_spec:main"
 watergeo-production-preflight = "watergeo.operations.production_preflight:main"
 watergeo-static-publish = "watergeo.static_publication:main"
+watergeo-prepare-company-performance = "watergeo.operations.company_performance:main"
 
 [project.optional-dependencies]
 exports = ["pyarrow>=21,<24"]

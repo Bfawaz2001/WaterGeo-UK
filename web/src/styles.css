@@ -429,3 +429,9 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
   font-size: 0.82rem;
   text-align: center;
 }
+.static-snapshot-banner > span { display: block; }
+.static-snapshot-banner details { margin-top: .2rem; }
+.static-snapshot-banner summary { cursor: pointer; font-weight: 700; }
+.static-snapshot-banner details span,
+.static-snapshot-banner code { display: block; margin-top: .25rem; }
+.static-snapshot-banner a { color: inherit; }

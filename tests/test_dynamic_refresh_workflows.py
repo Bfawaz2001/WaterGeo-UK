@@ -134,7 +134,40 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
     text = Path(".github/workflows/static-preview-build.yml").read_text()
     assert "watergeo-static-publish" in text
     assert "actions/upload-artifact" in text
+    assert "python -m watergeo.operations.public_artifact web/dist" in text
     assert "deploy" not in text.lower()
+    assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in text
+    assert "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0" in text
+
+
+def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
+    path = Path(".github/workflows/static-pages.yml")
+    workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)  # noqa: S506
+    assert workflow["on"] == {"workflow_dispatch": ""}
+    assert workflow["permissions"] == {"contents": "read", "actions": "read"}
+    build = workflow["jobs"]["build"]
+    assert build["permissions"] == {"contents": "read", "actions": "read", "pages": "read"}
+    condition = " ".join(build["if"].split())
+    assert "github.repository == 'Bfawaz2001/WaterGeo-UK'" in condition
+    assert "github.ref == 'refs/heads/main'" in condition
+    deploy = workflow["jobs"]["deploy"]
+    assert deploy["permissions"] == {"pages": "write", "id-token": "write"}
+    assert deploy["environment"]["name"] == "github-pages"
+    text = path.read_text()
+    assert "VITE_BASE_PATH: /WaterGeo-UK/" in text
+    assert "python -m watergeo.operations.public_artifact web/dist" in text
+    expected_actions = {
+        "actions/setup-node": ("820762786026740c76f36085b0efc47a31fe5020", "v7.0.0"),
+        "actions/configure-pages": ("45bfe0192ca1faeb007ade9deae92b16b8254a0d", "v6.0.0"),
+        "actions/upload-pages-artifact": (
+            "fc324d3547104276b827a68afc52ff2a11cc49c9",
+            "v5.0.0",
+        ),
+        "actions/deploy-pages": ("368f82528645a54fb793d4d04e342629a3f51346", "v5.0.1"),
+    }
+    for action, (commit, version) in expected_actions.items():
+        assert f"{action}@{commit} # {version}" in text
+    assert "schedule:" not in text
 
 
 @pytest.mark.parametrize("value", ["43 2 * * * *", "60 2 * * *", "43 24 * * *", "*/0 * * * *"])

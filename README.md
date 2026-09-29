@@ -4,10 +4,10 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phase 14's full hosted deployment capability is complete, but no paid hosted
-runtime is provisioned. Phase 15 expands national source coverage and adds a zero-cost
-static publication profile. Public deployment and real-tenant Fabric validation remain
-pending.** The
+**Status: Phase 16 makes the governed static explorer launch-ready for a zero-cost
+GitHub Pages public beta, including repository-subpath builds, publication reporting,
+artifact safety checks and Pages-style browser acceptance. Pages is not enabled, no
+public URL exists, and real-tenant Fabric validation remains pending.** The
 reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
 with five recorded geometry transformations. Developers can query metadata,
 paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
@@ -68,6 +68,11 @@ bundle. The static build is repository capability only: no Pages project, public
 schedule has been enabled. See the [source portfolio](docs/data-sources/source-portfolio.md),
 [refresh policy](docs/guides/data-refresh-policy.md) and
 [zero-cost preview contract](docs/deployment/zero-cost-static-preview.md).
+
+Phase 16 adds a manual, main-only GitHub Pages workflow and a deterministic
+operator-reviewed Ofwat workbook preparation command. Activation remains a repository
+owner action after review; no workflow schedule, Pages setting or public deployment is
+enabled by the repository change.
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
