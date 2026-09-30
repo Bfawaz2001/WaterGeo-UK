@@ -4,7 +4,10 @@ from pathlib import Path
 
 import httpx2 as httpx
 import pytest
+from shapely import make_valid
+from shapely.geometry import shape
 
+import watergeo.ingestion.phase15_sources as phase15_sources
 from watergeo.ingestion.phase15_client import (
     create_bundle,
     fetch_flood_monitoring,
@@ -123,10 +126,15 @@ def flood_payloads() -> tuple[dict[str, object], dict[str, object]]:
 
 def test_flood_warning_preserves_publisher_severity_and_geometry() -> None:
     warnings, areas = flood_payloads()
+    source_geometry = areas["items"][0]["geometry"]  # type: ignore[index]
     product = normalize_floods(warnings, areas)  # type: ignore[arg-type]
     assert product.secondary[0]["severity"] == "Flood Alert"
     assert product.secondary[0]["severity_level"] == 3
-    assert product.entities[0]["geometry"]["type"] == "Polygon"
+    assert product.entities[0]["geometry"] == source_geometry
+    assert product.entities[0]["geometry_policy"] == {
+        "policy": "source-valid",
+        "repaired": False,
+    }
 
 
 def test_flood_warning_rejects_reinterpreted_severity_and_bad_geometry() -> None:
@@ -136,9 +144,11 @@ def test_flood_warning_rejects_reinterpreted_severity_and_bad_geometry() -> None
         normalize_floods(warnings, areas)  # type: ignore[arg-type]
 
 
-def test_flood_warning_repairs_only_low_distortion_polygon_structure() -> None:
+def test_flood_warning_repairs_only_low_distortion_polygon_structure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     warnings, areas = flood_payloads()
-    areas["items"][0]["geometry"] = {  # type: ignore[index]
+    source_geometry = {  # type: ignore[var-annotated]
         "type": "Polygon",
         "coordinates": [
             [
@@ -153,9 +163,33 @@ def test_flood_warning_repairs_only_low_distortion_polygon_structure() -> None:
             ]
         ],
     }
+    areas["items"][0]["geometry"] = source_geometry  # type: ignore[index]
+    calls: list[dict[str, int]] = []
+    actual_to_wkb = phase15_sources.to_wkb
+
+    def tracked_to_wkb(geometry: object, **kwargs: int) -> bytes:
+        calls.append(kwargs)
+        return actual_to_wkb(geometry, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(phase15_sources, "to_wkb", tracked_to_wkb)
     product = normalize_floods(warnings, areas)  # type: ignore[arg-type]
-    assert product.entities[0]["geometry_policy"]["repaired"] is True
-    assert product.entities[0]["geometry_policy"]["policy"] == "ea-flood-area-structure-v1"
+    entity = product.entities[0]
+    policy = entity["geometry_policy"]
+    original = shape(source_geometry)
+    expected = make_valid(original, method="structure", keep_collapsed=False)
+    canonical = shape(entity["geometry"])
+    assert canonical.is_valid
+    assert canonical.geom_type in {"Polygon", "MultiPolygon"}
+    assert canonical.equals(expected)
+    assert policy["repaired"] is True
+    assert policy["policy"] == "ea-flood-area-structure-canonical-v2"
+    assert policy["area_change_square_degrees"] / original.area <= 0.000001
+    assert policy["hausdorff_degrees"] <= 0.0001
+    assert policy["canonical_wkb_sha256"] == (
+        "9c49976a81e68b98647477cc07b106913d3ef940e868330bddd820e4ce62c650"
+    )
+    assert policy["source_wkb_sha256"] != policy["canonical_wkb_sha256"]
+    assert calls == [{"byte_order": 1, "output_dimension": 2}]
     warnings, areas = flood_payloads()
     areas["items"][0]["geometry"] = {"type": "Point", "coordinates": [-1, 51]}  # type: ignore[index]
     with pytest.raises(Phase15SourceError, match="geometry"):
