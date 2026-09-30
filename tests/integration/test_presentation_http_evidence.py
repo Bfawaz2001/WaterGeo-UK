@@ -12,7 +12,7 @@ from sqlalchemy import text
 from watergeo.api.app import create_app, get_database
 from watergeo.core.config import MigrationSettings, Settings
 from watergeo.core.datasets import OFWAT_WATER_SUPPLY_SHA256, OFWAT_WATER_SUPPLY_TRANSFORMATION
-from watergeo.core.presentation import REVIEWED_WGS84_GEOMETRIES
+from watergeo.core.presentation import REVIEWED_WGS84_GEOMETRIES, WGS84_PRESENTATION_VERSION
 from watergeo.db.engine import create_database_engine
 from watergeo.db.presentation_assessment import (
     PresentationAssessmentError,
@@ -180,7 +180,7 @@ def test_reviewed_dataset_identity_mismatch_never_projects(dataset, mismatch):
 @pytest.mark.parametrize(
     "contract_case", ["primary", "variant", "canonical_mismatch", "output_mismatch"]
 )
-def test_http_presentation_exception_requires_both_reviewed_hashes(
+def test_http_presentation_exception_requires_exact_reviewed_hashes(
     dataset, monkeypatch, contract_case
 ):
     runtime, snapshot = dataset
@@ -213,7 +213,7 @@ def test_http_presentation_exception_requires_both_reviewed_hashes(
     with TestClient(app) as client:
         metadata = client.get("/v1/water-supply/dataset").json()
         assert metadata["transformation_version"] == OFWAT_WATER_SUPPLY_TRANSFORMATION
-        assert metadata["presentation_version"] == "ofwat-water-supply-v1_5-wgs84-structure-v2"
+        assert metadata["presentation_version"] == WGS84_PRESENTATION_VERSION
         assert metadata["presentation_exception_source_ids"] == [3, 4, 16, 21]
         response = client.get("/v1/water-supply/areas/3/geometry")
         if contract_case.endswith("mismatch"):

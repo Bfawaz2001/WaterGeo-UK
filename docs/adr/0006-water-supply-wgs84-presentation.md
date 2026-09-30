@@ -26,15 +26,17 @@ and PROJ 9.8.1 with network access disabled. Offline boundary-distance and candi
 comparisons used Shapely 2.1.2 / GEOS 3.13.1. These two GEOS runtimes must not be
 confused: candidate construction and serialization were performed in PostGIS.
 
-The Phase 16 Linux/AMD64 publication runner exposed last-bit projection differences
-from Linux/ARM64 despite matching PostgreSQL, PostGIS, GEOS and PROJ versions. The
-[cross-platform evidence](../data-sources/ofwat-water-supply-presentation-cross-platform.json)
-records both exact outputs. Both are valid MultiPolygons, preserve the reviewed part
-and hole counts, remain round-trip valid and have effectively identical distortion
-measurements. Area 4 differs by one redundant vertex; its 607 parts and 189 holes are
-unchanged. Policy v2 therefore admits exactly these two measured GeoJSON hashes for
-each already reviewed canonical geometry. It does not introduce a tolerance or accept
-an unmeasured output.
+Phase 16 measurements exposed last-bit projection differences between native
+Linux/ARM64, Linux/AMD64 emulated on ARM64, and native Linux/AMD64 on GitHub's
+Ubuntu 24.04 runner despite matching PostgreSQL, PostGIS, GEOS and PROJ versions.
+The [cross-platform evidence](../data-sources/ofwat-water-supply-presentation-cross-platform.json)
+records all three exact outputs and the native runner measurement provenance. All
+are valid MultiPolygons, preserve the reviewed part and hole counts, remain
+round-trip valid and have effectively identical distortion measurements. Area 4
+has one additional redundant vertex on both AMD64 executions; its 607 parts and
+189 holes are unchanged. Policy v3 therefore admits exactly these three measured
+GeoJSON hashes for each already reviewed canonical geometry. It does not introduce
+a tolerance or accept an unmeasured output.
 
 ### Candidate comparison
 
@@ -95,7 +97,7 @@ Introduce a policy separate from the canonical transformation:
 
 ```text
 canonical:    ofwat-water-supply-v1_5-structure-v1
-presentation: ofwat-water-supply-v1_5-wgs84-structure-v2
+presentation: ofwat-water-supply-v1_5-wgs84-structure-v3
 ```
 
 For exactly the reviewed archive SHA-256 and canonical transformation version,
@@ -111,7 +113,7 @@ Only unreviewed IDs follow plain `ST_Transform`. For reviewed exception IDs,
 failure to match the exact canonical hash or dataset identity is an error: return
 the generic 503 without falling back to ordinary reprojection. Both paths then
 orient polygon rings, serialize at 15 decimal places, enforce the 8 MiB bound and reparse/validate
-the representation. A repaired output must also match one of its **two exact reviewed
+the representation. A repaired output must also match one of its **three exact reviewed
 GeoJSON SHA-256 values**. A mismatch returns the existing generic 503; there is no
 fallback repair, precision reduction, filtering, simplification or new tolerance.
 
@@ -150,8 +152,9 @@ unidentified edition; neither this ADR nor the code licence changes that.
 ## Verification
 
 - Baseline scan: 1,141 areas, exact failure set 3/4/16/21.
-- Repeated assessment: identical candidate hashes within each recorded architecture;
-  exact ARM64 and AMD64 hash variants are recorded separately.
+- Repeated assessment: identical candidate hashes within each recorded execution;
+  exact native ARM64, emulated AMD64 and native AMD64 hash variants are recorded
+  separately.
 - Canonical row digest before/after, including complete source fields and EWKB:
   `529e2105187a4d366a4f83f82a1e08eef63bb65a7215ec7ba0aadc74dd1d3801`.
   The final digest uses a fresh transaction, not only the repeatable-read snapshot.

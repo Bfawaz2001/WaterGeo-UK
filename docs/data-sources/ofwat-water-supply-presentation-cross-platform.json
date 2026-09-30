@@ -1,6 +1,6 @@
 {
-  "format_version": "watergeo-water-supply-presentation-cross-platform-v1",
-  "policy_version": "ofwat-water-supply-v1_5-wgs84-structure-v2",
+  "format_version": "watergeo-water-supply-presentation-cross-platform-v2",
+  "policy_version": "ofwat-water-supply-v1_5-wgs84-structure-v3",
   "source_sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
   "canonical_transformation_version": "ofwat-water-supply-v1_5-structure-v1",
   "candidate": "ST_MakeValid(ST_Transform(geom, 4326), 'method=structure keepcollapsed=false')",
@@ -8,13 +8,23 @@
   "runtimes": {
     "arm64": {
       "architecture": "linux/arm64",
+      "execution": "native",
       "postgresql": "17",
       "postgis": "3.6.4",
       "geos": "3.11.1",
       "proj": "9.8.1"
     },
-    "amd64": {
+    "amd64_emulated": {
       "architecture": "linux/amd64",
+      "execution": "emulated on linux/arm64",
+      "postgresql": "17",
+      "postgis": "3.6.4",
+      "geos": "3.11.1",
+      "proj": "9.8.1"
+    },
+    "amd64_native": {
+      "architecture": "linux/amd64",
+      "execution": "native GitHub-hosted ubuntu-24.04 runner",
       "postgresql": "17",
       "postgis": "3.6.4",
       "geos": "3.11.1",
@@ -37,7 +47,7 @@
         "symmetric_difference_m2": 438.73057759207165,
         "boundary_hausdorff_m": 0.001016381090371206
       },
-      "amd64": {
+      "amd64_emulated": {
         "geojson_sha256": "f6b3ef2eeef030d1a609e581dabfc9b140f95d60861333e988604d8ff2c6aa32",
         "geojson_bytes": 525929,
         "points": 13544,
@@ -47,6 +57,18 @@
         "output_valid": true,
         "roundtrip_valid": true,
         "symmetric_difference_m2": 438.7306008437192,
+        "boundary_hausdorff_m": 0.0010163811162452517
+      },
+      "amd64_native": {
+        "geojson_sha256": "ee0b5a867b9605bed91caf3269a0288024394db551d1c3e2aa6fd5eadbe578dd",
+        "geojson_bytes": 525933,
+        "points": 13544,
+        "parts": 3,
+        "holes": 41,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 438.7306010322881,
         "boundary_hausdorff_m": 0.0010163811162452517
       }
     },
@@ -65,7 +87,7 @@
         "symmetric_difference_m2": 2084.5008434887377,
         "boundary_hausdorff_m": 0.0010352581274362307
       },
-      "amd64": {
+      "amd64_emulated": {
         "geojson_sha256": "3a7b084ee8b0e970ac5dfbbc651ce863572e013e201f76f8dd65ab2f4ef7e897",
         "geojson_bytes": 6303756,
         "points": 164730,
@@ -75,6 +97,18 @@
         "output_valid": true,
         "roundtrip_valid": true,
         "symmetric_difference_m2": 2084.500975302465,
+        "boundary_hausdorff_m": 0.0010352582574323108
+      },
+      "amd64_native": {
+        "geojson_sha256": "c0939e3448c4a1f97ed70f6860b744209f478a6e7b6d623fb3665da51a903bae",
+        "geojson_bytes": 6303737,
+        "points": 164730,
+        "parts": 607,
+        "holes": 189,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 2084.5009763467224,
         "boundary_hausdorff_m": 0.0010352582574323108
       }
     },
@@ -93,7 +127,7 @@
         "symmetric_difference_m2": 421.90849269328953,
         "boundary_hausdorff_m": 0.001041710998279296
       },
-      "amd64": {
+      "amd64_emulated": {
         "geojson_sha256": "145affc3afbc72d56135f85c72409e6574ffbed0aca59efbdc5bfb4962463583",
         "geojson_bytes": 572481,
         "points": 14989,
@@ -103,6 +137,18 @@
         "output_valid": true,
         "roundtrip_valid": true,
         "symmetric_difference_m2": 421.9085270061574,
+        "boundary_hausdorff_m": 0.0010417111359786466
+      },
+      "amd64_native": {
+        "geojson_sha256": "0ec4d9bce4ac398d2a3cabd35c493bdf16100b7a37cdcf5011382256823770c1",
+        "geojson_bytes": 572484,
+        "points": 14989,
+        "parts": 12,
+        "holes": 47,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 421.9085273716897,
         "boundary_hausdorff_m": 0.0010417111359786466
       }
     },
@@ -121,7 +167,7 @@
         "symmetric_difference_m2": 57.04521845502641,
         "boundary_hausdorff_m": 0.0009944227832817364
       },
-      "amd64": {
+      "amd64_emulated": {
         "geojson_sha256": "022a9e01dcf14fe3ab0b63302da6082551e0d7f5557171f3972e9003982380bc",
         "geojson_bytes": 314079,
         "points": 8031,
@@ -132,7 +178,24 @@
         "roundtrip_valid": true,
         "symmetric_difference_m2": 57.045220810775206,
         "boundary_hausdorff_m": 0.0009944244478363503
+      },
+      "amd64_native": {
+        "geojson_sha256": "75a77772340be46bac6b7a123f8709388244cb46339c3b83a0f1f7cb738ba7f3",
+        "geojson_bytes": 314084,
+        "points": 8031,
+        "parts": 67,
+        "holes": 0,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 57.04522082425487,
+        "boundary_hausdorff_m": 0.0009944244478363503
       }
     }
-  ]
+  ],
+  "measurement_provenance": {
+    "native_amd64_github_actions_run_id": 36785376137,
+    "native_amd64_runner": "ubuntu-24.04",
+    "native_amd64_repository_commit": "8d19f37d445676dd55879aca31306e023d4e727b"
+  }
 }
