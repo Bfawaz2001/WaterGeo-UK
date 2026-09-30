@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from shapely import hausdorff_distance, make_valid
+from shapely import hausdorff_distance, make_valid, normalize, to_wkb
 from shapely.geometry import mapping, shape
 from shapely.validation import explain_validity
 
@@ -23,7 +23,7 @@ OFWAT_WCPR_URL = (
 OFWAT_PR24_URL = "https://www.ofwat.gov.uk/publication/historical-performance-trends-for-pr24-v6-0/"
 VERSION = "phase15-national-products-v1"
 BOUNDARY_CROSSWALK_VERSION = "ofwat-to-water-supply-v1"
-FLOOD_GEOMETRY_POLICY = "ea-flood-area-structure-v1"
+FLOOD_GEOMETRY_POLICY = "ea-flood-area-structure-canonical-v2"
 IDENTITY = re.compile(r"^[A-Za-z0-9_.:-]{1,160}$")
 
 
@@ -266,6 +266,7 @@ def _flood_geometry(value: dict[str, Any]) -> tuple[dict[str, Any], dict[str, An
     distance = hausdorff_distance(original, repaired)
     if area_change / original.area > 0.000001 or distance > 0.0001:
         raise Phase15SourceError("Flood area geometry repair exceeded reviewed distortion")
+    repaired = normalize(repaired)
     before_parts, before_holes = _parts_and_holes(original)
     after_parts, after_holes = _parts_and_holes(repaired)
     policy = {
@@ -273,7 +274,9 @@ def _flood_geometry(value: dict[str, Any]) -> tuple[dict[str, Any], dict[str, An
         "repaired": True,
         "reason": explain_validity(original),
         "source_wkb_sha256": hashlib.sha256(original.wkb).hexdigest(),
-        "canonical_wkb_sha256": hashlib.sha256(repaired.wkb).hexdigest(),
+        "canonical_wkb_sha256": hashlib.sha256(
+            to_wkb(repaired, byte_order=1, output_dimension=2)
+        ).hexdigest(),
         "area_change_square_degrees": area_change,
         "hausdorff_degrees": distance,
         "parts_before": before_parts,
