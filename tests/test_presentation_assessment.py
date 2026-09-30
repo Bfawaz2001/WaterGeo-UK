@@ -92,8 +92,11 @@ def test_cross_platform_presentation_variants_are_exactly_reviewed():
         source_id = feature["source_id"]
         assert feature["canonical_wkb_sha256"] == REVIEWED_WGS84_GEOMETRIES[source_id][0]
         assert feature["arm64"]["geojson_sha256"] == REVIEWED_WGS84_GEOMETRIES[source_id][1]
-        assert (feature["amd64"]["geojson_sha256"],) == REVIEWED_WGS84_GEOJSON_VARIANTS[source_id]
-        for runtime in ("arm64", "amd64"):
+        assert (
+            feature["amd64_emulated"]["geojson_sha256"],
+            feature["amd64_native"]["geojson_sha256"],
+        ) == REVIEWED_WGS84_GEOJSON_VARIANTS[source_id]
+        for runtime in ("arm64", "amd64_emulated", "amd64_native"):
             output = feature[runtime]
             assert output["output_valid"] and output["roundtrip_valid"]
             assert output["hole_count_delta"] == 0
