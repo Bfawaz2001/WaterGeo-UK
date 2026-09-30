@@ -1,0 +1,138 @@
+{
+  "format_version": "watergeo-water-supply-presentation-cross-platform-v1",
+  "policy_version": "ofwat-water-supply-v1_5-wgs84-structure-v2",
+  "source_sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
+  "canonical_transformation_version": "ofwat-water-supply-v1_5-structure-v1",
+  "candidate": "ST_MakeValid(ST_Transform(geom, 4326), 'method=structure keepcollapsed=false')",
+  "serialization": "ST_AsGeoJSON(ST_ForcePolygonCCW(output_geom), 15, 0)",
+  "runtimes": {
+    "arm64": {
+      "architecture": "linux/arm64",
+      "postgresql": "17",
+      "postgis": "3.6.4",
+      "geos": "3.11.1",
+      "proj": "9.8.1"
+    },
+    "amd64": {
+      "architecture": "linux/amd64",
+      "postgresql": "17",
+      "postgis": "3.6.4",
+      "geos": "3.11.1",
+      "proj": "9.8.1"
+    }
+  },
+  "features": [
+    {
+      "source_id": 3,
+      "canonical_wkb_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f",
+      "arm64": {
+        "geojson_sha256": "859c9536bed336a2c4c7387ed64fb1b12bbfa2f11f09c866fb0a22441cc93fbc",
+        "geojson_bytes": 525856,
+        "points": 13544,
+        "parts": 3,
+        "holes": 41,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 438.73057759207165,
+        "boundary_hausdorff_m": 0.001016381090371206
+      },
+      "amd64": {
+        "geojson_sha256": "f6b3ef2eeef030d1a609e581dabfc9b140f95d60861333e988604d8ff2c6aa32",
+        "geojson_bytes": 525929,
+        "points": 13544,
+        "parts": 3,
+        "holes": 41,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 438.7306008437192,
+        "boundary_hausdorff_m": 0.0010163811162452517
+      }
+    },
+    {
+      "source_id": 4,
+      "canonical_wkb_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3",
+      "arm64": {
+        "geojson_sha256": "5afb38893fa0b05726acc41d09ef03ab1ac09709be41502db7797e0606ca82bd",
+        "geojson_bytes": 6303601,
+        "points": 164729,
+        "parts": 607,
+        "holes": 189,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 2084.5008434887377,
+        "boundary_hausdorff_m": 0.0010352581274362307
+      },
+      "amd64": {
+        "geojson_sha256": "3a7b084ee8b0e970ac5dfbbc651ce863572e013e201f76f8dd65ab2f4ef7e897",
+        "geojson_bytes": 6303756,
+        "points": 164730,
+        "parts": 607,
+        "holes": 189,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 2084.500975302465,
+        "boundary_hausdorff_m": 0.0010352582574323108
+      }
+    },
+    {
+      "source_id": 16,
+      "canonical_wkb_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2",
+      "arm64": {
+        "geojson_sha256": "7ec160dc7ab45af63ab953152af862819b5747e22346a4d14ae63bf47415fa6f",
+        "geojson_bytes": 572424,
+        "points": 14989,
+        "parts": 12,
+        "holes": 47,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 421.90849269328953,
+        "boundary_hausdorff_m": 0.001041710998279296
+      },
+      "amd64": {
+        "geojson_sha256": "145affc3afbc72d56135f85c72409e6574ffbed0aca59efbdc5bfb4962463583",
+        "geojson_bytes": 572481,
+        "points": 14989,
+        "parts": 12,
+        "holes": 47,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 421.9085270061574,
+        "boundary_hausdorff_m": 0.0010417111359786466
+      }
+    },
+    {
+      "source_id": 21,
+      "canonical_wkb_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4",
+      "arm64": {
+        "geojson_sha256": "36103aa15aa03246d1d085f1bb9de65cdf00d7c690179ae8f5f6164310c4a1cb",
+        "geojson_bytes": 314076,
+        "points": 8031,
+        "parts": 67,
+        "holes": 0,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 57.04521845502641,
+        "boundary_hausdorff_m": 0.0009944227832817364
+      },
+      "amd64": {
+        "geojson_sha256": "022a9e01dcf14fe3ab0b63302da6082551e0d7f5557171f3972e9003982380bc",
+        "geojson_bytes": 314079,
+        "points": 8031,
+        "parts": 67,
+        "holes": 0,
+        "hole_count_delta": 0,
+        "output_valid": true,
+        "roundtrip_valid": true,
+        "symmetric_difference_m2": 57.045220810775206,
+        "boundary_hausdorff_m": 0.0009944244478363503
+      }
+    }
+  ]
+}

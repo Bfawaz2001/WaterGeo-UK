@@ -9,7 +9,11 @@ import pytest
 import shapely
 from shapely.geometry import MultiPolygon, Polygon, box
 
-from watergeo.core.presentation import REVIEWED_WGS84_GEOMETRIES
+from watergeo.core.presentation import (
+    REVIEWED_WGS84_GEOJSON_VARIANTS,
+    REVIEWED_WGS84_GEOMETRIES,
+    WGS84_PRESENTATION_VERSION,
+)
 from watergeo.db.presentation_assessment import (
     PresentationAssessmentError,
     boundary_hausdorff,
@@ -76,3 +80,20 @@ def test_presentation_contract_is_separate_and_limited_to_reviewed_ids():
         assert candidate["output"]["output_valid"]
         assert candidate["output"]["hole_count_delta"] == 0
         assert not candidate["output"]["lower_dimension_parts"]
+
+
+def test_cross_platform_presentation_variants_are_exactly_reviewed():
+    evidence = json.loads(
+        Path("docs/data-sources/ofwat-water-supply-presentation-cross-platform.json").read_text()
+    )
+    assert evidence["policy_version"] == WGS84_PRESENTATION_VERSION
+    assert set(REVIEWED_WGS84_GEOJSON_VARIANTS) == set(REVIEWED_WGS84_GEOMETRIES)
+    for feature in evidence["features"]:
+        source_id = feature["source_id"]
+        assert feature["canonical_wkb_sha256"] == REVIEWED_WGS84_GEOMETRIES[source_id][0]
+        assert feature["arm64"]["geojson_sha256"] == REVIEWED_WGS84_GEOMETRIES[source_id][1]
+        assert (feature["amd64"]["geojson_sha256"],) == REVIEWED_WGS84_GEOJSON_VARIANTS[source_id]
+        for runtime in ("arm64", "amd64"):
+            output = feature[runtime]
+            assert output["output_valid"] and output["roundtrip_valid"]
+            assert output["hole_count_delta"] == 0

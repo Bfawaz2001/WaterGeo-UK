@@ -18,13 +18,23 @@ The [machine-readable evidence](../data-sources/ofwat-water-supply-presentation-
 records canonical and output hashes, validity reasons, types, holes, vertices,
 bytes, area changes, round-trip symmetric differences, discrete boundary Hausdorff
 distances, component correspondence and runtime versions. Repeated independent
-runs produced identical candidate WKB and GeoJSON hashes. Source provenance and
-the unidentified OGL edition are retained in that evidence.
+runs on that architecture produced identical candidate WKB and GeoJSON hashes.
+Source provenance and the unidentified OGL edition are retained in that evidence.
 
 The measured environment was PostgreSQL 17.11, PostGIS 3.6.4, PostGIS GEOS 3.11.1,
 and PROJ 9.8.1 with network access disabled. Offline boundary-distance and candidate
 comparisons used Shapely 2.1.2 / GEOS 3.13.1. These two GEOS runtimes must not be
 confused: candidate construction and serialization were performed in PostGIS.
+
+The Phase 16 Linux/AMD64 publication runner exposed last-bit projection differences
+from Linux/ARM64 despite matching PostgreSQL, PostGIS, GEOS and PROJ versions. The
+[cross-platform evidence](../data-sources/ofwat-water-supply-presentation-cross-platform.json)
+records both exact outputs. Both are valid MultiPolygons, preserve the reviewed part
+and hole counts, remain round-trip valid and have effectively identical distortion
+measurements. Area 4 differs by one redundant vertex; its 607 parts and 189 holes are
+unchanged. Policy v2 therefore admits exactly these two measured GeoJSON hashes for
+each already reviewed canonical geometry. It does not introduce a tolerance or accept
+an unmeasured output.
 
 ### Candidate comparison
 
@@ -85,7 +95,7 @@ Introduce a policy separate from the canonical transformation:
 
 ```text
 canonical:    ofwat-water-supply-v1_5-structure-v1
-presentation: ofwat-water-supply-v1_5-wgs84-structure-v1
+presentation: ofwat-water-supply-v1_5-wgs84-structure-v2
 ```
 
 For exactly the reviewed archive SHA-256 and canonical transformation version,
@@ -101,9 +111,9 @@ Only unreviewed IDs follow plain `ST_Transform`. For reviewed exception IDs,
 failure to match the exact canonical hash or dataset identity is an error: return
 the generic 503 without falling back to ordinary reprojection. Both paths then
 orient polygon rings, serialize at 15 decimal places, enforce the 8 MiB bound and reparse/validate
-the representation. A repaired output must also match its **exact reviewed
-GeoJSON SHA-256**. A mismatch returns the existing generic 503; there is no fallback
-repair, precision reduction, filtering, simplification or new tolerance.
+the representation. A repaired output must also match one of its **two exact reviewed
+GeoJSON SHA-256 values**. A mismatch returns the existing generic 503; there is no
+fallback repair, precision reduction, filtering, simplification or new tolerance.
 
 This content guard deliberately fails closed if changed PostGIS/GEOS/PROJ data
 or serialization produces different output, even if it is valid. Runtime version
@@ -140,7 +150,8 @@ unidentified edition; neither this ADR nor the code licence changes that.
 ## Verification
 
 - Baseline scan: 1,141 areas, exact failure set 3/4/16/21.
-- Repeated assessment: identical candidate hashes and recorded runtime versions.
+- Repeated assessment: identical candidate hashes within each recorded architecture;
+  exact ARM64 and AMD64 hash variants are recorded separately.
 - Canonical row digest before/after, including complete source fields and EWKB:
   `529e2105187a4d366a4f83f82a1e08eef63bb65a7215ec7ba0aadc74dd1d3801`.
   The final digest uses a fresh transaction, not only the repeatable-read snapshot.
