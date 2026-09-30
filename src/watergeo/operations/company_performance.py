@@ -25,8 +25,9 @@ from watergeo.ingestion.phase15_sources import (
     normalize_company_performance,
 )
 
-REVIEW_VERSION = "watergeo-company-performance-review-v1"
+REVIEW_VERSION = "watergeo-company-performance-review-v2"
 MAX_WORKBOOK_BYTES = 32 * 1024 * 1024
+MAX_DICTIONARY_BYTES = 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 128 * 1024 * 1024
 MAX_ROWS = 100_000
 FIELDS = (
@@ -62,9 +63,11 @@ def _read_json(path: Path) -> tuple[dict[str, Any], bytes]:
     return value, body
 
 
-def _review(value: dict[str, Any]) -> tuple[str, dict[str, str], set[str], set[str]]:
+def _review(value: dict[str, Any]) -> dict[str, Any]:
     columns = value.get("columns")
+    source_columns = value.get("source_columns")
     crosswalk = value.get("boundary_crosswalk")
+    expected_summary = value.get("expected_summary")
     if (
         value.get("version") != REVIEW_VERSION
         or value.get("publisher") != "Ofwat"
@@ -74,28 +77,58 @@ def _review(value: dict[str, Any]) -> tuple[str, dict[str, str], set[str], set[s
         or not value["publication"].strip()
         or not isinstance(value.get("sheet"), str)
         or not value["sheet"].strip()
+        or not isinstance(value.get("workbook_sha256"), str)
+        or re.fullmatch(r"[0-9a-f]{64}", value["workbook_sha256"]) is None
+        or not isinstance(value.get("dictionary_sha256"), str)
+        or re.fullmatch(r"[0-9a-f]{64}", value["dictionary_sha256"]) is None
+        or not isinstance(source_columns, list)
+        or not source_columns
+        or not all(isinstance(item, str) and item for item in source_columns)
+        or len(source_columns) != len(set(source_columns))
         or not isinstance(columns, dict)
         or set(columns) != set(FIELDS)
         or not all(isinstance(columns[field], str) and columns[field] for field in FIELDS)
-        or len(set(columns.values())) != len(FIELDS)
+        or set(columns.values()) != set(source_columns)
+        or columns["measure_name"] != columns["definition"]
         or not isinstance(crosswalk, dict)
         or not all(
             isinstance(key, str) and isinstance(item, str) for key, item in crosswalk.items()
         )
+        or not isinstance(expected_summary, dict)
     ):
         raise CompanyPerformancePreparationError("Invalid reviewed workbook contract")
 
-    def states(name: str) -> set[str]:
+    def strings(name: str, *, folded: bool = False) -> set[str]:
         raw = value.get(name)
         if not isinstance(raw, list) or not raw or not all(isinstance(item, str) for item in raw):
             raise CompanyPerformancePreparationError("Invalid reviewed value-state vocabulary")
-        return {item.strip().casefold() for item in raw}
+        return {item.strip().casefold() if folded else item for item in raw}
 
-    missing = states("missing_values")
-    not_applicable = states("not_applicable_values")
-    if missing & not_applicable:
+    missing = strings("missing_values", folded=True)
+    not_applicable = strings("not_applicable_values", folded=True)
+    rejected_values = strings("rejected_values", folded=True)
+    rejected_units = strings("rejected_units")
+    rejected_companies = strings("rejected_company_ids")
+    reject_if_empty = strings("reject_if_empty")
+    if (
+        missing & not_applicable
+        or missing & rejected_values
+        or not_applicable & rejected_values
+        or not reject_if_empty <= set(FIELDS) - {"value"}
+    ):
         raise CompanyPerformancePreparationError("Value-state vocabularies overlap")
-    return value["sheet"], columns, missing, not_applicable
+    return {
+        "sheet": value["sheet"],
+        "source_columns": source_columns,
+        "columns": columns,
+        "missing": missing,
+        "not_applicable": not_applicable,
+        "rejected_values": rejected_values,
+        "rejected_units": rejected_units,
+        "rejected_companies": rejected_companies,
+        "reject_if_empty": reject_if_empty,
+        "expected_summary": expected_summary,
+    }
 
 
 def _text(node: ElementTree.Element) -> str:
@@ -208,11 +241,28 @@ def _workbook_rows(path: Path, sheet_name: str) -> list[list[str]]:
     return rows
 
 
-def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path, dict[str, int]]:
+def _source_bytes(path: Path, description: str, limit: int) -> bytes:
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > limit:
+        raise CompanyPerformancePreparationError(
+            f"{description} is missing or exceeds the size limit"
+        )
+    return path.read_bytes()
+
+
+def prepare(
+    workbook: Path, dictionary: Path, review_path: Path, output_root: Path
+) -> tuple[Path, dict[str, Any]]:
     review, review_body = _read_json(review_path)
-    sheet, columns, missing, not_applicable = _review(review)
-    rows = _workbook_rows(workbook, sheet)
-    expected = [columns[field] for field in FIELDS]
+    contract = _review(review)
+    workbook_body = _source_bytes(workbook, "Workbook", MAX_WORKBOOK_BYTES)
+    dictionary_body = _source_bytes(dictionary, "Data dictionary", MAX_DICTIONARY_BYTES)
+    if (
+        hashlib.sha256(workbook_body).hexdigest() != review["workbook_sha256"]
+        or hashlib.sha256(dictionary_body).hexdigest() != review["dictionary_sha256"]
+    ):
+        raise CompanyPerformancePreparationError("Official source checksum changed from review")
+    rows = _workbook_rows(workbook, contract["sheet"])
+    expected = contract["source_columns"]
     if not rows or rows[0] != expected:
         raise CompanyPerformancePreparationError("Workbook columns changed from reviewed contract")
     items: list[dict[str, Any]] = []
@@ -222,12 +272,31 @@ def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path,
     periods: set[str] = set()
     measures: set[str] = set()
     company_names: dict[str, str] = {}
+    rejected_reasons: dict[str, int] = {
+        "company": 0,
+        "empty_metadata": 0,
+        "unit": 0,
+        "value": 0,
+    }
+    reported_count = 0
+    zero_count = 0
     for row_number, row in enumerate(rows[1:], start=2):
         if len(row) != len(expected) or not any(row):
             raise CompanyPerformancePreparationError(f"Invalid workbook row {row_number}")
-        source = dict(zip(FIELDS, row, strict=True))
+        raw = dict(zip(expected, row, strict=True))
+        source = {field: raw[contract["columns"][field]] for field in FIELDS}
         raw_value = source.pop("value")
-        if any(not source[field] for field in source):
+        if source["company_id"] in contract["rejected_companies"]:
+            rejected_reasons["company"] += 1
+            continue
+        if source["unit"] in contract["rejected_units"]:
+            rejected_reasons["unit"] += 1
+            continue
+        if any(not source[field] for field in contract["reject_if_empty"]):
+            rejected_reasons["empty_metadata"] += 1
+            continue
+        required = ("company_id", "company_name", "reporting_period", "measure_code", "unit")
+        if any(not source[field] for field in required):
             raise CompanyPerformancePreparationError(
                 f"Required performance metadata is empty at row {row_number}"
             )
@@ -237,14 +306,17 @@ def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path,
                 f"Company identity changed name at row {row_number}"
             )
         state_key = raw_value.strip().casefold()
-        if state_key in missing:
+        if state_key in contract["missing"]:
             value: float | None = None
             state = "missing"
             missing_count += 1
-        elif state_key in not_applicable:
+        elif state_key in contract["not_applicable"]:
             value = None
             state = "not_applicable"
             not_applicable_count += 1
+        elif state_key in contract["rejected_values"]:
+            rejected_reasons["value"] += 1
+            continue
         else:
             try:
                 value = float(raw_value)
@@ -257,6 +329,9 @@ def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path,
                     f"Invalid numeric performance value at row {row_number}"
                 )
             state = "reported"
+            reported_count += 1
+            if value == 0:
+                zero_count += 1
         item = {**source, "value": value, "value_state": state}
         items.append(item)
         companies.add(source["company_id"])
@@ -264,7 +339,21 @@ def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path,
         measures.add(source["measure_code"])
     if not items:
         raise CompanyPerformancePreparationError("Workbook contains no performance rows")
-    workbook_body = workbook.read_bytes()
+    rejected_count = sum(rejected_reasons.values())
+    summary: dict[str, Any] = {
+        "companies": len(companies),
+        "periods": len(periods),
+        "measures": len(measures),
+        "rows": len(items),
+        "reported": reported_count,
+        "zero": zero_count,
+        "missing": missing_count,
+        "not_applicable": not_applicable_count,
+        "rejected": rejected_count,
+        "rejected_by_reason": rejected_reasons,
+    }
+    if summary != contract["expected_summary"]:
+        raise CompanyPerformancePreparationError("Workbook summary changed from reviewed contract")
     payload = {
         "publisher": "Ofwat",
         "licence": EA_LICENCE,
@@ -274,8 +363,10 @@ def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path,
         "preparation": {
             "version": REVIEW_VERSION,
             "workbook_sha256": hashlib.sha256(workbook_body).hexdigest(),
+            "dictionary_sha256": hashlib.sha256(dictionary_body).hexdigest(),
             "review_sha256": hashlib.sha256(review_body).hexdigest(),
-            "sheet": sheet,
+            "sheet": contract["sheet"],
+            "summary": summary,
         },
         "items": items,
     }
@@ -294,26 +385,20 @@ def prepare(workbook: Path, review_path: Path, output_root: Path) -> tuple[Path,
         )
     except Phase15SourceError as error:
         raise CompanyPerformancePreparationError(str(error)) from error
-    summary = {
-        "companies": len(companies),
-        "periods": len(periods),
-        "measures": len(measures),
-        "rows": len(items),
-        "missing": missing_count,
-        "not_applicable": not_applicable_count,
-        "rejected": 0,
-    }
     return directory, summary
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workbook", type=Path)
+    parser.add_argument("--dictionary", type=Path, required=True)
     parser.add_argument("--review", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     arguments = parser.parse_args(argv)
     try:
-        directory, summary = prepare(arguments.workbook, arguments.review, arguments.output_root)
+        directory, summary = prepare(
+            arguments.workbook, arguments.dictionary, arguments.review, arguments.output_root
+        )
     except CompanyPerformancePreparationError as error:
         print(
             json.dumps({"status": "rejected", "rejected": 1, "error": str(error)}),
