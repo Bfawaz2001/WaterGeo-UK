@@ -200,6 +200,12 @@ def test_phase15_atomic_load_spatial_api_search_and_status(engines, tmp_path: Pa
             flood = client.get("/v1/flood-monitoring/warnings")
             assert flood.status_code == 200
             assert flood.json()["items"][0]["severity"] == "Flood Alert"
+            areas = client.get(
+                "/v1/flood-monitoring/areas",
+                params={"snapshot_id": flood.json()["dataset"]["snapshot_id"]},
+            )
+            assert areas.status_code == 200
+            assert areas.json()["items"][0]["area_id"] == "A1"
             bathing = client.get(
                 "/v1/bathing-waters/near",
                 params={"lon": -1.2, "lat": 51.1, "radius_m": 1000},

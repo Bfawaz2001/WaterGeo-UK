@@ -28,6 +28,10 @@ class PageQuery(SnapshotQuery):
     after_id: str | None = Field(default=None, max_length=160)
 
 
+class FloodAreaQuery(SnapshotQuery):
+    warnings_only: bool = False
+
+
 class NearQuery(SnapshotQuery):
     lon: float = Field(ge=-180, le=180, allow_inf_nan=False)
     lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
@@ -83,11 +87,9 @@ def flood_dataset(query: Annotated[SnapshotQuery, Query()], db: Queries) -> Data
 
 
 @router.get("/flood-monitoring/areas")
-def flood_areas(
-    query: Annotated[SnapshotQuery, Query()], db: Queries, warnings_only: bool = False
-) -> Page:
+def flood_areas(query: Annotated[FloodAreaQuery, Query()], db: Queries) -> Page:
     dataset = db.dataset("flood-monitoring", query.snapshot_id)
-    items = db.flood_areas(dataset, warnings_only=warnings_only)
+    items = db.flood_areas(dataset, warnings_only=query.warnings_only)
     return Page(dataset=dataset, items=items, next_after_id=None)
 
 
