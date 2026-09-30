@@ -147,6 +147,14 @@ def test_openapi_documents_public_endpoints(client: TestClient) -> None:
     assert "503" in paths["/ready"]["get"]["responses"]
 
 
+def test_flood_area_query_parameters_are_flat(client: TestClient) -> None:
+    operation = client.get("/openapi.json").json()["paths"]["/v1/flood-monitoring/areas"]["get"]
+    assert {parameter["name"] for parameter in operation["parameters"]} == {
+        "snapshot_id",
+        "warnings_only",
+    }
+
+
 def test_cors_is_not_enabled(client: TestClient) -> None:
     response = client.get("/health", headers={"Origin": "https://example.com"})
     assert "access-control-allow-origin" not in response.headers
