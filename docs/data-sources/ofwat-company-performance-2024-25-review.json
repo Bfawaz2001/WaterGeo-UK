@@ -1,0 +1,72 @@
+{
+  "version": "watergeo-company-performance-review-v2",
+  "publisher": "Ofwat",
+  "licence": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+  "publication": "Water Company Performance Report 2024-25",
+  "sheet": "in",
+  "workbook_sha256": "62fe9156388f76c04e36cd494ba927124dc7f239928dc0f7e1e257b91168976b",
+  "dictionary_sha256": "fb0846b78d066a98794b40bb408610e87b996edd3a0542859536ae0eb8412c50",
+  "source_columns": [
+    "COMPANY_NAME",
+    "COMPANY_ABBREVIATION",
+    "UNIQUE_ITEM_REFERENCE",
+    "SHORT_DESCRIPTION",
+    "RAG",
+    "YEAR",
+    "VALUE",
+    "UNITS"
+  ],
+  "columns": {
+    "company_id": "COMPANY_ABBREVIATION",
+    "company_name": "COMPANY_NAME",
+    "reporting_period": "YEAR",
+    "measure_code": "UNIQUE_ITEM_REFERENCE",
+    "measure_name": "SHORT_DESCRIPTION",
+    "value": "VALUE",
+    "unit": "UNITS",
+    "definition": "SHORT_DESCRIPTION",
+    "definition_source": "RAG"
+  },
+  "missing_values": [""],
+  "not_applicable_values": ["N/A"],
+  "rejected_values": ["-", "Yes", "No", "PR24", "See RAG Guidance"],
+  "rejected_units": ["Text"],
+  "rejected_company_ids": ["-"],
+  "reject_if_empty": ["measure_name", "definition"],
+  "expected_summary": {
+    "companies": 21,
+    "periods": 8,
+    "measures": 243,
+    "rows": 35381,
+    "reported": 20952,
+    "zero": 6118,
+    "missing": 14426,
+    "not_applicable": 3,
+    "rejected": 2747,
+    "rejected_by_reason": {
+      "company": 13,
+      "empty_metadata": 170,
+      "unit": 2520,
+      "value": 44
+    }
+  },
+  "boundary_crosswalk_version": "ofwat-to-water-supply-v1",
+  "boundary_crosswalk": {
+    "AFW": "AFW",
+    "ANH": "ANH",
+    "HDD": "HDD",
+    "NES": "NES",
+    "PRT": "PRT",
+    "SES": "SES",
+    "SEW": "SEW",
+    "SRN": "SRN",
+    "SSC": "SSC",
+    "SVE": "SVE",
+    "SWB": "SBB",
+    "TMS": "TMS",
+    "UUW": "UUW",
+    "WSH": "WSH",
+    "WSX": "WSX",
+    "YKY": "YKY"
+  }
+}

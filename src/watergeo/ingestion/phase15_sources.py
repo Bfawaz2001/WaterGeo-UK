@@ -445,7 +445,7 @@ def normalize_company_performance(payload: dict[str, Any]) -> NormalizedProduct:
         if not isinstance(raw, dict):
             raise Phase15SourceError("Invalid company-performance row")
         company_id = text(raw.get("company_id"), "Ofwat company identity", 32)
-        measure_code = text(raw.get("measure_code"), "performance measure code", 128)
+        measure_code = text(raw.get("measure_code"), "performance measure code", 256)
         period = text(raw.get("reporting_period"), "reporting period", 32)
         key = company_id, measure_code, period
         if key in keys:
