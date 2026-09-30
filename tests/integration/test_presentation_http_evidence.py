@@ -162,7 +162,7 @@ def test_reviewed_dataset_identity_mismatch_never_projects(dataset, mismatch):
                     {
                         "source_id": 4,
                         "canonical_wkb_sha256": candidate["canonical"]["wkb_sha256"],
-                        "geojson_sha256": candidate["output"]["geojson_sha256"],
+                        "geojson_sha256s": [candidate["output"]["geojson_sha256"]],
                     }
                 ]
             ),
@@ -177,32 +177,46 @@ def test_reviewed_dataset_identity_mismatch_never_projects(dataset, mismatch):
     assert row["byte_count"] is None
 
 
-@pytest.mark.parametrize("mismatch", [None, "canonical", "output"])
-def test_http_presentation_exception_requires_both_reviewed_hashes(dataset, monkeypatch, mismatch):
+@pytest.mark.parametrize(
+    "contract_case", ["primary", "variant", "canonical_mismatch", "output_mismatch"]
+)
+def test_http_presentation_exception_requires_both_reviewed_hashes(
+    dataset, monkeypatch, contract_case
+):
     runtime, snapshot = dataset
     with runtime.connect() as connection:
         before = canonical_digest(connection, snapshot)
         candidate = inspect_candidate(connection, snapshot, 3, "structure_drop")
     canonical_hash = candidate["canonical"]["wkb_sha256"]
-    output_hash = candidate["output"]["geojson_sha256"]
-    if mismatch == "canonical":
+    actual_output_hash = candidate["output"]["geojson_sha256"]
+    primary_output_hash = actual_output_hash
+    variants: dict[int, tuple[str, ...]] = {}
+    if contract_case == "variant":
+        primary_output_hash = "0" * 64
+        variants = {3: (actual_output_hash,)}
+    if contract_case == "canonical_mismatch":
         canonical_hash = "0" * 64
-    if mismatch == "output":
-        output_hash = "0" * 64
+    if contract_case == "output_mismatch":
+        primary_output_hash = "0" * 64
     # Invented geometry gets an invented contract in this test only. Production
     # contracts contain hashes of the four reviewed publisher geometries.
     monkeypatch.setattr(
-        "watergeo.db.water_supply.REVIEWED_WGS84_GEOMETRIES", {3: (canonical_hash, output_hash)}
+        "watergeo.db.water_supply.REVIEWED_WGS84_GEOMETRIES",
+        {3: (canonical_hash, primary_output_hash)},
+    )
+    monkeypatch.setattr(
+        "watergeo.db.water_supply.REVIEWED_WGS84_GEOJSON_VARIANTS",
+        variants,
     )
     app = create_app()
     app.dependency_overrides[get_database] = lambda: runtime
     with TestClient(app) as client:
         metadata = client.get("/v1/water-supply/dataset").json()
         assert metadata["transformation_version"] == OFWAT_WATER_SUPPLY_TRANSFORMATION
-        assert metadata["presentation_version"] == "ofwat-water-supply-v1_5-wgs84-structure-v1"
+        assert metadata["presentation_version"] == "ofwat-water-supply-v1_5-wgs84-structure-v2"
         assert metadata["presentation_exception_source_ids"] == [3, 4, 16, 21]
         response = client.get("/v1/water-supply/areas/3/geometry")
-        if mismatch:
+        if contract_case.endswith("mismatch"):
             assert response.status_code == 503
             assert response.json() == {"detail": "Water-supply dataset unavailable"}
         else:
@@ -211,7 +225,7 @@ def test_http_presentation_exception_requires_both_reviewed_hashes(dataset, monk
             assert presentation["method"] == "post_transform_structure"
             assert presentation["canonical_geometry_changed"] is False
             assert presentation["canonical_wkb_sha256"] == canonical_hash
-            assert presentation["geometry_geojson_sha256"] == output_hash
+            assert presentation["geometry_geojson_sha256"] == actual_output_hash
             assert response.json()["properties"]["transformation"] is None
         # Identical canonical geometry with a different ID is never repaired.
         assert client.get("/v1/water-supply/areas/7/geometry").status_code == 503

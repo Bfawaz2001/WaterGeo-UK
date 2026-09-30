@@ -16,7 +16,10 @@ from watergeo.api.water_supply_models import (
     TransformationMetadata,
 )
 from watergeo.core.datasets import OFWAT_WATER_SUPPLY_SHA256, OFWAT_WATER_SUPPLY_TRANSFORMATION
-from watergeo.core.presentation import REVIEWED_WGS84_GEOMETRIES
+from watergeo.core.presentation import (
+    REVIEWED_WGS84_GEOJSON_VARIANTS,
+    REVIEWED_WGS84_GEOMETRIES,
+)
 
 MAX_GEOMETRY_BYTES = 8 * 1024 * 1024
 
@@ -96,7 +99,7 @@ DETAIL_SQL = text(
 )
 GEOMETRY_SQL = text("""
     WITH source AS MATERIALIZED (
-        SELECT a.geom, p.geojson_sha256 AS expected_sha256,
+        SELECT a.geom, p.geojson_sha256s AS expected_sha256s,
                p.canonical_wkb_sha256 AS canonical_sha256,
                (p.source_id IS NOT NULL) AS presentation_expected,
                COALESCE(p.canonical_wkb_sha256 =
@@ -107,7 +110,7 @@ GEOMETRY_SQL = text("""
         FROM watergeo.water_supply_area a
         JOIN watergeo.water_supply_snapshot s ON s.id = a.snapshot_id
         LEFT JOIN jsonb_to_recordset(CAST(:presentation_contract AS jsonb))
-            AS p(source_id bigint, canonical_wkb_sha256 text, geojson_sha256 text)
+            AS p(source_id bigint, canonical_wkb_sha256 text, geojson_sha256s text[])
             ON p.source_id = a.source_id
         WHERE a.snapshot_id = :snapshot_id AND a.source_id = :source_id
     ), contracted AS MATERIALIZED (
@@ -123,7 +126,7 @@ GEOMETRY_SQL = text("""
         SELECT public.ST_AsGeoJSON(
             public.ST_ForcePolygonCCW(output_geom), 15, 0
         ) AS geojson, presentation_expected, presentation_contract_matches,
-          presentation_applied, canonical_sha256, expected_sha256
+          presentation_applied, canonical_sha256, expected_sha256s
         FROM projected
     )
     SELECT octet_length(geojson) AS byte_count,
@@ -135,7 +138,8 @@ GEOMETRY_SQL = text("""
                 THEN public.ST_IsValid(public.ST_GeomFromGeoJSON(geojson), 0)
                      AND (NOT presentation_expected OR
                           (presentation_contract_matches AND presentation_applied AND
-                           encode(sha256(convert_to(geojson, 'UTF8')), 'hex') = expected_sha256))
+                           encode(sha256(convert_to(geojson, 'UTF8')), 'hex') =
+                               ANY(expected_sha256s)))
                 ELSE false END AS valid
     FROM output
 """)
@@ -251,7 +255,10 @@ class WaterSupplyQueries:
                             {
                                 "source_id": identifier,
                                 "canonical_wkb_sha256": hashes[0],
-                                "geojson_sha256": hashes[1],
+                                "geojson_sha256s": [
+                                    hashes[1],
+                                    *REVIEWED_WGS84_GEOJSON_VARIANTS.get(identifier, ()),
+                                ],
                             }
                             for identifier, hashes in REVIEWED_WGS84_GEOMETRIES.items()
                         ]
