@@ -147,6 +147,11 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
     assert "WATERGEO_STATIC_EVIDENCE_RUN_ID" not in text
     assert '[[ "$EVIDENCE_RELEASE_ID" =~ ^[0-9]+$ ]]' in text
     assert '[[ "$EVIDENCE_SHA256" =~ ^[0-9a-f]{64}$ ]]' in text
+    assert (
+        text.index("docker compose up --build --wait db")
+        < text.index("uv run --locked alembic upgrade head")
+        < text.index("scripts/replay_static_sources.py")
+    )
 
 
 def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
@@ -186,6 +191,11 @@ def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
     assert "WATERGEO_STATIC_EVIDENCE_RUN_ID" not in text
     assert '[[ "$EVIDENCE_RELEASE_ID" =~ ^[0-9]+$ ]]' in text
     assert '[[ "$EVIDENCE_SHA256" =~ ^[0-9a-f]{64}$ ]]' in text
+    assert (
+        text.index("docker compose up --build --wait db")
+        < text.index("uv run --locked alembic upgrade head")
+        < text.index("scripts/replay_static_sources.py")
+    )
     assert "schedule:" not in text
 
 

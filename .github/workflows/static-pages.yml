@@ -51,6 +51,8 @@ jobs:
                   destination.write(f"{key}={value}\n")
           PY
       - run: docker compose up --build --wait db
+      - name: Apply schema migrations
+        run: uv run --locked alembic upgrade head
       - name: Download checksum-pinned reviewed evidence release asset
         env:
           GH_TOKEN: ${{ secrets.WATERGEO_STATIC_EVIDENCE_TOKEN }}
