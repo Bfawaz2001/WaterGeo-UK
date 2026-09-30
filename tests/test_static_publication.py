@@ -7,7 +7,8 @@ from urllib.parse import parse_qs
 import httpx2 as httpx
 import pytest
 
-from watergeo.static_publication import ApiReader, StaticPublicationError, build_publication
+import watergeo.static_publication as static_publication
+from watergeo.static_publication import ApiReader, StaticPublicationError, build_publication, pages
 
 SNAPSHOT = "00000000-0000-0000-0000-000000000015"
 RETRIEVAL = "00000000-0000-4000-8000-000000000016"
@@ -253,6 +254,58 @@ def test_publication_fails_if_a_page_changes_snapshot(tmp_path: Path) -> None:
     with pytest.raises(StaticPublicationError, match="snapshot changed"):
         build_publication(api, tmp_path / "changed", COMMIT)
     assert not (tmp_path / "changed").exists()
+    api.close()
+
+
+def test_pages_support_reviewed_national_water_quality_volume() -> None:
+    total = 66_300
+    calls = 0
+
+    def national_points(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        query = parse_qs(request.url.query.decode())
+        start = int(query.get("after_id", ["-1"])[0]) + 1
+        stop = min(start + 100, total)
+        items = [{"sampling_point_id": str(index)} for index in range(start, stop)]
+        return httpx.Response(
+            200,
+            json={
+                "dataset": dataset("water-quality"),
+                "items": items,
+                "next_after_id": items[-1]["sampling_point_id"] if stop < total else None,
+            },
+        )
+
+    api = ApiReader("http://localhost:8000", transport=httpx.MockTransport(national_points))
+    selected, items = pages(
+        api,
+        "/v1/water-quality/sampling-points",
+        identity="sampling_point_id",
+    )
+    assert selected["snapshot_id"] == SNAPSHOT
+    assert len(items) == total
+    assert calls == 663
+    api.close()
+
+
+def test_pages_remain_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    def endless(request: httpx.Request) -> httpx.Response:
+        query = parse_qs(request.url.query.decode())
+        identity = str(int(query.get("after_id", ["-1"])[0]) + 1)
+        return httpx.Response(
+            200,
+            json={
+                "dataset": dataset(),
+                "items": [{"station_id": identity}],
+                "next_after_id": identity,
+            },
+        )
+
+    monkeypatch.setattr(static_publication, "MAX_PAGE_COUNT", 2)
+    api = ApiReader("http://localhost:8000", transport=httpx.MockTransport(endless))
+    with pytest.raises(StaticPublicationError, match="page budget exceeded"):
+        pages(api, "/v1/hydrology/stations", identity="station_id")
     api.close()
 
 

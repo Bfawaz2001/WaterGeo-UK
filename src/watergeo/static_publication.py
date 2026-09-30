@@ -18,6 +18,7 @@ from shapely.geometry import shape
 
 PUBLICATION_VERSION = "watergeo-static-publication-v1"
 MAX_RESPONSE_BYTES = 64 * 1024 * 1024
+MAX_PAGE_COUNT = 1000
 
 
 def encode(value: Any) -> bytes:
@@ -91,7 +92,7 @@ def pages(
     items: list[dict[str, Any]] = []
     after: str | int | None = None
     dataset: dict[str, Any] | None = None
-    for _ in range(200):
+    for _ in range(MAX_PAGE_COUNT):
         parameters: dict[str, Any] = {"limit": 100}
         if snapshot:
             parameters["snapshot_id"] = snapshot
