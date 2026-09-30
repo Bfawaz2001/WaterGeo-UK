@@ -107,6 +107,9 @@ jobs:
           npm run lint
           npm run typecheck
           npm test -- --run
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
       - name: Build and accept static explorer
         working-directory: web
         env:

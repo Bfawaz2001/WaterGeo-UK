@@ -152,6 +152,7 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
         < text.index("uv run --locked alembic upgrade head")
         < text.index("scripts/replay_static_sources.py")
     )
+    _assert_playwright_chromium_installed_before_static_acceptance(job)
     _assert_static_build_does_not_change_unit_test_mode(job)
 
 
@@ -198,6 +199,7 @@ def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
         < text.index("uv run --locked alembic upgrade head")
         < text.index("scripts/replay_static_sources.py")
     )
+    _assert_playwright_chromium_installed_before_static_acceptance(build)
     assert "schedule:" not in text
 
 
@@ -207,6 +209,15 @@ def _assert_static_build_does_not_change_unit_test_mode(job: dict) -> None:
     assert "VITE_WATERGEO_DATA_MODE" not in test_step.get("env", {})
     build_step = next(step for step in job["steps"] if "npm run build" in step.get("run", ""))
     assert build_step["env"]["VITE_WATERGEO_DATA_MODE"] == "static"
+
+
+def _assert_playwright_chromium_installed_before_static_acceptance(job: dict) -> None:
+    commands = [step.get("run", "") for step in job["steps"]]
+    install_index = commands.index("npx playwright install --with-deps chromium")
+    acceptance_index = next(
+        index for index, command in enumerate(commands) if "npm run test:e2e:static" in command
+    )
+    assert install_index < acceptance_index
 
 
 @pytest.mark.parametrize("value", ["43 2 * * * *", "60 2 * * *", "43 24 * * *", "*/0 * * * *"])
