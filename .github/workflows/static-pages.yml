@@ -95,6 +95,13 @@ jobs:
       - run: docker compose --profile app up --build --wait api
       - name: Build immutable data publication
         run: uv run --locked watergeo-static-publish --output "$RUNNER_TEMP/watergeo-data" --analytics
+      - name: Install and test explorer
+        working-directory: web
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test -- --run
       - name: Build and accept Pages site
         working-directory: web
         env:
@@ -102,12 +109,8 @@ jobs:
           VITE_WATERGEO_DATA_MODE: static
           VITE_BASEMAP_STYLE_URL: ""
         run: |
-          npm ci
           mkdir -p public/watergeo-data
           cp -R "$RUNNER_TEMP/watergeo-data/." public/watergeo-data/
-          npm run lint
-          npm run typecheck
-          npm test -- --run
           npm run build
           npm run test:e2e:static
           cp dist/index.html dist/404.html
