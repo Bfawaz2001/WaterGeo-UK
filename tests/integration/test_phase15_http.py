@@ -242,6 +242,50 @@ def test_phase15_atomic_load_spatial_api_search_and_status(engines, tmp_path: Pa
                 connection.execute(text(f"DELETE FROM watergeo.{table}"))  # noqa: S608
 
 
+def test_rainfall_load_accepts_unlocated_station(engines, tmp_path: Path) -> None:
+    stations, readings = rainfall_payloads()
+    station = stations["items"][0]  # type: ignore[index]
+    station.pop("lat")
+    station.pop("long")
+    normalize = lambda value: normalize_rainfall(  # noqa: E731
+        value["stations.json"], value["readings.json"]
+    )
+    bundle = create_bundle(
+        "rainfall",
+        {
+            "stations.json": ("https://example.invalid/stations", body(stations), {}),
+            "readings.json": ("https://example.invalid/readings", body(readings), {}),
+        },
+        normalize,
+        root=tmp_path,
+    )
+    loaded = load_snapshot(engines[0], bundle, normalize)
+    try:
+        with engines[1].connect() as connection:
+            unlocated = connection.execute(
+                text("""
+                    SELECT geom IS NULL FROM watergeo.rainfall_station
+                    WHERE snapshot_id=:snapshot AND station_id='R1'
+                """),
+                {"snapshot": loaded["snapshot_id"]},
+            ).scalar_one()
+        assert unlocated is True
+    finally:
+        with engines[2].begin() as connection:
+            connection.execute(
+                text("DELETE FROM watergeo.rainfall_station WHERE snapshot_id=:snapshot"),
+                {"snapshot": loaded["snapshot_id"]},
+            )
+            connection.execute(
+                text("DELETE FROM watergeo.national_source_retrieval WHERE snapshot_id=:snapshot"),
+                {"snapshot": loaded["snapshot_id"]},
+            )
+            connection.execute(
+                text("DELETE FROM watergeo.national_source_snapshot WHERE id=:snapshot"),
+                {"snapshot": loaded["snapshot_id"]},
+            )
+
+
 def test_identical_content_records_new_retrieval_and_advances_freshness(
     engines, tmp_path: Path
 ) -> None:

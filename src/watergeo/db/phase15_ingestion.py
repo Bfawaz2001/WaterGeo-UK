@@ -21,8 +21,10 @@ def _insert_entities(connection: Any, identity: UUID, product: NormalizedProduct
                      latest_observed_at,latest_value_mm,latest_value,latest_unit,
                      latest_period_seconds,source_fields)
                 VALUES (:snapshot_id,:station_id,:publisher_uri,:display_name,
-                    CASE WHEN :longitude IS NULL THEN NULL ELSE
-                        public.ST_SetSRID(public.ST_MakePoint(:longitude,:latitude),4326) END,
+                    CASE WHEN CAST(:longitude AS double precision) IS NULL THEN NULL ELSE
+                        public.ST_SetSRID(public.ST_MakePoint(
+                            CAST(:longitude AS double precision),
+                            CAST(:latitude AS double precision)),4326) END,
                     :grid_reference,:latest_observed_at,:latest_value_mm,:latest_value,
                     :latest_unit,:latest_period_seconds,
                     CAST(:source_fields AS jsonb))
