@@ -138,6 +138,8 @@ def test_static_preview_build_is_artifact_only_and_opt_in() -> None:
     assert "python -m watergeo.operations.public_artifact web/dist" in text
     assert "deploy" not in text.lower()
     assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in text
+    assert "node-version-file: .nvmrc" in text
+    assert "node-version-file: web/.nvmrc" not in text
     assert "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0" in text
     assert "secrets.WATERGEO_STATIC_EVIDENCE_TOKEN" in text
     assert "${GH_TOKEN:?WATERGEO_STATIC_EVIDENCE_TOKEN is required}" in text
@@ -163,6 +165,8 @@ def test_static_pages_is_manual_main_only_and_least_privilege() -> None:
     assert deploy["environment"]["name"] == "github-pages"
     text = path.read_text()
     assert "VITE_BASE_PATH: /WaterGeo-UK/" in text
+    assert "node-version-file: .nvmrc" in text
+    assert "node-version-file: web/.nvmrc" not in text
     assert "python -m watergeo.operations.public_artifact web/dist" in text
     expected_actions = {
         "actions/setup-node": ("820762786026740c76f36085b0efc47a31fe5020", "v7.0.0"),
