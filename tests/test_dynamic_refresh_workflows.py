@@ -209,6 +209,7 @@ def _assert_static_build_does_not_change_unit_test_mode(job: dict) -> None:
     assert "VITE_WATERGEO_DATA_MODE" not in test_step.get("env", {})
     build_step = next(step for step in job["steps"] if "npm run build" in step.get("run", ""))
     assert build_step["env"]["VITE_WATERGEO_DATA_MODE"] == "static"
+    assert "VITE_BASEMAP_STYLE_URL" not in build_step["env"]
 
 
 def _assert_playwright_chromium_installed_before_static_acceptance(job: dict) -> None:

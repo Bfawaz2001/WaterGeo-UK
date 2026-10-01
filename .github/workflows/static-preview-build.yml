@@ -115,7 +115,6 @@ jobs:
         env:
           VITE_WATERGEO_DATA_MODE: static
           VITE_WATERGEO_STATIC_DATA_PATH: /watergeo-data
-          VITE_BASEMAP_STYLE_URL: ""
         run: |
           mkdir -p public/watergeo-data
           cp -R "$RUNNER_TEMP/watergeo-data/." public/watergeo-data/
