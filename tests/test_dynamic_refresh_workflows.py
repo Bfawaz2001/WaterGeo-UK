@@ -221,6 +221,14 @@ def _assert_playwright_chromium_installed_before_static_acceptance(job: dict) ->
     assert install_index < acceptance_index
 
 
+def test_static_playwright_rebuild_preserves_deployment_basemap() -> None:
+    text = Path("web/playwright.static.config.ts").read_text()
+    assert "VITE_BASEMAP_STYLE_URL" not in text
+    assert 'VITE_WATERGEO_DATA_MODE: "static"' in text
+    assert "VITE_BASE_PATH: normalizedBase" in text
+    assert "VITE_WATERGEO_STATIC_DATA_PATH" in text
+
+
 @pytest.mark.parametrize("value", ["43 2 * * * *", "60 2 * * *", "43 24 * * *", "*/0 * * * *"])
 def test_cron_validator_rejects_invalid_field_count_ranges_and_steps(value: str) -> None:
     with pytest.raises(AssertionError):
