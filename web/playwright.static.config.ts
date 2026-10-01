@@ -25,7 +25,6 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: false,
     env: {
-      VITE_BASEMAP_STYLE_URL: "",
       VITE_WATERGEO_DATA_MODE: "static",
       VITE_BASE_PATH: normalizedBase,
       VITE_WATERGEO_STATIC_DATA_PATH: `${normalizedBase}watergeo-data`,
