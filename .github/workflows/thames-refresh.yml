@@ -1,4 +1,4 @@
-name: Thames discharge status refresh
+name: Refresh — Thames EDM
 
 on:
   workflow_dispatch:

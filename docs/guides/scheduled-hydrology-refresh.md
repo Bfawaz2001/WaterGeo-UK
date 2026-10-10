@@ -36,7 +36,7 @@ status command. Use `/v1/sources/status` for the accepted-data view.
 ## Enable safely
 
 1. Provision PostgreSQL/PostGIS using the existing schema and least-privilege roles;
-   apply migrations through `0011` separately. Check the API's `/ready` if deployed.
+   apply migrations through `0012` separately. Check the API's `/ready` if deployed.
 2. Provide a database endpoint reachable from `ubuntu-24.04` GitHub-hosted runners,
    with server TLS enabled and a certificate matching the connection hostname.
    A localhost Compose database or private endpoint without network connectivity will
@@ -65,7 +65,7 @@ status command. Use `/v1/sources/status` for the accepted-data view.
    environment must not receive these credentials.
 
 5. After configuring the environment/secrets and merging the workflow separately,
-   open Actions → **Hydrology latest refresh**
+   open Actions → **Refresh — Hydrology**
    → Run workflow, select **main**, and inspect the first run, summary and artifact.
    Manual dispatch works independently of `WATERGEO_HYDROLOGY_SCHEDULE_ENABLED`.
    There are no dispatch inputs. Repository and `refs/heads/main` guards prevent this

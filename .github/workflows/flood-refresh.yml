@@ -1,4 +1,4 @@
-name: EA flood monitoring refresh
+name: Refresh — Flood Monitoring
 
 on:
   workflow_dispatch:

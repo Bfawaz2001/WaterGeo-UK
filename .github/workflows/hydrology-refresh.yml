@@ -1,4 +1,4 @@
-name: Hydrology latest refresh
+name: Refresh — Hydrology
 
 on:
   workflow_dispatch:

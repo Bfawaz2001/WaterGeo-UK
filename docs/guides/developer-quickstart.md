@@ -1,8 +1,9 @@
 # Python SDK and CLI quickstart
 
-WaterGeo has no hosted endpoint yet. Start the API locally using the repository
-[setup instructions](../../README.md#local-development), or supply the URL of a
-WaterGeo instance that you operate.
+The [public explorer](https://bfawaz2001.github.io/WaterGeo-UK/) is a governed static
+GitHub Pages publication and does not expose FastAPI. Start the API locally using the
+repository [setup instructions](../../README.md#local-development), or supply the URL
+of a WaterGeo instance that you operate.
 
 ## Install from the current project
 
@@ -158,6 +159,6 @@ Third-party data keeps its publisher licence; the repository MIT licence does no
 relicense it.
 
 WaterGeo does not infer current suppliers, company/catchment relationships, supply
-risk, restrictions, or local dates. It has no authentication contract or public
-production deployment in this phase. The SDK and CLI are read-only clients and do
-not expose refresh or ingestion operations.
+risk, restrictions, or local dates. There is no hosted public FastAPI/PostGIS service
+or authentication contract. The SDK and CLI are read-only clients and do not expose
+refresh or ingestion operations.

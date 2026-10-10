@@ -2,8 +2,8 @@
 
 **Status: pending external provisioning. Provider review: 28 September 2026.**
 
-No hosted endpoint or DigitalOcean resource is claimed by this document. Provisioning
-requires a separately approved cost proposal and a reviewed `main` commit.
+No hosted FastAPI/PostGIS endpoint or DigitalOcean resource is claimed by this document.
+Provisioning requires a separately approved cost proposal and a reviewed `main` commit.
 
 ## Reviewed provider contract
 
@@ -127,7 +127,8 @@ component-scoped `SECRET` variables and never build arguments.
    process liveness and `/ready` remains database/migration readiness.
 9. Render a separate spec with `--include-bootstrap`. Its temporary POST_DEPLOY job uses
    the operator image and accepted `watergeo-demo-bootstrap` refresh/evidence gates for
-   all six source families. Do not expose traffic while it runs. If a reviewed static
+   the six core local-demo source families. This is distinct from the ten-source
+   governed static publication. Do not expose traffic while it runs. If a reviewed static
    publisher dependency cannot be retrieved, stop; do not use a mirror or local DB.
 10. Record the job result and source status, then immediately apply the normal spec to
     remove bootstrap. Future deploys run only migrations. No recurring job exists.
@@ -157,7 +158,7 @@ bundle is archived below `watergeo/evidence` before publication.
 ## Acceptance and monitoring
 
 Require HTTPS redirect, no direct API route, exact Host rejection, inaccessible public
-PostgreSQL, private/versioned bucket, all six sources, `/health`, `/ready`, OpenAPI,
+PostgreSQL, private/versioned bucket, all six core API-demo sources, `/health`, `/ready`, OpenAPI,
 source status, search, complete smoke, and manual explorer checks. Use App Platform's
 deployment/domain failure alerts and built-in service/database metrics. Phase 15 owns
 schedule activation, formal alert routing and a managed restore drill.

@@ -6,10 +6,11 @@ Please do not post credentials, exploit details, or personal data in public issu
 Use GitHub's **Report a vulnerability** option on this repository's Security tab
 when private reporting is enabled. If it is unavailable, open an issue requesting
 a private reporting channel without including sensitive details. The maintainer
-should enable private vulnerability reporting before inviting public use.
+should enable and keep private vulnerability reporting enabled where available.
 
-Only the current `main` branch is maintained during this pre-release phase.
-There is no production deployment or response-time guarantee yet.
+Only the current `main` branch is maintained. The governed static explorer is deployed
+through GitHub Pages, with no response-time guarantee. There is no hosted public
+FastAPI/PostgreSQL service.
 
 ## Current controls
 
@@ -37,9 +38,10 @@ publication job has the only package-write permission; publishing never deploys.
 The production design retains separate API, migration, ingestion and administrator
 identities. See the [production operations runbook](docs/guides/production-operations.md).
 
-These controls are a deployment foundation, not evidence of a public deployment.
-GitHub secret scanning/push protection, private reporting, and branch protections
-are repository settings and must be enabled by the maintainer where available.
+These controls are a deployment foundation for a future hosted API, separate from the
+current static GitHub Pages publication. GitHub secret scanning/push protection,
+private reporting, and branch protections are repository settings and must be enabled
+by the maintainer where available.
 Do not enable CodeQL default setup alongside the committed advanced workflow.
 
 ## Future integrations and deployment
@@ -49,8 +51,9 @@ Future provider clients must use approved publisher hosts, validate redirects,
 bound response sizes and timeouts, and retry only appropriate transient failures.
 No internal APIs or credentials may be used.
 
-Before public hosting, configure the reviewed TLS, trusted-host, edge-limit,
+Before hosting the API, configure the reviewed TLS, trusted-host, edge-limit,
 database-network, backup restoration, evidence retention, secret rotation and
 monitoring contracts. Proxy headers remain disabled until the exact ingress proxy
 network is known. Local Compose credentials are for local development; do not reuse
-them elsewhere.
+them elsewhere. The public Pages explorer must continue to contain only reviewed
+static publication assets, never raw/private evidence or service credentials.

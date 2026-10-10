@@ -4,22 +4,21 @@ An independent, open-source project working towards a consistent geospatial API
 for public UK water data, preserving publisher identifiers, provenance,
 attribution, and dataset licensing.
 
-**Status: Phase 16A made the governed static explorer launch-capable, and Phase 16B
-adds deterministic complete-evidence packaging plus a checksum-pinned private draft
-release bridge for a zero-cost GitHub Pages beta. The official WCPR 2024–25 workbook
-still requires manual download and review, so no complete real publication candidate
-or public WaterGeo URL exists. Pages remains disabled.** The
-reviewed April 2024 water-supply release can be loaded as 1,141 canonical areas
-with five recorded geometry transformations. Developers can query metadata,
-paginate area summaries, retrieve one-area GeoJSON, and look up areas covering a
-longitude/latitude. This is a local development service; a hosted API and visual
-explorer deployment may come later.
+**Status: Phase 16 is complete. The governed static explorer is published at
+[bfawaz2001.github.io/WaterGeo-UK](https://bfawaz2001.github.io/WaterGeo-UK/) from an
+accepted ten-source evidence package.** It is an immutable GitHub Pages publication,
+not a live feed: publisher observation/publication time, WaterGeo retrieval time and
+WaterGeo publication time remain distinct. The reviewed April 2024 water-supply
+release contains 1,141 canonical areas with explicit transformation and presentation
+provenance.
 
-The repository defines a production architecture, immutable image workflow,
-fail-closed production configuration, versioned evidence gate and deployment smoke
-checks. No public endpoint
-or external infrastructure exists. See the [production operations runbook](docs/guides/production-operations.md)
-and [hosting assessment](docs/deployment/hosting-assessment-2026-09-24.md).
+GitHub Pages serves static public data and the React explorer; it does not run FastAPI
+or PostgreSQL/PostGIS. Local development supports React → FastAPI → PostgreSQL/PostGIS.
+There is currently no hosted public FastAPI/PostGIS service. The repository also
+defines a separate production API architecture, immutable image workflow, fail-closed
+configuration, versioned evidence gate and deployment smoke checks. See the
+[production operations runbook](docs/guides/production-operations.md) and
+[hosting assessment](docs/deployment/hosting-assessment-2026-09-24.md).
 
 The [map explorer](docs/guides/explorer-local-development.md) is a separate React,
 TypeScript and MapLibre application under `web/`. It shows bounded nearby point
@@ -35,9 +34,9 @@ npm ci
 npm run dev
 ```
 
-Run the API on `127.0.0.1:8000`; Vite proxies same-origin API paths during local
-development. WaterGeo still has no public hosted endpoint or externally provisioned
-production environment.
+Run the local API on `127.0.0.1:8000`; Vite proxies same-origin API paths during local
+development. The public Pages explorer reads immutable static assets and makes no
+FastAPI requests.
 
 Phase 8 adds collapsible controls, overlay details, source-backed drill-down and an
 optional national PMTiles overview. The [export guide](docs/guides/phase-8-exports.md)
@@ -64,18 +63,16 @@ disclosure, while observation timing, caveats and provenance remain visible. See
 
 Phase 15 adds governed Environment Agency rainfall, flood-monitoring and bathing-water
 products plus a generic Ofwat company-performance model. The same accepted snapshots
-feed FastAPI/PostGIS, an optional analytical export and a vendor-neutral static explorer
-bundle. The static build is repository capability only: no Pages project, public URL or
-schedule has been enabled. See the [source portfolio](docs/data-sources/source-portfolio.md),
+feed FastAPI/PostGIS, optional analytical exports and the vendor-neutral static explorer
+bundle. The governed ten-source bundle is now published through GitHub Pages. See the
+[source portfolio](docs/data-sources/source-portfolio.md),
 [refresh policy](docs/guides/data-refresh-policy.md) and
 [zero-cost preview contract](docs/deployment/zero-cost-static-preview.md).
 
-Phase 16A adds a manual, main-only GitHub Pages workflow and a deterministic
-operator-reviewed Ofwat workbook preparation command. Phase 16B adds the
-`watergeo-static-evidence-package` operator command and pins private reviewed evidence
-by draft-release ID and SHA-256. Activation remains a repository-owner action after a
-complete real candidate passes review; no Pages setting or public deployment is enabled
-by the repository change.
+Phase 16 completed the checksum-pinned private evidence handoff, deterministic
+ten-source replay, static publication, browser acceptance and protected GitHub Pages
+deployment. The public result remains a reviewed snapshot rather than a hosted API or
+publisher-live service.
 
 Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
 for setup, loading, querying, exporting GeoJSON and diagnosing failures.
@@ -84,7 +81,7 @@ for setup, loading, querying, exporting GeoJSON and diagnosing failures.
 
 After starting PostgreSQL and migrating to `0012`, one command inspects the database,
 preserves compatible snapshots, replays retained verified evidence where available,
-and loads only missing accepted demo sources:
+and loads only missing accepted sources for the six-core-source local API demo:
 
 ```bash
 uv run --locked watergeo-demo-bootstrap --dry-run
@@ -93,7 +90,8 @@ uv run --locked watergeo-demo-smoke http://127.0.0.1:8000 --complete
 ```
 
 See the [complete local demo guide](docs/guides/local-complete-demo.md) for offline and
-selected-source modes, source semantics and failure handling. The
+selected-source modes, source semantics and failure handling. This legacy local
+bootstrap is distinct from the governed ten-source static publication. The
 [v1 production rehearsal](docs/guides/v1-production-rehearsal.md) serves the built
 explorer and API from one local origin and defines guarded recovery, scheduling, cost
 and monitoring contracts. It does not claim public hosting or cloud provisioning.
@@ -108,10 +106,11 @@ offline retries, exit codes and external scheduling, and
 
 The opt-in [scheduled Hydrology workflow](docs/guides/scheduled-hydrology-refresh.md)
 provides hourly/manual refresh, retained operational logs and GitHub failure summaries.
-Phase 10 also supplies separately gated Thames and Water Quality metadata schedules.
-Production jobs require reachable PostgreSQL, verified TLS and private versioned
-S3-compatible evidence storage;
-no hosted deployment is claimed.
+Separate opt-in workflows cover Thames, Water Quality metadata, rainfall, flood
+monitoring and bathing waters at their reviewed cadences.
+Production refresh jobs require reachable PostgreSQL, verified TLS and private
+versioned S3-compatible evidence storage. No hosted FastAPI/PostGIS deployment is
+claimed.
 
 ## Independence and licensing
 
@@ -159,7 +158,7 @@ Open <http://127.0.0.1:8000/docs> for OpenAPI documentation.
 
 For typed Python client and read-only CLI examples, see the
 [developer quickstart](docs/guides/developer-quickstart.md). WaterGeo has no hosted
-endpoint; configure the client or CLI with a local or self-hosted server URL.
+FastAPI endpoint; configure the client or CLI with a local or self-hosted server URL.
 
 Existing databases from before the ingestion role was introduced need that role
 provisioned before migration `0003`; editing `.env` alone does not create it. See
@@ -261,7 +260,7 @@ separate read-only `watergeo_app` role.
 
 ## Load and query the reviewed dataset
 
-With the database at migration head (`0011`), run these from the repository root:
+With the database at migration head (`0012`), run these from the repository root:
 
 ```bash
 uv run --locked python scripts/fetch_ofwat_water_supply.py
@@ -332,7 +331,7 @@ timeout. It never approves transformations or modifies the API policy.
 
 Data routes return 503 until the reviewed snapshot is loaded or if the database
 is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0011`), not dataset availability. See the
+infrastructure and migration head (`0012`), not dataset availability. See the
 [API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
 
 ## Query the Catchment Data Explorer hierarchy
@@ -398,7 +397,7 @@ docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
 docs/architecture/       Current design and operational boundaries
 docs/adr/                Significant architectural decisions
 docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through indexed product search (0011)
+migrations/              Alembic revisions through national products (0012)
 scripts/                 Source retrieval, validation, assessment and canonical loader
 src/watergeo/
   api/                   Operational, water-supply, hydrology and catchment public routes
@@ -455,10 +454,10 @@ refresh operations and bounded historical observations with determinand/unit evi
 See the [walkthrough](docs/guides/water-quality-walkthrough.md) and
 [ADR 0012](docs/adr/0012-bounded-water-quality-observations.md). Observation retrievals
 preserve publisher sample relationships, censored results and unspecified timezones;
-they do not claim a complete or publisher-atomic archive. Water Quality scheduling,
-unit conversion and cross-source geographic assignments remain deferred.
-Public hosting still requires the
-deployment controls described in SECURITY.md; there is no hosted endpoint yet.
+they do not claim a complete or publisher-atomic archive. Water Quality observation
+scheduling, unit conversion and cross-source geographic assignments remain deferred.
+The public static explorer is hosted on GitHub Pages; hosting a FastAPI/PostGIS service
+still requires the deployment controls described in SECURITY.md.
 
 Phase 4's first company-data slice integrates Severn Trent Water's public 2025
 raw-water reservoir levels from Stream: 14 reservoirs and 728 weekly source readings,

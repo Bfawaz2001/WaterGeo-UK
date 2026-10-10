@@ -1,8 +1,8 @@
 # External production and Fabric validation checklist
 
-Nothing in this checklist has been provisioned or executed by the repository. For the
-Phase 14 public preview, stop after manually validating each dynamic source; step 9
-belongs to Phase 15 and recurring production schedules remain disabled.
+This checklist covers an optional future hosted FastAPI/PostGIS and Fabric deployment;
+none of those external resources has been provisioned or validated. It is separate
+from the governed static GitHub Pages explorer that completed Phase 16.
 
 ## DigitalOcean production rehearsal
 
@@ -12,7 +12,7 @@ belongs to Phase 15 and recurring production schedules remain disabled.
    migration, ingestion and app roles; require `verify-full` with the provider CA.
 3. Create a private encrypted Spaces bucket. Enable and verify object versioning,
    access logs and retention. Give write/read credentials only to ingestion jobs.
-4. Run migration `0011` as a one-shot job using the exact API image digest. Verify the
+4. Run migration `0012` as a one-shot job using the exact API image digest. Verify the
    revision and stop it before API rollout.
 5. Deploy the API digest without autodeploy. Configure trusted hosts, read-only database
    credentials, CA mount, freshness thresholds and `/health`/`/ready` probes.
@@ -22,8 +22,11 @@ belongs to Phase 15 and recurring production schedules remain disabled.
    archive hashes and the database manifest reference before enabling schedules.
 8. Bootstrap static sources, then dynamic sources. Never schedule global history or
    observation retrievals.
-9. Enable Hydrology hourly, Thames every 15 minutes and Water Quality metadata daily
-   only after manual success. Confirm advisory-lock overlap exits safely.
+9. Enable only the reviewed cadences needed by the deployment: Hydrology and rainfall
+   hourly; Thames and flood monitoring every 15 minutes; Water Quality metadata daily;
+   and bathing waters weekly in May–September and monthly otherwise. Keep every
+   schedule opt-in, enable it only after manual success, and confirm advisory-lock
+   overlap exits safely.
 10. Add DNS/TLS after starter-domain smoke tests. Exercise health, readiness, OpenAPI,
     source status, representative data, explorer and failure states.
 11. Configure HTTP error/latency, restart, database, migration, refresh, archive,

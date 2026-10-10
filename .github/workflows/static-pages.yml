@@ -1,4 +1,4 @@
-name: Publish governed static beta to GitHub Pages
+name: Deploy Public Explorer
 
 on:
   workflow_dispatch:
