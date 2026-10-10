@@ -18,9 +18,36 @@ async function syntheticApi(page: Page) {
       return;
     }
     if (url.pathname === "/v1/sources/status") {
-      await route.fulfill({ json: { checked_at: "2026-09-26T12:01:00Z", sources: [
-        "ofwat", "hydrology", "catchments", "water-quality", "stream-reservoir-levels", "thames-discharge-status",
-      ].map((source) => ({ source, semantics: source === "ofwat" ? "versioned_release" : "dynamic_snapshot", availability: "available", snapshot_id: dataset.snapshot_id, retrieval_freshness: "current", observation_freshness: "current", retrieved_at: dataset.retrieval_completed_at, observation_newest_at: dataset.retrieval_completed_at, caveat: "Synthetic status" })) } });
+      const sources = [
+        { source: "hydrology", semantics: "dynamic_snapshot", source_version: null },
+        { source: "water-quality", semantics: "dynamic_snapshot", source_version: null },
+        { source: "thames-discharge-status", semantics: "dynamic_snapshot", source_version: null },
+        { source: "rainfall", semantics: "dynamic_snapshot", source_version: null },
+        { source: "flood-monitoring", semantics: "dynamic_snapshot", source_version: null },
+        { source: "bathing-waters", semantics: "dynamic_snapshot", source_version: null },
+        { source: "ofwat", semantics: "versioned_release", source_version: "2024-04 / v1_5" },
+        { source: "catchments", semantics: "versioned_plan", source_version: "c3-plan" },
+        { source: "stream-reservoir-levels", semantics: "versioned_release", source_version: "2025 edition" },
+        { source: "company-performance", semantics: "versioned_release", source_version: "WCPR 2024-25 / PR24 V6.0" },
+      ];
+      await route.fulfill({ json: {
+        checked_at: "2026-09-26T12:01:00Z",
+        sources: sources.map((item) => {
+          const dynamic = item.semantics === "dynamic_snapshot";
+          return {
+            ...item,
+            availability: "available",
+            snapshot_id: dataset.snapshot_id,
+            snapshot_age_seconds: 60,
+            retrieval_max_age_seconds: dynamic ? 3600 : null,
+            retrieval_freshness: dynamic ? "current" : "not_applicable",
+            observation_freshness: item.source === "hydrology" ? "unknown" : "not_applicable",
+            retrieved_at: dataset.retrieval_completed_at,
+            observation_newest_at: item.source === "hydrology" ? dataset.retrieval_completed_at : null,
+            caveat: "Synthetic status",
+          };
+        }),
+      } });
       return;
     }
     if (url.pathname === "/v1/hydrology/stations/near") {
@@ -230,9 +257,14 @@ test("Water Body browser explains loaded scope and selection hierarchy", async (
 });
 
 test("source health expands from a compact product summary", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-09-26T12:01:00Z"));
   await syntheticApi(page);
   await page.goto("/");
-  await expect(page.getByText("6/6 available")).toBeVisible();
+  await expect(page.getByText("10/10 available")).toBeVisible();
   await page.getByText("Source status", { exact: true }).click();
-  await expect(page.getByLabel("Hydrology: Available")).toBeVisible();
+  await expect(page.getByLabel("Hydrology: Current by policy")).toBeVisible();
+  await expect(page.getByLabel("Bathing waters: Current by policy")).toBeVisible();
+  await expect(
+    page.getByLabel("Company performance: Edition WCPR 2024-25 / PR24 V6.0"),
+  ).toBeVisible();
 });
