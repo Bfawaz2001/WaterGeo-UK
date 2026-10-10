@@ -1,4 +1,4 @@
-name: Build governed static preview
+name: Static Preview
 
 on:
   workflow_dispatch:

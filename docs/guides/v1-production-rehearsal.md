@@ -1,7 +1,10 @@
 # V1 production rehearsal
 
-Status: executable local rehearsal; no public infrastructure or Fabric tenant has
-been provisioned or validated.
+Status: the same-origin local FastAPI/PostGIS rehearsal is executable. The backup/restore
+rehearsal is not valid current acceptance because its script still requires legacy
+migration `0011`; runtime readiness requires `0012`. No hosted API infrastructure or
+Fabric tenant has been provisioned or validated. The public GitHub Pages explorer is a
+separate governed static deployment.
 
 ## Same-origin topology
 
@@ -34,11 +37,11 @@ the operator/bootstrap path. The API never migrates or publishes data.
 `scripts/rehearse_backup_restore.sh` operates only when
 `WATERGEO_DISPOSABLE_REHEARSAL=1` is set and both explicitly named containers begin
 `watergeo-v1-rehearsal-`. It refuses to overwrite a dump. It uses `pg_dump -Fc`, restores
-with `pg_restore --exit-on-error`, verifies revision `0011`, and compares a stable
-signature across snapshot IDs, hashes and provenance rows. It reports dump bytes and
-wall-clock backup/restore seconds as local measurements. Populate two isolated
-containers, set their names, run the script, then point an API container at the
-restored database and require `/ready` plus `watergeo-demo-smoke --complete`.
+with `pg_restore --exit-on-error` and compares a stable signature across snapshot IDs,
+hashes and provenance rows. The script still checks the legacy `0011` revision, so it
+must not be treated as current `0012` acceptance until that separate script correction
+is reviewed. It reports dump bytes and wall-clock backup/restore seconds as local
+measurements.
 
 Never use the normal `watergeo-db-1` container. The script intentionally rejects that
 name. Evidence storage requires a separate restore/replay check: verify every object

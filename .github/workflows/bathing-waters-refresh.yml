@@ -1,4 +1,4 @@
-name: EA bathing waters refresh
+name: Refresh — Bathing Waters
 
 on:
   workflow_dispatch:

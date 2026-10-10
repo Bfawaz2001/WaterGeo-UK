@@ -1,8 +1,8 @@
 # Zero-cost public static beta
 
-**Status: launch capability and evidence packaging are implemented. The official WCPR
-2024–25 workbook remains an external manual-download blocker, so no complete real
-candidate exists. GitHub Pages is not enabled and no public WaterGeo URL exists.**
+**Status: Phase 16 is complete. The governed ten-source static publication is live at
+[bfawaz2001.github.io/WaterGeo-UK](https://bfawaz2001.github.io/WaterGeo-UK/).** It is
+an immutable GitHub Pages snapshot; GitHub Pages does not run FastAPI or PostGIS.
 
 WaterGeo can build a repository-subpath-safe static explorer for
 `/WaterGeo-UK/`. Browser runtime needs only immutable files; it does not need FastAPI,
@@ -71,7 +71,11 @@ documented release API exposes draft releases only to identities with push acces
 the ordinary workflow `GITHUB_TOKEN` is not assumed to work. Store a fine-grained token
 belonging to an operator with repository push access as the protected
 `static-preview-build` environment secret `WATERGEO_STATIC_EVIDENCE_TOKEN`, limited to
-this repository and **Contents: read**.
+this repository and **Contents: Read and write**. Although the workflow only reads the
+release, GitHub required push-level repository permission to access the draft release
+and its asset during the successful launch. Scope the fine-grained token to this single
+repository, grant no other repository or account permissions, and rotate or revoke it
+when the governed handoff is no longer needed.
 
 Both workflows require `WATERGEO_STATIC_EVIDENCE_RELEASE_ID` and
 `WATERGEO_STATIC_EVIDENCE_SHA256`. They require the configured release to remain a
@@ -96,10 +100,10 @@ Reject a release if the data bundle exceeds the preliminary limit, required prov
 or licensing is missing, hashes fail, a required asset returns 404, the Pages base-path
 test fails, the final-site artifact guard fails, or static browser acceptance fails.
 
-## Post-merge activation
+## Publication operation
 
-Do this only after all ten real evidence sources, including the reviewed official WCPR
-edition, produce a complete local candidate with no synthetic data.
+Use this procedure only with all ten accepted real evidence sources, including the
+reviewed official WCPR edition. Do not substitute synthetic or newly fetched data.
 
 ```bash
 OWNER_REPO=Bfawaz2001/WaterGeo-UK
@@ -120,7 +124,9 @@ gh variable set WATERGEO_STATIC_EVIDENCE_SHA256 --repo "$OWNER_REPO" \
 ```
 
 Create a fine-grained token for the operator identity, scoped only to this repository
-with Contents read, then store it without echoing it:
+with **Contents: Read and write**, then store it without echoing it. GitHub draft-release
+asset access required this push-level repository permission during launch; do not add
+broader repository or account permissions.
 
 ```bash
 gh secret set WATERGEO_STATIC_EVIDENCE_TOKEN --repo Bfawaz2001/WaterGeo-UK \
@@ -165,7 +171,7 @@ reviewed revert PR before dispatching. Approve the protected deployment, then co
 the served manifest's publication ID and WaterGeo commit with the recorded known-good
 values. Never replace evidence while claiming the prior checksum or publication
 identity. This procedure is documented and covered by package identity tests; it cannot
-be exercised against a live Pages deployment until the first real candidate exists.
+replace the independent preview and public verification gates.
 
 ## Product semantics
 
@@ -176,6 +182,7 @@ bounded filtering and explicitly marks API-only drill-downs. WaterGeo is an inde
 open-source project and is not endorsed by Ofwat, the Environment Agency, or a water
 company.
 
-No complete real multi-source artifact has been built or published. Local evidence is
-available for only part of the portfolio, and the official Ofwat workbook still needs
-the documented manual download, dictionary review and preparation step.
+The public publication uses the accepted ten-source evidence package, including the
+reviewed Ofwat workbook and dictionary. It exposes derived public assets only; the
+private evidence package remains outside the Pages artifact. Publication time does not
+replace publisher observation/publication time or WaterGeo retrieval time.

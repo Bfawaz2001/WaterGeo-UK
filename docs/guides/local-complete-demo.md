@@ -1,8 +1,9 @@
 # Run the complete local demo
 
-This workflow loads accepted source snapshots into the existing local database. It
-never changes or deletes the Docker volume, bypasses source validation, or makes the
-browser contact a publisher.
+This legacy workflow loads the six core local-demo source families into the existing
+database. It is separate from the governed ten-source static publication. It never
+changes or deletes the Docker volume, bypasses source validation, or makes the browser
+contact a publisher.
 
 ## Prepare and inspect
 
@@ -15,7 +16,7 @@ uv run --locked watergeo-demo-bootstrap --status
 uv run --locked watergeo-demo-bootstrap --dry-run
 ```
 
-The command checks database readiness at revision `0011`, reads compatible accepted
+The command checks database readiness at revision `0012`, reads compatible accepted
 snapshots and marks each source as available, stale or not loaded. A dry run says
 whether each missing source can use retained local evidence or needs a publisher
 retrieval. Static/versioned and dynamic/latest-available sources are labelled

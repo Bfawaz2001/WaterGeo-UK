@@ -1,4 +1,4 @@
-name: Rainfall refresh
+name: Refresh — Rainfall
 
 on:
   workflow_dispatch:
