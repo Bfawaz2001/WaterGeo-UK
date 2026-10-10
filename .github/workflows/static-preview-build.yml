@@ -127,7 +127,7 @@ jobs:
           test -f web/dist/watergeo-data/publication-report.json
           uv run --locked python -m json.tool web/dist/watergeo-data/manifest.json >/dev/null
           uv run --locked python -m watergeo.operations.public_artifact web/dist
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: watergeo-static-preview-${{ github.sha }}
           path: web/dist
