@@ -86,8 +86,13 @@ and loads only missing accepted sources for the six-core-source local API demo:
 ```bash
 uv run --locked watergeo-demo-bootstrap --dry-run
 uv run --locked watergeo-demo-bootstrap
+uv run --locked watergeo-demo-refresh-dynamic
 uv run --locked watergeo-demo-smoke http://127.0.0.1:8000 --complete
 ```
+
+The optional dynamic-refresh command sequentially retrieves the six dynamic products
+through the governed evidence, validation and atomic publication path. Its accepted
+retrieval times do not assert publisher observation freshness or a live feed.
 
 See the [complete local demo guide](docs/guides/local-complete-demo.md) for offline and
 selected-source modes, source semantics and failure handling. This legacy local

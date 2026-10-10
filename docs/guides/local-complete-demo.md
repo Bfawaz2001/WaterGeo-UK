@@ -45,6 +45,26 @@ dated static/versioned data. They are not live supplier, catchment or reservoir
 conditions. Hydrology, Water Quality metadata and Thames status represent the latest
 accepted WaterGeo retrieval, subject to their explicit freshness caveats.
 
+## Refresh dynamic sources
+
+Prepare all six dynamic demo products with one sequential operator command:
+
+```bash
+uv run --locked watergeo-demo-refresh-dynamic
+```
+
+It runs the existing governed refresh path for Hydrology, Water Quality metadata,
+Thames discharge monitors, rainfall, flood monitoring and bathing waters. Each source
+retains evidence, validates it and atomically publishes an accepted snapshot. Static
+and versioned products and bounded history/observation retrievals are excluded. A
+failure is reported per source, later sources continue unless the run is interrupted,
+and any partial failure makes the command exit nonzero without deleting an older
+accepted snapshot.
+
+This command uses publisher networks and can take time. Successful results are the
+latest accepted WaterGeo retrievals. Retrieval time is distinct from publisher
+observation time and does not make these products live feeds.
+
 ## Start and verify
 
 Start the API and Vite explorer as described in the README, then run:
