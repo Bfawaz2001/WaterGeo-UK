@@ -7,8 +7,12 @@ import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
 import { dataset, sourceStatuses } from "./test/fixtures";
 import { Onboarding } from "./Onboarding";
+import type { SourceStatus } from "./types";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 it("renders accessible layer toggles and reports bounded results", async () => {
   const toggle = vi.fn();
@@ -29,10 +33,12 @@ it("renders accessible layer toggles and reports bounded results", async () => {
 });
 
 it("distinguishes available and not-loaded source states outside the map", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime("2026-09-24T12:01:00Z");
   render(<SourceStatusPanel status={sourceStatuses} error={null} loading={false} />);
   expect(screen.getByText("Hydrology")).toBeInTheDocument();
-  expect(screen.getByText("Water Quality")).toBeInTheDocument();
-  expect(screen.getByText("Available")).toBeInTheDocument();
+  expect(screen.getByText("Water Quality metadata")).toBeInTheDocument();
+  expect(screen.getByText("Current by policy")).toBeInTheDocument();
   expect(screen.getByText("Not loaded")).toBeInTheDocument();
   expect(screen.getByText(/No compatible local snapshot/)).toBeInTheDocument();
 });
@@ -48,6 +54,108 @@ it("summarises healthy source status and keeps precise unavailable detail", () =
   render(<SourceStatusPanel status={available} error={null} loading={false} />);
   expect(screen.getByText(`${available.sources.length}/${available.sources.length} available`)).toBeInTheDocument();
   expect(screen.getByText("Hydrology")).toBeInTheDocument();
+});
+
+it("summarises the ten primary products with truthful retrieval and edition semantics", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime("2026-09-24T12:01:00Z");
+  const primary = [
+    ["hydrology", "dynamic_snapshot"],
+    ["water-quality", "dynamic_snapshot"],
+    ["thames-discharge-status", "dynamic_snapshot"],
+    ["rainfall", "dynamic_snapshot"],
+    ["flood-monitoring", "dynamic_snapshot"],
+    ["bathing-waters", "dynamic_snapshot"],
+    ["ofwat", "versioned_release"],
+    ["catchments", "versioned_plan"],
+    ["stream-reservoir-levels", "versioned_release"],
+    ["company-performance", "versioned_release"],
+  ] as const;
+  const sources: SourceStatus[] = primary.map(([source, semantics]) => ({
+    source,
+    semantics,
+    availability: "available",
+    snapshot_id: dataset.snapshot_id,
+    source_version: semantics === "dynamic_snapshot" ? null : "reviewed-2026",
+    snapshot_age_seconds: semantics === "dynamic_snapshot" ? 8 * 60 : 86400,
+    retrieval_freshness: semantics === "dynamic_snapshot" ? "unknown" : "not_applicable",
+    observation_freshness: "not_applicable",
+    retrieved_at: dataset.retrieval_completed_at,
+    observation_newest_at: null,
+    caveat: "Synthetic status.",
+  }));
+  sources.push(
+    { ...sources[0]!, source: "hydrology-history", semantics: "bounded_history" },
+    { ...sources[1]!, source: "water-quality-observations", semantics: "bounded_history" },
+  );
+
+  render(
+    <SourceStatusPanel
+      status={{ checked_at: "2026-09-24T12:01:00Z", sources }}
+      error={null}
+      loading={false}
+    />,
+  );
+
+  expect(screen.getByText("10/10 available")).toBeInTheDocument();
+  expect(screen.getByText("Company performance")).toBeInTheDocument();
+  expect(screen.getAllByText("Retrieved 8 min ago")).toHaveLength(6);
+  expect(screen.getAllByText("Edition reviewed-2026")).toHaveLength(4);
+  expect(screen.getByText(/no freshness policy is configured/)).toBeInTheDocument();
+  expect(screen.getByText(/not publisher observation times/)).toBeInTheDocument();
+  expect(screen.queryByText("hydrology-history")).not.toBeInTheDocument();
+  expect(screen.queryByText("water-quality-observations")).not.toBeInTheDocument();
+});
+
+it("recomputes configured freshness as static wall-clock time advances", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime("2026-09-24T12:01:00Z");
+  const hydrology: SourceStatus = {
+    ...sourceStatuses.sources[0]!,
+    snapshot_age_seconds: 60,
+    retrieval_max_age_seconds: 120,
+  };
+  const view = render(
+    <SourceStatusPanel
+      status={{ checked_at: "2026-09-24T12:01:00Z", sources: [hydrology] }}
+      error={null}
+      loading={false}
+    />,
+  );
+  expect(screen.getByText("Current by policy")).toBeInTheDocument();
+
+  vi.setSystemTime("2026-09-24T12:02:01Z");
+  view.rerender(
+    <SourceStatusPanel
+      status={{ checked_at: "2026-09-24T12:01:00Z", sources: [hydrology] }}
+      error={null}
+      loading={false}
+    />,
+  );
+  expect(screen.getByText("Stale by policy")).toBeInTheDocument();
+});
+
+it.each([
+  ["future", "2026-09-24T12:02:00Z"],
+  ["invalid", "not-a-timestamp"],
+])("shows neutral freshness for a configured policy with %s retrieval time", (_case, retrievedAt) => {
+  vi.useFakeTimers();
+  vi.setSystemTime("2026-09-24T12:01:00Z");
+  const hydrology: SourceStatus = {
+    ...sourceStatuses.sources[0]!,
+    snapshot_age_seconds: 60,
+    retrieval_max_age_seconds: 120,
+    retrieved_at: retrievedAt,
+  };
+  render(
+    <SourceStatusPanel
+      status={{ checked_at: "2026-09-24T12:01:00Z", sources: [hydrology] }}
+      error={null}
+      loading={false}
+    />,
+  );
+  expect(screen.getByText("Freshness unavailable")).toBeInTheDocument();
+  expect(screen.queryByText(/by policy/)).not.toBeInTheDocument();
 });
 
 it("shows dismissible first-use guidance and remembers dismissal", async () => {

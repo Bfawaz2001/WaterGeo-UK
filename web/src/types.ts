@@ -293,7 +293,10 @@ export interface SourceStatus {
   semantics: "versioned_release" | "dynamic_snapshot" | "bounded_history" | "versioned_plan";
   availability: SourceAvailability;
   snapshot_id: string | null;
+  source_version?: string | null;
+  snapshot_age_seconds?: number | null;
   retrieval_freshness: Freshness;
+  retrieval_max_age_seconds?: number | null;
   observation_freshness: Freshness;
   retrieved_at: string | null;
   observation_newest_at: string | null;

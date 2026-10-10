@@ -26,6 +26,8 @@ export const sourceStatuses: SourceStatuses = {
       semantics: "dynamic_snapshot",
       availability: "available",
       snapshot_id: dataset.snapshot_id,
+      snapshot_age_seconds: 60,
+      retrieval_max_age_seconds: 3600,
       retrieval_freshness: "current",
       observation_freshness: "unknown",
       retrieved_at: "2026-09-24T12:00:00Z",

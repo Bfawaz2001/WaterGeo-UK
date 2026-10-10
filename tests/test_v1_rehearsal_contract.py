@@ -3,6 +3,8 @@ from pathlib import Path
 
 import yaml
 
+from watergeo.db.engine import SCHEMA_REVISION
+
 
 def test_rehearsal_stack_preserves_service_identity_boundaries() -> None:
     stack = yaml.safe_load(Path("docker-compose.rehearsal.yml").read_text())
@@ -42,6 +44,11 @@ def test_backup_rehearsal_has_destructive_safety_interlock() -> None:
     assert "Source and restore containers must differ." in script
     assert "Refusing to overwrite" in script
     assert "snapshot_signature" in script
+
+
+def test_backup_rehearsal_requires_current_runtime_schema() -> None:
+    script = Path("scripts/rehearse_backup_restore.sh").read_text()
+    assert f'test "$revision" = "{SCHEMA_REVISION}"' in script
 
 
 def test_backup_rehearsal_rejects_same_source_and_restore_container() -> None:

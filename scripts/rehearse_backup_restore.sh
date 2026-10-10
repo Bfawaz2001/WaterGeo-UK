@@ -45,7 +45,7 @@ restore_finished=$(date +%s)
 
 revision=$(docker exec "$restore_container" psql -XAt -U postgres -d watergeo \
   -c 'SELECT version_num FROM watergeo.alembic_version')
-test "$revision" = "0011"
+test "$revision" = "0012"
 restore_signature=$(docker exec "$restore_container" psql -XAt -U postgres -d watergeo -c "$signature_sql")
 test "$source_signature" = "$restore_signature"
 bytes=$(wc -c < "$artifact" | tr -d ' ')

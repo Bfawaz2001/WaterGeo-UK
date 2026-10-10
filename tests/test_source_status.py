@@ -21,6 +21,10 @@ SOURCES = (
     "water-quality",
     "stream-reservoir-levels",
     "thames-discharge-status",
+    "rainfall",
+    "flood-monitoring",
+    "bathing-waters",
+    "company-performance",
 )
 
 
@@ -61,7 +65,14 @@ def test_unavailable(source):
 
 
 @pytest.mark.parametrize(
-    "source", ("ofwat", "hydrology-history", "catchments", "stream-reservoir-levels")
+    "source",
+    (
+        "ofwat",
+        "hydrology-history",
+        "catchments",
+        "stream-reservoir-levels",
+        "company-performance",
+    ),
 )
 def test_versioned_and_bounded_sources_are_not_declared_stale(source):
     result = describe(source, {"retrieved_at": NOW - timedelta(days=1000)}, NOW, settings())
