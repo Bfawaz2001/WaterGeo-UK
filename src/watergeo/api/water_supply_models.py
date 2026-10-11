@@ -24,13 +24,18 @@ def decimal_integer(value: object) -> object:
 SourceId = Annotated[int, BeforeValidator(decimal_integer), Field(ge=1, le=2**63 - 1)]
 Cursor = Annotated[int, BeforeValidator(decimal_integer), Field(ge=0, le=2**63 - 1)]
 PageSize = Annotated[int, BeforeValidator(decimal_integer), Field(ge=1, le=100)]
+CompanyId = Annotated[str, Field(pattern=r"^[A-Z0-9]{1,16}$")]
 
 
 class NoQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class AreaQuery(NoQuery):
+class SnapshotQuery(NoQuery):
+    snapshot_id: UUID | None = None
+
+
+class AreaQuery(SnapshotQuery):
     limit: PageSize = 50
     after_id: Cursor = 0
 
@@ -96,6 +101,26 @@ class AreaPage(BaseModel):
     next_after_id: int | None
 
 
+class CompanySummary(BaseModel):
+    company_acronym: CompanyId
+    display_name: str
+    publisher_labels: tuple[str, ...]
+    area_count: int = Field(ge=1)
+
+
+class CompanyPage(BaseModel):
+    snapshot_id: UUID
+    dataset_url: str = "/v1/water-supply/dataset"
+    items: list[CompanySummary]
+
+
+class CompanyAreaPage(BaseModel):
+    snapshot_id: UUID
+    company: CompanySummary
+    items: list[AreaSummary]
+    next_after_id: int | None
+
+
 class TransformationMetadata(BaseModel):
     transformation_id: str
     method: str
@@ -148,3 +173,10 @@ class AreaFeature(BaseModel):
     properties: AreaDetail
     geometry: MultiPolygon
     presentation: PresentationMetadata
+
+
+class CompanyFeatureCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    snapshot_id: UUID
+    company: CompanySummary
+    features: list[AreaFeature]

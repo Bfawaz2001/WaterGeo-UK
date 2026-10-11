@@ -28,6 +28,7 @@ import type {
   SamplingPoint,
   ThamesDischargeSite,
   PointGeometry,
+  WaterCompanyFeatureCollection,
 } from "./types";
 import type { ViewportQuery } from "./useNearby";
 import { Protocol } from "pmtiles";
@@ -66,6 +67,7 @@ interface Props {
   reservoirs: Reservoir[];
   thamesDischarge?: ThamesDischargeSite[];
   area: AreaFeature | null;
+  companyAreas?: WaterCompanyFeatureCollection | null;
   waterBody: GeoJSONFeatureCollection | null;
   onViewport: (viewport: ViewportQuery & { zoom: number }) => void;
   onMapClick: (longitude: number, latitude: number) => void;
@@ -190,6 +192,19 @@ function addExplorerSources(map: MapLibreMap): void {
     });
   }
   if (!map.getSource("watergeo-area")) {
+    map.addSource("watergeo-company-areas", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({
+      id: "watergeo-company-areas-fill",
+      source: "watergeo-company-areas",
+      type: "fill",
+      paint: { "fill-color": "#2f8f80", "fill-opacity": 0.12 },
+    });
+    map.addLayer({
+      id: "watergeo-company-areas-line",
+      source: "watergeo-company-areas",
+      type: "line",
+      paint: { "line-color": "#26766b", "line-width": 1.4, "line-opacity": 0.8 },
+    });
     map.addSource("watergeo-area", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({
       id: "watergeo-area-fill",
@@ -254,6 +269,7 @@ export function MapView({
   reservoirs,
   thamesDischarge = [],
   area,
+  companyAreas = null,
   waterBody,
   onViewport,
   onMapClick,
@@ -459,6 +475,7 @@ export function MapView({
       ),
     );
     setData(map, "watergeo-area", area ?? { type: "FeatureCollection", features: [] });
+    setData(map, "watergeo-company-areas", companyAreas ?? { type: "FeatureCollection", features: [] });
     setData(map, "watergeo-flood-warnings", {
       type: "FeatureCollection",
       features: floodWarnings.map((item) => ({
@@ -478,7 +495,7 @@ export function MapView({
       map.setLayoutProperty(`${layer}-clusters`, "visibility", visibility);
       map.setLayoutProperty(`${layer}-cluster-count`, "visibility", visibility);
     }
-  }, [activeLayers, area, bathingWaters, floodWarnings, hydrology, rainfall, reservoirs, styleRevision, thamesDischarge, waterBody, waterQuality]);
+  }, [activeLayers, area, bathingWaters, companyAreas, floodWarnings, hydrology, rainfall, reservoirs, styleRevision, thamesDischarge, waterBody, waterQuality]);
 
   useEffect(() => {
     const map = mapRef.current;

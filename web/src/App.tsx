@@ -7,7 +7,7 @@ import { DetailPanel } from "./DetailPanel";
 import { LayerControls } from "./LayerControls";
 import { SourceStatusPanel } from "./SourceStatusPanel";
 import { SearchBox } from "./SearchBox";
-import type { AreaFeature, AreaPage, AreaSummary, CompanyPerformance, LayerId, NationalDetail, SearchResult, SelectedFeature, SourceStatuses, ThamesAlertStatus } from "./types";
+import type { AreaFeature, AreaPage, AreaSummary, LayerId, SearchResult, SelectedFeature, SourceStatuses, ThamesAlertStatus, WaterCompanyFeatureCollection } from "./types";
 import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlState";
 import { useNearby, type ViewportQuery } from "./useNearby";
 import { WaterBodyBrowser } from "./WaterBodyBrowser";
@@ -18,6 +18,7 @@ import { geometryBounds, REGIONS, type MapNavigation } from "./mapNavigation";
 import { filterFloods, FLOOD_STATES, type FloodFilter } from "./floodFilters";
 import { Onboarding } from "./Onboarding";
 import { BATHING_CLASSIFICATIONS, filterBathingWaters, type BathingClassification } from "./explorerPresentation";
+import { CompanyExplorer } from "./CompanyExplorer";
 
 const MapView = lazy(async () => {
   const module = await import("./MapView");
@@ -34,6 +35,7 @@ function selectionKey(selected: SelectedFeature | null): string | null {
   if (selected.kind === "reservoirs") return `reservoirs:${selected.item.reservoir_id}`;
   if (selected.kind === "thames-discharge") return `thames-discharge:${selected.item.site_id}`;
   if (selected.kind === "water-supply") return `water-supply:${selected.item.id}`;
+  if (selected.kind === "company-performance") return null;
   return `water-body:${selected.item.water_body_id}`;
 }
 
@@ -90,6 +92,8 @@ export function App() {
   const [mapNotice, setMapNotice] = useState<string>();
   const [shareFeedback, setShareFeedback] = useState<{ kind: "success" | "error"; message: string; url?: string }>();
   const [waterBodiesOpen, setWaterBodiesOpen] = useState(false);
+  const [companyAreas, setCompanyAreas] = useState<WaterCompanyFeatureCollection | null>(null);
+  const [companyAcronym, setCompanyAcronym] = useState<string | null>(initial.company);
   const lookupController = useRef<AbortController | undefined>(undefined);
   const searchSelectionController = useRef<AbortController | undefined>(undefined);
   const initialSelectionApplied = useRef(false);
@@ -132,12 +136,13 @@ export function App() {
       zoom: viewport.zoom,
       layers,
       selected: selectionKey(selected),
+      company: companyAcronym,
       floodSeverity,
       bathingClassification,
     });
     window.history.replaceState(null, "", `${window.location.pathname}${next}`);
     queueMicrotask(() => setShareFeedback(undefined));
-  }, [bathingClassification, floodSeverity, layers, selected, viewport.latitude, viewport.longitude, viewport.zoom]);
+  }, [bathingClassification, companyAcronym, floodSeverity, layers, selected, viewport.latitude, viewport.longitude, viewport.zoom]);
 
   useEffect(() => {
     if (initialSelectionApplied.current || initial.selected === null) return;
@@ -219,6 +224,10 @@ export function App() {
       setAreaMatches(null);
       setAreaError(undefined);
       if (layers.has("water-supply") && selected?.kind === "water-supply") setSelected(null);
+      if (layers.has("water-supply")) {
+        setCompanyAreas(null);
+        setCompanyAcronym(null);
+      }
     }
   };
 
@@ -304,28 +313,9 @@ export function App() {
       });
   };
 
-  const selectSupplyArea = async (item: AreaFeature, signal: AbortSignal) => {
-    let performance: NationalDetail<CompanyPerformance> | null = null;
-    const acronym = item.properties.company_acronym;
-    if (acronym) {
-      try {
-        const companies = await api.companyPerformanceCompanies(signal);
-        const company = companies.items.find(
-          (candidate) => candidate.boundary_company_acronym === acronym,
-        );
-        if (company) {
-          performance = await api.companyPerformance(
-            company.company_id,
-            companies.dataset.snapshot_id,
-            signal,
-          );
-        }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") throw error;
-      }
-    }
+  const selectSupplyArea = (item: AreaFeature, signal: AbortSignal) => {
     if (!signal.aborted) {
-      setSelected({ kind: "water-supply", item, performance });
+      setSelected({ kind: "water-supply", item });
       setMapFocus({ key: `water-supply:${item.id}` });
     }
   };
@@ -455,7 +445,7 @@ export function App() {
       const item = await api.areaGeometry(sourceId, controller.signal);
       if (item.properties.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
       enable("water-supply");
-      await selectSupplyArea(item, controller.signal);
+      selectSupplyArea(item, controller.signal);
     }
   };
 
@@ -517,6 +507,34 @@ export function App() {
           errors={nearby.errors}
           onToggle={toggleLayer}
         />
+        {layers.has("water-supply") && (
+          <CompanyExplorer
+            initialCompany={initial.company}
+            selectedAreaId={selected?.kind === "water-supply" ? selected.item.id : null}
+            onShowCompany={(collection) => {
+              setCompanyAreas(collection);
+              setCompanyAcronym(collection.company.company_acronym);
+              setSelected(null);
+              setMapFocus(null);
+              setMapNotice(undefined);
+              navigate(geometryBounds(collection.features.map((feature) => feature.geometry)));
+            }}
+            onSelectArea={(item) => {
+              setSelected({ kind: "water-supply", item });
+              setMapFocus(null);
+              setMapNotice(undefined);
+              navigate(geometryBounds([item.geometry]));
+            }}
+            onSelectPerformance={(performance) => {
+              setSelected({
+                kind: "company-performance",
+                item: performance.item,
+                dataset: performance.dataset,
+              });
+              setMapFocus(null);
+            }}
+          />
+        )}
         {layers.has("flood-warnings") && (
           <section className="panel-section" aria-labelledby="flood-filter-heading">
             <p className="eyebrow">Active filters</p>
@@ -633,6 +651,7 @@ export function App() {
             reservoirs={nearby.reservoirs}
             thamesDischarge={thamesDischarge}
             area={selected?.kind === "water-supply" ? selected.item : null}
+            companyAreas={companyAreas}
             waterBody={selected?.kind === "water-body" ? selected.geometry : null}
             onViewport={setViewport}
             onMapClick={lookupArea}

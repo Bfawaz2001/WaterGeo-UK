@@ -4,21 +4,23 @@ import { explorerSearch, parseExplorerState, parseWaterSupplyId } from "./urlSta
 
 it("accepts bounded camera, known layers, and a short stable selection", () => {
   const state = parseExplorerState(
-    "?lon=-1.25&lat=52.4&z=9&layers=hydrology,reservoirs&selected=reservoirs:10014&flood=2&bathing=Good",
+    "?lon=-1.25&lat=52.4&z=9&layers=hydrology,reservoirs&selected=reservoirs:10014&company=ANH&flood=2&bathing=Good",
   );
-  expect(state).toMatchObject({ longitude: -1.25, latitude: 52.4, zoom: 9, selected: "reservoirs:10014", floodSeverity: "2", bathingClassification: "Good" });
+  expect(state).toMatchObject({ longitude: -1.25, latitude: 52.4, zoom: 9, selected: "reservoirs:10014", company: "ANH", floodSeverity: "2", bathingClassification: "Good" });
   expect([...state.layers]).toEqual(["hydrology", "reservoirs"]);
   expect(explorerSearch(state)).toContain("selected=reservoirs%3A10014");
   expect(explorerSearch(state)).toContain("flood=2");
   expect(explorerSearch(state)).toContain("bathing=Good");
+  expect(explorerSearch(state)).toContain("company=ANH");
 });
 
 it("rejects unknown filter values instead of inventing state", () => {
-  const state = parseExplorerState("?flood=severe&bathing=Unsafe");
+  const state = parseExplorerState("?flood=severe&bathing=Unsafe&company=anglian-water");
   expect(state.floodSeverity).toBe("");
   expect(state.bathingClassification).toBe("");
   expect(explorerSearch(state)).not.toContain("flood=");
   expect(explorerSearch(state)).not.toContain("bathing=");
+  expect(state.company).toBeNull();
 });
 
 it("rejects invalid URL coordinates, layers, and oversized selections", () => {

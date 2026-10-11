@@ -13,7 +13,10 @@
   declared period rather than assuming 15 minutes. The accepted live response contained
   `mm` measures at 900 and 3,600 seconds. `dateTime` is the observation time; WaterGeo
   retrieval time remains separate.
-- **Geography:** publisher WGS84 latitude/longitude. The publisher says names may be absent and positions are reduced to a 100 m grid. WaterGeo retains that precision and does not infer names or locations.
+- **Name and geography:** WaterGeo accepts a non-generic `label` only from the same
+  exact publisher station record identified by `notation`. Names may be absent or the
+  generic “Rainfall station”; positions are reduced to a 100 m grid. WaterGeo retains
+  that precision and does not infer names or locations.
 
 The API describes roughly 1,000 telemetry gauges and states that data transfer is typically once or twice daily, but can increase during high rainfall. Publisher transfer cadence, measure period, observation time, WaterGeo retrieval time and static publication time are separate; none alone is a freshness guarantee.
 
@@ -21,7 +24,7 @@ The API describes roughly 1,000 telemetry gauges and states that data transfer i
 
 Each bounded retrieval retains exact station and latest-reading responses before strict validation. WaterGeo rejects licence, API-version, identifier, measure-period, unit, timestamp, coordinate or completeness drift. An accepted append-only snapshot powers the API, map, static snapshot and optional GeoParquet export. No unlimited rainfall history is retained.
 
-The explorer uses the accepted publisher label when present and otherwise displays
+The explorer uses the accepted exact-station publisher label when present and otherwise displays
 `Rainfall gauge <publisher ID>`. It never derives a name from nearby features or an
 external search. Detail shows the exact gauge ID, declared unit and period, publisher
 observation time and separate WaterGeo retrieval time. A missing latest observation is
@@ -69,3 +72,10 @@ for choosing or combining those two values, so validation has not been relaxed. 
 is a safe source-contract rejection, not evidence that the entire publisher service
 was unavailable. A future compatible publisher correction can pass the unchanged
 contract; repeated live requests are not required for diagnosis.
+
+The official Rainfall API reference defines each reading `value` as an `xsd:double`
+(or omitted in JSON for NaN), not an array. It provides no rule for selecting, summing
+or averaging two array members. The October value therefore remains schema drift;
+quarantining it would also change that station's “latest” semantics and the accepted
+bundle's completeness. WaterGeo keeps the prior accepted snapshot and the rejected raw
+evidence instead.

@@ -3,6 +3,9 @@ import { clearStaticCaches, StaticDataError, staticRequest } from "./staticData"
 import type {
   AreaFeature,
   AreaPage,
+  WaterCompanyAreaPage,
+  WaterCompanyFeatureCollection,
+  WaterCompanyPage,
   CatchmentDataset,
   CompanyPerformance,
   DatasetProvenance,
@@ -284,12 +287,45 @@ export const api = {
       { signal },
     ),
 
-  areaGeometry: (sourceId: number, signal?: AbortSignal) =>
-    request<AreaFeature>(`/v1/water-supply/areas/${sourceId}/geometry`, {
+  areaGeometry: (sourceId: number, signal?: AbortSignal, snapshotId?: string) =>
+    request<AreaFeature>(withQuery(`/v1/water-supply/areas/${sourceId}/geometry`, { snapshot_id: snapshotId }), {
       signal,
       immutable: true,
       responseKind: "geojson",
     }),
+
+  waterSupplyCompanies: (signal?: AbortSignal, snapshotId?: string) =>
+    request<WaterCompanyPage>(
+      withQuery("/v1/water-supply/companies", { snapshot_id: snapshotId }),
+      { signal, immutable: true },
+    ),
+
+  waterSupplyCompanyAreas: (
+    acronym: string,
+    snapshotId: string,
+    afterId?: number,
+    signal?: AbortSignal,
+  ) =>
+    request<WaterCompanyAreaPage>(
+      withQuery(`/v1/water-supply/companies/${encodeURIComponent(acronym)}/areas`, {
+        snapshot_id: snapshotId,
+        limit: 100,
+        after_id: afterId,
+      }),
+      { signal },
+    ),
+
+  waterSupplyCompanyGeometry: (
+    acronym: string,
+    snapshotId: string,
+    signal?: AbortSignal,
+  ) =>
+    request<WaterCompanyFeatureCollection>(
+      withQuery(`/v1/water-supply/companies/${encodeURIComponent(acronym)}/geometry`, {
+        snapshot_id: snapshotId,
+      }),
+      { signal, immutable: true, responseKind: "geojson" },
+    ),
 
   catchmentDataset: (signal?: AbortSignal, snapshotId?: string) =>
     request<CatchmentDataset>(withQuery("/v1/catchments/dataset", { snapshot_id: snapshotId }), { signal }),

@@ -98,3 +98,41 @@ it("explicitly rejects server-only point-in-polygon lookup in static mode", asyn
     message: expect.stringContaining("requires API mode"),
   });
 });
+
+it("serves the complete snapshot-pinned company inventory and exact collection in static mode", async () => {
+  vi.stubEnv("VITE_WATERGEO_DATA_MODE", "static");
+  const dataset = { snapshot_id: "snapshot-a" };
+  const fetcher = vi.fn((url: string) => {
+    if (url.endsWith("companies.json")) {
+      return Promise.resolve(response({
+        dataset,
+        snapshot_id: "snapshot-a",
+        items: [{
+          company_acronym: "ANH", display_name: "Anglian Water",
+          publisher_labels: ["Anglian Water"], area_count: 2,
+          areas: [{ source_id: 1 }, { source_id: 2 }],
+        }],
+      }));
+    }
+    return Promise.resolve(response({
+      type: "FeatureCollection", snapshot_id: "snapshot-a",
+      company: { company_acronym: "ANH", display_name: "Anglian Water", publisher_labels: ["Anglian Water"], area_count: 2 },
+      features: [{ id: 1 }, { id: 2 }],
+    }));
+  });
+  vi.stubGlobal("fetch", fetcher);
+
+  await expect(api.waterSupplyCompanies(undefined, "snapshot-a")).resolves.toMatchObject({
+    snapshot_id: "snapshot-a", items: [{ company_acronym: "ANH", area_count: 2 }],
+  });
+  await expect(api.waterSupplyCompanyAreas("ANH", "snapshot-a", 1)).resolves.toMatchObject({
+    snapshot_id: "snapshot-a", items: [{ source_id: 2 }], next_after_id: null,
+  });
+  await expect(api.waterSupplyCompanyGeometry("ANH", "snapshot-a")).resolves.toMatchObject({
+    snapshot_id: "snapshot-a", features: [{ id: 1 }, { id: 2 }],
+  });
+  expect(fetcher).toHaveBeenCalledWith(
+    "/watergeo-data/datasets/water-supply/companies/ANH.geojson",
+    expect.any(Object),
+  );
+});

@@ -17,7 +17,8 @@ for current state; dated ADRs and performance reports describe their review runt
 | Operational maturity, Phase 17A | Current-state documentation, six-product dynamic refresh command, ten-product source status and policy-aware retrieval age | [Refresh and publication](../guides/refresh-and-publication.md) |
 | Explorer clarity, Phase 17B | Consolidated architecture docs, regional orientation, explicit filter navigation and publisher flood-state controls | [Navigation design](../design/explorer-navigation.md) |
 | Explorer intelligence, Phase 18A | Readable rainfall/Hydrology details, loaded-scope bathing classification filters, Water Quality capability states, catchment hierarchy and company/area search grouping | [Interpretation guide](../guides/explorer-data-interpretation.md) |
-| Explorer reliability, Phase 18A.1 | One-shot Water Body navigation, visible shared-view feedback/filter state, clearer area-versus-company semantics, rainfall rejection diagnosis and updated project guidance | [Presentation walkthrough](../guides/presentation-walkthrough.md) |
+| Explorer reliability, Phase 18A.1 | One-shot Water Body navigation, visible shared-view feedback/filter state, clearer area-versus-company semantics, rainfall rejection diagnosis and updated project guidance | [Interpretation guide](../guides/explorer-data-interpretation.md) |
+| Company discovery, Phase 18A.2 | Complete snapshot-pinned company-area inventories, exact multi-feature map navigation, independent performance selection and stricter rainfall identity/value coverage | [Water-supply walkthrough](../guides/water-supply-walkthrough.md) |
 
 Public hosting refers to static GitHub Pages, not a hosted FastAPI/PostGIS service.
 Fabric compatibility does not mean a Fabric deployment was provisioned. New source

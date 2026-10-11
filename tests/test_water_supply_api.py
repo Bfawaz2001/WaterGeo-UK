@@ -56,6 +56,11 @@ def api():
         "/areas/at-point?lon=-2",
         "/areas/at-point?lat=52",
         "/areas/at-point",
+        "/companies/lower/areas",
+        "/companies/SYN-OTHER/geometry",
+        "/companies/SYN/areas?limit=101",
+        "/companies/SYN/areas?after_id=-1",
+        "/companies?unexpected=1",
     ],
 )
 def test_invalid_parameters_do_not_access_database(api, suffix):
@@ -73,6 +78,9 @@ def test_invalid_parameters_do_not_access_database(api, suffix):
         "/areas/1",
         "/areas/1/geometry",
         "/areas/at-point?lon=-2&lat=52",
+        "/companies",
+        "/companies/SYN/areas",
+        "/companies/SYN/geometry",
     ],
 )
 def test_database_failure_is_generic_and_sanitised(api, suffix, caplog):
@@ -111,3 +119,5 @@ def test_openapi_geojson_and_validation_contracts(api):
         spec["components"]["schemas"]["MultiPolygon"]["properties"]["type"]["const"]
         == "MultiPolygon"
     )
+    companies = spec["paths"][PREFIX + "/companies/{company_acronym}/geometry"]["get"]
+    assert "application/geo+json" in companies["responses"]["200"]["content"]

@@ -17,13 +17,18 @@ from watergeo.api.water_supply_models import (
     AreaFeature,
     AreaPage,
     AreaQuery,
+    CompanyAreaPage,
+    CompanyFeatureCollection,
+    CompanyId,
+    CompanyPage,
     DatasetMetadata,
-    NoQuery,
     PointQuery,
+    SnapshotQuery,
     SourceId,
 )
 from watergeo.db.water_supply import (
     AreaNotFound,
+    CompanyNotFound,
     DatasetUnavailable,
     GeometryTooLarge,
     WaterSupplyQueries,
@@ -51,6 +56,10 @@ def queries(
         yield db
     except AreaNotFound:
         raise HTTPException(404, "Area not found", headers={"Cache-Control": "no-store"}) from None
+    except CompanyNotFound:
+        raise HTTPException(
+            404, "Company not found", headers={"Cache-Control": "no-store"}
+        ) from None
     except GeometryTooLarge:
         raise HTTPException(
             413,
@@ -72,15 +81,15 @@ Queries = Annotated[WaterSupplyQueries, Depends(queries)]
 
 
 @router.get("/dataset")
-def dataset(query: Annotated[NoQuery, Query()], db: Queries) -> DatasetMetadata:
+def dataset(query: Annotated[SnapshotQuery, Query()], db: Queries) -> DatasetMetadata:
     """Provenance for the explicitly published Ofwat v1.5 snapshot; 503 until loaded."""
-    return db.dataset()
+    return db.dataset(query.snapshot_id)
 
 
 @router.get("/areas")
 def areas(query: Annotated[AreaQuery, Query()], db: Queries) -> AreaPage:
     """Metadata only, ordered by source ID. Continue with next_after_id as after_id."""
-    snapshot = db.dataset()
+    snapshot = db.dataset(query.snapshot_id)
     return db.areas(snapshot.snapshot_id, limit=query.limit, after_id=query.after_id)
 
 
@@ -93,7 +102,7 @@ def at_point(query: Annotated[PointQuery, Query()], db: Queries) -> AreaPage:
     Coordinates outside the conservative GB processing extent (-9..3 lon,
     49..61 lat) return no matches. This is not a definitive property-supplier lookup.
     """
-    snapshot = db.dataset()
+    snapshot = db.dataset(query.snapshot_id)
     return db.areas(
         snapshot.snapshot_id,
         limit=query.limit,
@@ -103,9 +112,9 @@ def at_point(query: Annotated[PointQuery, Query()], db: Queries) -> AreaPage:
 
 
 @router.get("/areas/{source_id}", responses={404: {"model": ApiError}})
-def area(source_id: SourceId, query: Annotated[NoQuery, Query()], db: Queries) -> AreaDetail:
+def area(source_id: SourceId, query: Annotated[SnapshotQuery, Query()], db: Queries) -> AreaDetail:
     """Publisher labels, source notices and any reviewed transformation provenance."""
-    return db.area(db.dataset().snapshot_id, source_id)
+    return db.area(db.dataset(query.snapshot_id).snapshot_id, source_id)
 
 
 @router.get(
@@ -113,7 +122,9 @@ def area(source_id: SourceId, query: Annotated[NoQuery, Query()], db: Queries) -
     response_class=GeoJSONResponse,
     responses={404: {"model": ApiError}, 413: {"model": ApiError}},
 )
-def geometry(source_id: SourceId, query: Annotated[NoQuery, Query()], db: Queries) -> AreaFeature:
+def geometry(
+    source_id: SourceId, query: Annotated[SnapshotQuery, Query()], db: Queries
+) -> AreaFeature:
     """One GeoJSON Feature, WGS84 longitude/latitude, with counterclockwise shells.
 
     Geometry is reprojected at query time, without simplifying canonical storage.
@@ -121,4 +132,42 @@ def geometry(source_id: SourceId, query: Annotated[NoQuery, Query()], db: Querie
     repair (ADR 0006). Other geometries use plain reprojection. Invalid output or
     a reviewed output hash mismatch returns 503. Geometry is limited to 8 MiB.
     """
-    return db.feature(db.dataset().snapshot_id, source_id)
+    return db.feature(db.dataset(query.snapshot_id).snapshot_id, source_id)
+
+
+@router.get("/companies")
+def companies(query: Annotated[SnapshotQuery, Query()], db: Queries) -> CompanyPage:
+    """Complete company index derived from the accepted boundary snapshot."""
+    snapshot = db.dataset(query.snapshot_id)
+    return db.companies(snapshot.snapshot_id)
+
+
+@router.get("/companies/{company_acronym}/areas", responses={404: {"model": ApiError}})
+def company_areas(
+    company_acronym: CompanyId,
+    query: Annotated[AreaQuery, Query()],
+    db: Queries,
+) -> CompanyAreaPage:
+    """Snapshot-pinned area inventory for one exact publisher acronym."""
+    snapshot = db.dataset(query.snapshot_id)
+    return db.company_areas(
+        snapshot.snapshot_id,
+        company_acronym,
+        limit=query.limit,
+        after_id=query.after_id,
+    )
+
+
+@router.get(
+    "/companies/{company_acronym}/geometry",
+    response_class=GeoJSONResponse,
+    responses={404: {"model": ApiError}, 413: {"model": ApiError}},
+)
+def company_geometry(
+    company_acronym: CompanyId,
+    query: Annotated[SnapshotQuery, Query()],
+    db: Queries,
+) -> CompanyFeatureCollection:
+    """Bounded exact features for one verified company inventory."""
+    snapshot = db.dataset(query.snapshot_id)
+    return db.company_feature_collection(snapshot.snapshot_id, company_acronym)

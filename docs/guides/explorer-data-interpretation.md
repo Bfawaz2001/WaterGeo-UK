@@ -39,15 +39,18 @@ point visible in the viewport. Pan or zoom to request another bounded result set
 Bathing-water classification counts apply after this bounded nearest selection and are
 therefore loaded-result counts. Company headings in search group returned supply-area
 matches for readability; they do not claim a complete company-area inventory, and every
-publisher area remains individually selectable.
+publisher area remains individually selectable. The dedicated company browser uses a
+different complete contract: exact publisher acronyms, snapshot-pinned pagination and
+an ordered exact feature collection. Its verified total comes from the accepted April
+2024 edition, not from search results.
 
 Selecting an area shows that one publisher-defined dated polygon in a **Selected
-supply area** section. Any company-performance measures are displayed separately and
-apply to the company/reporting period, not specifically to that polygon. Starting a
+supply area** section. The full company view preserves all disconnected publisher
+features and does not union them. Company performance is a separate selection with
+its own source snapshot, retrieval provenance and reporting periods; its reviewed
+acronym crosswalk does not turn a performance value into a local polygon measurement. Starting a
 global search clears earlier map-click boundary matches so two discovery paths are not
-presented as one result. A complete multi-area company overview is not implemented:
-the bounded search response cannot establish completeness, and WaterGeo does not union
-or dissolve the first returned polygons into a misleading company boundary.
+presented as one result.
 
 Use the details panel for publisher, licence, snapshot, retrieval time, attribution
 and caveats. Shared URLs contain map state and stable identifiers, not API responses

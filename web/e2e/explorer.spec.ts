@@ -165,6 +165,42 @@ async function syntheticApi(page: Page) {
       } });
       return;
     }
+    const company = {
+      company_acronym: "SW", display_name: "Synthetic Water",
+      publisher_labels: ["Synthetic Water"], area_count: 1,
+    };
+    if (url.pathname === "/v1/water-supply/companies") {
+      await route.fulfill({ json: { snapshot_id: dataset.snapshot_id, items: [company] } });
+      return;
+    }
+    if (url.pathname === "/v1/water-supply/companies/SW/areas") {
+      await route.fulfill({ json: { snapshot_id: dataset.snapshot_id, company, next_after_id: null, items: [{
+        source_id: 3, area_served: "Synthetic area", company: "Synthetic Water",
+        company_acronym: "SW", company_type: "Water only", area_type: "Appointment",
+        warnings: null, transformed: false,
+      }] } });
+      return;
+    }
+    if (url.pathname === "/v1/water-supply/companies/SW/geometry") {
+      await route.fulfill({ contentType: "application/geo+json", json: {
+        type: "FeatureCollection", snapshot_id: dataset.snapshot_id, company,
+        features: [{
+          type: "Feature", id: 3,
+          properties: { source_id: 3, area_served: "Synthetic area", company: "Synthetic Water", company_acronym: "SW", company_type: "Water only", area_type: "Appointment", warnings: null, transformed: false, snapshot_id: dataset.snapshot_id, geometry_url: "/geometry", licence_statement: "Synthetic licence", source_provenance: "Synthetic acceptance data", disclaimer: "Synthetic boundary.", premises_disclaimer: null, coastline_disclaimer: null },
+          geometry: { type: "MultiPolygon", coordinates: [[[[-2.8, 54.2], [-2.2, 54.2], [-2.2, 54.8], [-2.8, 54.2]]]] },
+          presentation: { policy_version: "test", review_reference: "test", method: "reprojection" },
+        }],
+      } });
+      return;
+    }
+    if (url.pathname === "/v1/company-performance/companies") {
+      await route.fulfill({ json: { dataset, next_after_id: null, items: [{ company_id: "synthetic", company_name: "Synthetic Water", boundary_company_acronym: "SW" }] } });
+      return;
+    }
+    if (url.pathname === "/v1/company-performance/companies/synthetic") {
+      await route.fulfill({ json: { dataset, item: { company_id: "synthetic", company_name: "Synthetic Water", boundary_company_acronym: "SW", measures: [{ reporting_period: "2024-25", measure_code: "M1", measure_name: "Synthetic leakage", value: 1.2, value_state: "reported", unit: "Ml/d", definition: "Synthetic definition", publication: "Synthetic publication" }] } } });
+      return;
+    }
     await route.fulfill({ status: 404, contentType: "application/json", body: '{"detail":"not found"}' });
   });
   return state;
@@ -220,6 +256,24 @@ test("water-supply lookup and API failure states remain visible", async ({ page 
   await page.reload();
   await expect(page.getByText("Source status is currently unavailable.")).toBeVisible();
   await expect(page.getByText("This dataset is currently unavailable from the WaterGeo service.")).toBeVisible();
+});
+
+test("company-first water-supply exploration keeps performance analytically separate", async ({ page }) => {
+  await syntheticApi(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Dismiss explorer introduction" }).click();
+  await page.getByRole("checkbox", { name: /Water-supply lookup/i }).check();
+  await page.getByLabel("Water company").selectOption("SW");
+  await expect(page.getByText("1 verified area", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show all company areas" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Synthetic area/ })).toBeVisible();
+  await page.getByRole("button", { name: /Synthetic area/ }).click();
+  await expect(page.getByRole("heading", { name: "Selected supply area" })).toBeVisible();
+  await page.getByRole("button", { name: "View company performance" }).click();
+  await expect(page.getByText("Company-wide performance")).toBeVisible();
+  await expect(page.getByText("Synthetic leakage")).toBeVisible();
+  await expect(page.getByText(/analytically separate from the dated supply-area polygons/)).toBeVisible();
+  await expect(page).toHaveURL(/company=SW/);
 });
 
 test("mobile viewport exposes the collapsed controls", async ({ page }) => {

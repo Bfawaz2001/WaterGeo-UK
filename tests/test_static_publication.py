@@ -95,6 +95,57 @@ def fixture_response(request: httpx.Request) -> httpx.Response:
             200,
             json={"snapshot_id": SNAPSHOT, "items": [{"source_id": 1}], "next_after_id": None},
         )
+    if path == "/v1/water-supply/companies":
+        return httpx.Response(
+            200,
+            json={
+                "snapshot_id": SNAPSHOT,
+                "items": [
+                    {
+                        "company_acronym": "FIX",
+                        "display_name": "Fixture Water",
+                        "publisher_labels": ["Fixture Water"],
+                        "area_count": 1,
+                    }
+                ],
+            },
+        )
+    if path == "/v1/water-supply/companies/FIX/areas":
+        return httpx.Response(
+            200,
+            json={
+                "snapshot_id": SNAPSHOT,
+                "company": {
+                    "company_acronym": "FIX",
+                    "display_name": "Fixture Water",
+                    "publisher_labels": ["Fixture Water"],
+                    "area_count": 1,
+                },
+                "items": [{"source_id": 1}],
+                "next_after_id": None,
+            },
+        )
+    if path == "/v1/water-supply/companies/FIX/geometry":
+        return httpx.Response(
+            200,
+            json={
+                "type": "FeatureCollection",
+                "snapshot_id": SNAPSHOT,
+                "company": {
+                    "company_acronym": "FIX",
+                    "display_name": "Fixture Water",
+                    "publisher_labels": ["Fixture Water"],
+                    "area_count": 1,
+                },
+                "features": [
+                    {
+                        "type": "Feature",
+                        "id": 1,
+                        "geometry": {"type": "Polygon", "coordinates": []},
+                    }
+                ],
+            },
+        )
     if path == "/v1/water-supply/areas/1/geometry":
         return httpx.Response(
             200,
@@ -211,6 +262,17 @@ def test_publication_is_deterministic_complete_and_refuses_overwrite(tmp_path: P
         "water-supply",
     }
     assert first["files"]["datasets/catchments/water-bodies.geojson"]["count"] == 1
+    company_index = json.loads(
+        (tmp_path / "first/datasets/water-supply/companies.json").read_text()
+    )
+    assert company_index["snapshot_id"] == SNAPSHOT
+    assert company_index["items"][0]["area_count"] == 1
+    assert company_index["items"][0]["areas"] == [{"source_id": 1}]
+    company_geometry = json.loads(
+        (tmp_path / "first/datasets/water-supply/companies/FIX.geojson").read_text()
+    )
+    assert company_geometry["snapshot_id"] == SNAPSHOT
+    assert [feature["id"] for feature in company_geometry["features"]] == [1]
     for relative, metadata in first["files"].items():
         body = (tmp_path / "first" / relative).read_bytes()
         assert metadata["sha256"] == hashlib.sha256(body).hexdigest()

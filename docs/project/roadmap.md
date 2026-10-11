@@ -32,9 +32,19 @@ publication schema is added by this work.
 Explorer reliability and project guidance: one-shot Water Body geometry
 navigation, visible Copy view feedback with supported filter state, clearer separation
 of supply-area geometry from company-wide performance, retained rainfall-incident
-diagnosis and connected project/presentation documentation. Search continues to expose
+diagnosis and connected project documentation. Search continues to expose
 returned area matches rather than claiming a complete company inventory. No new
 publisher feed, static product schema, forecast pipeline or hosted service is added.
+
+## Phase 18A.2 — delivered
+
+Company-first boundary discovery derived from the accepted Ofwat edition: a complete
+publisher-acronym index, snapshot-pinned paginated inventories, bounded exact
+multi-feature company views, individual-area navigation and a separate
+company-performance selection with its own provenance. API and static modes implement
+the same contract. Exact labels from accepted EA rainfall station records are used;
+generic or missing labels retain the gauge-ID fallback. The undocumented October
+list-valued rainfall reading remains rejected under the official scalar-value contract.
 
 ## Future, separately reviewed work
 
@@ -47,7 +57,7 @@ publisher feed, static product schema, forecast pipeline or hosted service is ad
 | Fabric interoperability | Validate tenant-specific Lakehouse/Map/Power BI integrations against export contracts; keep vendor SDKs optional |
 | Operational observability | Deployment-specific alerts, freshness policy dashboards, durable evidence retention and tested recovery at current schema |
 | Source opportunities | Reassess documented Stream/company candidates only with stable schema, licensing and provenance contracts |
-| Rainfall station naming | Review an official exact-identity name crosswalk with retained source/licence evidence; retain gauge-ID fallback where no verified name exists |
+| Additional rainfall station naming | Assess a governed official exact-identity crosswalk for gauges whose accepted API station record has only a generic/missing label; retain the ID fallback meanwhile |
 
 The optional water-supply overview already exists; national point tiling and dynamic
 source tiles are separate work. Water Body tiling, unit conversion and cross-source

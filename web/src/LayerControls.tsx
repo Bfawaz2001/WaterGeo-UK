@@ -34,7 +34,7 @@ const LAYERS: Array<{ id: LayerId; icon: IconName; label: string; description: s
   {
     id: "water-supply",
     icon: "water-supply", label: "Water-supply lookup",
-    description: "Click map; one reviewed area at a time", group: "companies",
+    description: "Company inventories and reviewed dated areas", group: "companies",
   },
 ];
 
