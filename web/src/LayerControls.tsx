@@ -74,7 +74,7 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
                 <small className={errors[layer.id] ? "state-error" : "state-detail"}>
                   {loading.has(layer.id)
                     ? `Updating nearby results… ${counts[layer.id] ?? 0} previous points retained until ready.`
-                    : errors[layer.id] ?? `${counts[layer.id] ?? 0} nearest results shown (maximum 100)`}
+                    : errors[layer.id] ?? (layer.id === "flood-warnings" ? `${counts[layer.id] ?? 0} accepted warning areas shown` : `${counts[layer.id] ?? 0} nearest results shown (maximum 100)`)}
                 </small>
               )}
             </span>

@@ -10,11 +10,12 @@
 - **Time:** `timeRaised`, `timeMessageChanged` and `timeSeverityChanged` are retained as publisher timestamps; retrieval time is separate.
 - **Geometry:** official GeoJSON Polygon/MultiPolygon coordinates in WGS84. Geometry must be present, non-empty and valid.
 
-The reviewed live warning set contained three official polygons with ring
-self-intersections. Policy `ea-flood-area-structure-v1` applies deterministic GEOS
-structure repair only when the result remains polygonal and valid, relative planar area
+The historical acceptance below included polygons with self-intersections. Current
+policy `ea-flood-area-structure-canonical-v2` applies GEOS structure repair only when the result remains polygonal and valid, relative planar area
 change is at most `1e-6`, and Hausdorff distance is at most `0.0001` degrees. Source and
 canonical WKB hashes, validity reason, area/distance changes, parts and holes are stored.
+Repaired geometry is normalized for canonical ordering and hashed using explicit
+little-endian 2D WKB; source-valid geometry is not rewritten by this repair policy.
 Anything outside that envelope fails closed; exact publisher GeoJSON remains in evidence.
 
 The current warning feed is transient. The publisher describes a roughly 15-minute update cycle and may retain “warning no longer in force” records for about 24 hours. A WaterGeo snapshot therefore describes only its accepted retrieval.
@@ -23,7 +24,8 @@ The current warning feed is transient. The publisher describes a roughly 15-minu
 
 WaterGeo is not an emergency warning service and offers no service guarantee. Users must use the [official flood warning service](https://check-for-flooding.service.gov.uk/) for safety decisions. The API, explorer and static publication repeat this caveat and expose retrieval time and attribution.
 
-The raw warnings response and every referenced area and polygon response are durably written before validation. Only a complete accepted bundle can load atomically. Hosted retrieval runs at `:02/:17/:32/:47` UTC only when `WATERGEO_FLOOD_SCHEDULE_ENABLED=true`; the public static profile remains a daily snapshot.
+The raw warnings response and every referenced area and polygon response are durably written before validation. Only a complete accepted bundle can load atomically. Hosted retrieval runs at `:02/:17/:32/:47` UTC only when `WATERGEO_FLOOD_SCHEDULE_ENABLED=true`; the gated daily static preview replays accepted evidence, while public Pages
+deployment is manual. Neither is an emergency feed.
 
 ## Local acceptance on 29 September 2026
 

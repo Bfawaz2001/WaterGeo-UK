@@ -103,6 +103,7 @@ async function staticPublication(page: Page): Promise<void> {
             },
             properties: {
               area_id: "F1",
+              warning_id: "W1",
               label: "Static flood area",
               county: "Testshire",
               description: "Publisher description",
@@ -194,6 +195,12 @@ test("static production mode shows national layers, caveats and company facts", 
   );
   await expect(page.getByRole("button", { name: /Rainfall: RF1/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Bathing water: Static beach/ })).toBeVisible();
+  const severity = page.getByLabel("Publisher severity");
+  await severity.selectOption("4");
+  await expect(page.getByText("No matching warnings in this snapshot. The map position is unchanged.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Flood area: Static flood area/ })).toHaveCount(0);
+  await severity.selectOption("3");
+  await expect(page.getByText("1 matching areas in the loaded accepted warning snapshot.")).toBeVisible();
   await page.getByRole("button", { name: /Flood area: Static flood area/ }).click();
   await expect(page.getByText(/not an emergency warning service/i)).toBeVisible();
 

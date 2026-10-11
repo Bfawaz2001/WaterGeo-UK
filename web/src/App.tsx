@@ -14,6 +14,8 @@ import { WaterBodyBrowser } from "./WaterBodyBrowser";
 import { OverviewControl } from "./OverviewControl";
 import type { Overview } from "./overview";
 import { Icon } from "./Icon";
+import { geometryBounds, REGIONS, type MapNavigation } from "./mapNavigation";
+import { filterFloods, FLOOD_STATES, type FloodFilter } from "./floodFilters";
 import { Onboarding } from "./Onboarding";
 
 const MapView = lazy(async () => {
@@ -41,6 +43,12 @@ export function App() {
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 740);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [thamesStatus, setThamesStatus] = useState<ThamesAlertStatus | "">("");
+  const [floodSeverity, setFloodSeverity] = useState<FloodFilter>("");
+  const [navigation, setNavigation] = useState<MapNavigation | null>(null);
+  const navigationId = useRef(0);
+  const navigate = (bounds: MapNavigation["bounds"] | null, maxZoom = 12) => {
+    if (bounds) setNavigation({ id: ++navigationId.current, bounds, maxZoom });
+  };
   const [thamesRecent, setThamesRecent] = useState(false);
   const [viewport, setViewport] = useState<ViewportQuery & { zoom: number }>({
     longitude: initial.longitude,
@@ -58,7 +66,10 @@ export function App() {
   );
   const rainfall = nearby.rainfall ?? [];
   const bathingWaters = nearby.bathingWaters ?? [];
-  const floodWarnings = nearby.floodWarnings ?? [];
+  const floodWarnings = useMemo(
+    () => filterFloods(nearby.floodWarnings ?? [], floodSeverity),
+    [nearby.floodWarnings, floodSeverity],
+  );
   const [sourceStatus, setSourceStatus] = useState<SourceStatuses | null>(null);
   const [staticPublication, setStaticPublication] = useState<Awaited<ReturnType<typeof staticPublicationMetadata>> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -221,6 +232,7 @@ export function App() {
       if (item && dataset) {
         setSelected({ kind: layer, item, dataset });
         setMapFocus({ key: `${layer}:${identity}` });
+        navigate(geometryBounds([item.geometry]));
       }
     } else if (layer === "water-quality") {
       const item = nearby.waterQuality.find((candidate) => candidate.sampling_point_id === identity);
@@ -359,6 +371,7 @@ export function App() {
       enable("flood-warnings");
       setSelected({ kind: "flood-warnings", item, dataset: page.dataset });
       focusPoint(null, null);
+      navigate(geometryBounds([item.geometry]));
     } else if (result.kind === "water-quality") {
       const detail = await api.samplingPointDetail(result.identity, result.snapshot_id, controller.signal);
       if (detail.dataset.snapshot_id !== result.snapshot_id) throw new ApiError(503, "Search snapshot changed");
@@ -426,7 +439,16 @@ export function App() {
       )}
 
       <aside id="explorer-controls" className="control-panel" aria-label="Explorer controls" hidden={!panelOpen}>
-        <OverviewControl onChange={setOverview} />
+        <section className="panel-section orientation" aria-labelledby="orientation-heading">
+          <p className="eyebrow">National to local</p>
+          <h2 id="orientation-heading">Explore a region</h2>
+          <p>Choose a region, then zoom into clusters or search by name. Points show bounded local results, not national totals.</p>
+          <div className="region-grid">{REGIONS.map((region) => <button className="secondary-button" key={region.label} onClick={() => navigate(region.bounds, 8)}>{region.label}</button>)}</div>
+          <details><summary>Coverage and overview</summary>
+            <p>EA layers cover England; water-supply and company-performance products cover England and Wales. Thames and Severn Trent are company-specific. No nationwide point distribution layer is loaded.</p>
+            <OverviewControl onChange={setOverview} />
+          </details>
+        </section>
         <LayerControls
           active={layers}
           counts={{
@@ -442,6 +464,27 @@ export function App() {
           errors={nearby.errors}
           onToggle={toggleLayer}
         />
+        {layers.has("flood-warnings") && (
+          <section className="panel-section" aria-labelledby="flood-filter-heading">
+            <p className="eyebrow">Active filters</p>
+            <h2 id="flood-filter-heading">Flood warning state</h2>
+            <label>Publisher severity <select value={floodSeverity} onChange={(event) => {
+              const value = event.target.value as FloodFilter;
+              setFloodSeverity(value);
+              if (!nearby.loading.has("flood-warnings") && !nearby.errors["flood-warnings"]) {
+                navigate(geometryBounds(filterFloods(nearby.floodWarnings ?? [], value).map((item) => item.geometry)));
+              }
+            }}>
+              <option value="">All accepted warning states</option>
+              {FLOOD_STATES.map((state) => <option key={state.value} value={state.value}>{state.label}</option>)}
+            </select></label>
+            <p role="status">{floodWarnings.length} matching areas in the loaded accepted warning snapshot.</p>
+            {!floodWarnings.length && !nearby.loading.has("flood-warnings") && !nearby.errors["flood-warnings"] && <p>No matching warnings in this snapshot. The map position is unchanged.</p>}
+            <button className="secondary-button" disabled={!floodWarnings.length || nearby.loading.has("flood-warnings") || Boolean(nearby.errors["flood-warnings"])} onClick={() => navigate(geometryBounds(floodWarnings.map((item) => item.geometry)))}>Show matching warning areas</button>
+            <p className="caveat">All includes warnings no longer in force. Unknown states remain in All. A selected detail retains its original snapshot even when filtered out.</p>
+            <a href="https://check-for-flooding.service.gov.uk/" target="_blank" rel="noreferrer">Official EA flood guidance</a>
+          </section>
+        )}
         {layers.has("thames-discharge") && (
           <section className="panel-section" aria-labelledby="thames-filter-heading">
             <p className="eyebrow">Server-side filters</p>
@@ -452,6 +495,8 @@ export function App() {
             </select></label>
             <label><input type="checkbox" checked={thamesRecent} onChange={(event) => setThamesRecent(event.target.checked)} /> Publisher marks activity in past 48 hours</label>
             <p className="caveat">Filters run on the full selected snapshot before the nearest 100 results are returned.</p>
+            <button className="secondary-button" disabled={!thamesDischarge.length || nearby.loading.has("thames-discharge") || Boolean(nearby.errors["thames-discharge"])} onClick={() => navigate(geometryBounds(thamesDischarge.map((item) => item.geometry)))}>Show loaded monitor matches</button>
+            <p className="caveat">Fits only the loaded nearby matches, not every matching monitor nationwide. Apply a filter and wait for the updated results before navigating.</p>
             <p className="caveat">
               Near-real-time means the latest accepted WaterGeo retrieval for each map request, not instantaneous publisher state.
               {nearby.provenance["thames-discharge"] && (
@@ -461,7 +506,7 @@ export function App() {
           </section>
         )}
         <details className="panel-section"><summary>Browse nearby results without the map</summary>
-          <p>Current bounded results only; maximum 100 per source.</p>
+          <p>Point layers: nearest 100 within a bounded radius. Flood areas: loaded accepted warning snapshot. Cluster counts describe these loaded features only.</p>
           <ul className="result-list nearby-list">
             {layers.has("hydrology") && nearby.hydrology.map((item) => <li key={`h:${item.station_id}`}><button onClick={() => selectPoint("hydrology", item.station_id)}>Station: {item.labels[0] ?? item.station_id}</button></li>)}
             {layers.has("rainfall") && rainfall.map((item) => <li key={`rf:${item.station_id}`}><button onClick={() => selectPoint("rainfall", item.station_id)}>Rainfall: {item.display_name ?? item.station_id}</button></li>)}
@@ -485,6 +530,7 @@ export function App() {
         {viewport.radiusM === 0 && <p className="map-message" role="status">Preparing map viewport…</p>}
         <Suspense fallback={<div className="map-loading" role="status">Loading map renderer…</div>}>
           <MapView
+            navigation={navigation}
             overview={overview}
             focus={mapFocus}
             initial={initial}

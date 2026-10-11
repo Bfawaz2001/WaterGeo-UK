@@ -55,7 +55,7 @@ uv run --locked alembic current
 ```
 
 Expected schema revision: **0003**. An existing pre-0003 database may need the
-ingestion role bootstrapped using the [README instructions](../../README.md#existing-database-volumes).
+ingestion role bootstrapped using the [volume instructions](local-platform-reference.md#existing-database-volumes).
 Do not delete an existing volume to solve a missing-role error.
 
 ## 3. Retrieve, inspect and load the source
@@ -172,7 +172,7 @@ remain relevant even when a request succeeds.
 
 ## Tests and shutdown
 
-Run unit checks using the [README commands](../../README.md#checks). Migration
+Run unit checks using the [validation commands](local-platform-reference.md#checks). Migration
 integration tests require a **separate disposable database**; never point them at
 your loaded development database.
 

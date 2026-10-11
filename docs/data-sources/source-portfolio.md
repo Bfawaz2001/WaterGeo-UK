@@ -26,3 +26,25 @@ schedule jobs run only when their named repository variable is exactly `true`.
 Manual dispatch is independent of that gate. Repository variables and external
 database availability determine whether scheduled refreshes actually run; these
 cadences do not make the static Pages publication live.
+
+## Source contracts and official origins
+
+These reviewed assessments record official upstream endpoints/downloads, identity,
+retained evidence, validation, licence/attribution and limitations. Use them alongside
+the source client rather than substituting an unreviewed publisher URL.
+
+| Primary product | Contract and provenance details |
+| --- | --- |
+| Ofwat water supply | [Boundary assessment](ofwat-company-boundaries.md), [geometry lineage](../architecture/geospatial-model.md) |
+| EA Hydrology | [Source assessment](environment-agency-hydrology.md) |
+| EA Catchments/CDE | [Accepted hierarchy decision](../adr/0009-catchment-data-explorer.md) |
+| EA Water Quality metadata | [Source assessment](environment-agency-water-quality.md) |
+| Severn Trent reservoirs | [Stream assessment](stream-company-source-assessment.md) |
+| Thames EDM | [Source and evidence contract](thames-water-discharge-status.md) |
+| EA rainfall | [Source assessment](environment-agency-rainfall.md) |
+| EA flood monitoring | [Geometry and warning contract](environment-agency-flood-monitoring.md) |
+| EA bathing waters | [Source assessment](environment-agency-bathing-waters.md) |
+| Ofwat company performance | [Workbook and dictionary contract](ofwat-company-performance.md) |
+
+[Refresh and publication](../guides/refresh-and-publication.md) distinguishes local
+refresh, scheduled operation, accepted evidence replay and manual Pages deployment.
