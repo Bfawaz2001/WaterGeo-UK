@@ -27,12 +27,12 @@ hierarchy, company/area search grouping, regional discovery guidance and clearer
 observation/retrieval/publication timing. No publisher, ingestion, database or static
 publication schema is added by this work.
 
-## Phase 18A.1 — current review scope
+## Phase 18A.1 — delivered
 
-Presentation readiness and focused reliability: one-shot Water Body geometry
+Explorer reliability and project guidance: one-shot Water Body geometry
 navigation, visible Copy view feedback with supported filter state, clearer separation
 of supply-area geometry from company-wide performance, retained rainfall-incident
-diagnosis and a connected README/meeting walkthrough. Search continues to expose
+diagnosis and connected project/presentation documentation. Search continues to expose
 returned area matches rather than claiming a complete company inventory. No new
 publisher feed, static product schema, forecast pipeline or hosted service is added.
 

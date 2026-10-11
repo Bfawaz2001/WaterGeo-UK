@@ -9,17 +9,17 @@ be traced back to the accepted data behind it.
 
 **Ingest once, govern once, consume anywhere — including Fabric.**
 
-> **Presenting WaterGeo UK? Start with the
-> [project presentation and technical walkthrough](docs/guides/presentation-walkthrough.md).**
+## Project links
 
-| Quick route | Open |
+| Resource | Description |
 | --- | --- |
-| Use the product | [Public explorer](https://bfawaz2001.github.io/WaterGeo-UK/) |
-| Explain the design | [System architecture](docs/architecture/system-overview.md) |
-| Review coverage | [Data portfolio](docs/data-sources/source-portfolio.md) |
-| Explain trust | [Evidence and governance](docs/architecture/ingestion-and-evidence.md) |
-| Run the full stack | [Local demo](docs/guides/local-complete-demo.md) |
-| Discuss what comes next | [Roadmap](docs/project/roadmap.md) |
+| [Public explorer](https://bfawaz2001.github.io/WaterGeo-UK/) | Browse the governed static publication. |
+| [System architecture](docs/architecture/system-overview.md) | Understand the local API/database and static-publication paths. |
+| [Data portfolio](docs/data-sources/source-portfolio.md) | Review sources, licences, coverage and time semantics. |
+| [Evidence and governance](docs/architecture/ingestion-and-evidence.md) | See how retrieval, validation and acceptance remain auditable. |
+| [Local demo](docs/guides/local-complete-demo.md) | Run the complete local development stack. |
+| [Roadmap](docs/project/roadmap.md) | Review delivered milestones and separately scoped future work. |
+| [Presentation walkthrough](docs/guides/presentation-walkthrough.md) | Optional guided product and technical tour. |
 
 ## What the platform can do
 
@@ -44,7 +44,7 @@ be traced back to the accepted data behind it.
 | Local API and database | Implemented; operators can retrieve, validate and accept new publisher snapshots. |
 | Hosted public API | No publicly hosted FastAPI/PostgreSQL/PostGIS service. Pages serves files only. |
 | Fabric interoperability | Compatibility/export foundations and examples; no Fabric deployment or cloud resource is required. |
-| Current development | Phase 18A is delivered; Phase 18A.1 demo-readiness improvements are under review on this branch. |
+| Latest milestone | Phase 18A.1 delivered explorer reliability, clearer company discovery, share-state improvements and updated project guidance. |
 
 Publisher observation/publication time, WaterGeo retrieval time and WaterGeo static
 publication time are separate. A fresh retrieval does not prove a fresh observation.
