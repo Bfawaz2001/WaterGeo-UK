@@ -19,7 +19,9 @@ buttons to bounded layer results. Bathing-water classification filters can fit m
 operate after the bounded nearest-100 query and label both the match count and scope;
 they do not represent all classified bathing waters nationally. Search groups returned
 water-supply areas under their verified company label without collapsing identities or
-claiming the bounded response is a complete company inventory.
+claiming the bounded response is a complete company inventory. Phase 18A.2 adds a
+separate complete company path: the selected acronym's paginated inventory and exact
+FeatureCollection must agree on snapshot, count and ordered source IDs before display.
 
 The existing optional water-supply PMTiles overview remains under “Coverage and
 overview”, configured via its reviewed same-origin export manifest. It is labelled
@@ -48,11 +50,15 @@ does not supply a nationwide point overview. See [geospatial model](../architect
   interaction. Detail remains separate from the scrollable control panel.
 - Bathing-water points use publisher classification colours plus written classification
   labels and accessible controls, so meaning does not depend on colour alone.
+- Selecting a water company issues one fit over all of its verified, possibly
+  disconnected features. Selecting an area issues one fit to that exact feature;
+  “Show all company areas” returns to the company extent. Manual movement does not
+  retrigger either fit. The company fill sits beneath the stronger selected-area style.
 
 ## Shared view URLs
 
-“Copy view” serializes bounded camera coordinates, zoom, visible layers, supported
-selection identity, flood severity and bathing classification. It does not serialize
+“Copy view” serializes bounded camera coordinates, zoom, visible layers, selected
+company acronym, supported feature identity, flood severity and bathing classification. It does not serialize
 API responses, credentials or browser location. Clipboard success and failure are
 announced; blocked clipboard access exposes the same URL for manual copying. A
 localhost/127.0.0.1 URL is explicitly local to that computer. WaterGeo does not

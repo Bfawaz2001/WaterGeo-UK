@@ -68,6 +68,9 @@ the [existing-volume instructions](#existing-database-volumes).
 | `GET /v1/water-supply/areas/at-point?lon=-2&lat=52` | All covering areas, including boundary matches, with pagination. |
 | `GET /v1/water-supply/areas/{source_id}` | Area labels, publisher notices and reviewed transformation provenance. |
 | `GET /v1/water-supply/areas/{source_id}/geometry` | One GeoJSON Feature in WGS84 longitude/latitude. |
+| `GET /v1/water-supply/companies` | Complete derived publisher-acronym index for one accepted boundary snapshot. |
+| `GET /v1/water-supply/companies/{acronym}/areas` | Snapshot-pinned, keyset-paginated complete company-area inventory. |
+| `GET /v1/water-supply/companies/{acronym}/geometry` | Bounded exact FeatureCollection for the verified inventory; no dissolve. |
 | `GET /v1/hydrology/dataset` | Current reviewed Environment Agency hydrology snapshot metadata and coverage. |
 | `GET /v1/hydrology/stations` | Paginated river level/flow station summaries. |
 | `GET /v1/hydrology/stations/near` | Nearby located stations using WGS84 geography distance. |
@@ -168,6 +171,8 @@ curl --fail 'http://127.0.0.1:8000/v1/water-supply/areas?limit=10'
 curl --fail 'http://127.0.0.1:8000/v1/water-supply/areas/at-point?lon=-2&lat=52'
 curl --fail http://127.0.0.1:8000/v1/water-supply/areas/1
 curl --fail http://127.0.0.1:8000/v1/water-supply/areas/1/geometry
+curl --fail http://127.0.0.1:8000/v1/water-supply/companies
+curl --fail 'http://127.0.0.1:8000/v1/water-supply/companies/ANH/areas?limit=100'
 ```
 
 Use `next_after_id` as the next request's `after_id`; `null` means the final page.

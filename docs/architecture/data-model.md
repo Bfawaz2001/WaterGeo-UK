@@ -83,5 +83,9 @@ separately, so another retrieval need not invent a different content product.
 
 The static manifest is a publication artifact, not another relational foreign-key
 schema. Compatibility depends on versions/hashes as well as a row's existence.
+The water-company index is likewise a representation derived from exact
+`source_fields->>'Acronym'` values in one accepted boundary snapshot; it is not a new
+company table or an inferred spatial relationship. Publisher name variants remain
+visible. Company-performance rows remain in their separate national-source snapshot.
 See [data flow](data-flow.md), [geospatial model](geospatial-model.md) and
 [export contracts](../guides/phase-8-exports.md).

@@ -10,6 +10,10 @@ from watergeo.api.water_supply_models import (
     AreaFeature,
     AreaPage,
     AreaSummary,
+    CompanyAreaPage,
+    CompanyFeatureCollection,
+    CompanyPage,
+    CompanySummary,
     DatasetMetadata,
     MultiPolygon,
     PresentationMetadata,
@@ -22,6 +26,8 @@ from watergeo.core.presentation import (
 )
 
 MAX_GEOMETRY_BYTES = 8 * 1024 * 1024
+MAX_COMPANY_GEOMETRY_BYTES = 8 * 1024 * 1024
+MAX_COMPANY_AREAS = 1000
 
 
 class DatasetUnavailable(Exception):
@@ -30,6 +36,10 @@ class DatasetUnavailable(Exception):
 
 class AreaNotFound(Exception):
     """No area in the published snapshot has this identifier."""
+
+
+class CompanyNotFound(Exception):
+    """No company in the published snapshot has this identifier."""
 
 
 class GeometryTooLarge(Exception):
@@ -73,6 +83,35 @@ POINT_SQL = text(
     + " WHERE a.snapshot_id = :snapshot_id AND a.source_id > :after_id"
     + POINT_PREDICATE
     + " ORDER BY a.source_id LIMIT :limit"
+)
+COMPANY_LIST_SQL = text("""
+    WITH label_counts AS (
+        SELECT a.source_fields->>'Acronym' AS company_acronym,
+               a.source_fields->>'COMPANY' AS publisher_label,
+               count(*) AS label_count
+        FROM watergeo.water_supply_area a
+        WHERE a.snapshot_id = :snapshot_id
+          AND COALESCE(a.source_fields->>'Acronym', '') <> ''
+          AND COALESCE(a.source_fields->>'COMPANY', '') <> ''
+        GROUP BY company_acronym, publisher_label
+    )
+    SELECT company_acronym,
+           (array_agg(publisher_label ORDER BY label_count DESC,
+                      publisher_label COLLATE "C"))[1] AS display_name,
+           array_agg(publisher_label ORDER BY label_count DESC,
+                     publisher_label COLLATE "C") AS publisher_labels,
+           sum(label_count) AS area_count
+    FROM label_counts
+    GROUP BY company_acronym
+    ORDER BY company_acronym COLLATE "C"
+""")
+COMPANY_AREA_SQL = text(
+    "SELECT "
+    + SUMMARY_COLUMNS
+    + AREA_TABLES
+    + " WHERE a.snapshot_id = :snapshot_id"
+    + " AND a.source_fields->>'Acronym' = :company_acronym"
+    + " AND a.source_id > :after_id ORDER BY a.source_id LIMIT :limit"
 )
 DETAIL_SQL = text(
     "SELECT "
@@ -161,7 +200,7 @@ class WaterSupplyQueries:
         if self._connection is not None:
             self._connection.close()
 
-    def dataset(self) -> DatasetMetadata:
+    def dataset(self, snapshot_id: UUID | None = None) -> DatasetMetadata:
         row = (
             self.connection.execute(
                 text("""
@@ -175,8 +214,13 @@ class WaterSupplyQueries:
                         WHERE t.snapshot_id = s.id) AS transformed_area_count
                 FROM watergeo.water_supply_snapshot s
                 WHERE s.source_sha256 = :sha256 AND s.transformation_version = :version
+                  AND (CAST(:snapshot_id AS uuid) IS NULL OR s.id = CAST(:snapshot_id AS uuid))
             """),
-                {"sha256": OFWAT_WATER_SUPPLY_SHA256, "version": OFWAT_WATER_SUPPLY_TRANSFORMATION},
+                {
+                    "sha256": OFWAT_WATER_SUPPLY_SHA256,
+                    "version": OFWAT_WATER_SUPPLY_TRANSFORMATION,
+                    "snapshot_id": snapshot_id,
+                },
             )
             .mappings()
             .one_or_none()
@@ -184,6 +228,72 @@ class WaterSupplyQueries:
         if row is None:
             raise DatasetUnavailable
         return DatasetMetadata.model_validate(dict(row))
+
+    def companies(self, snapshot_id: UUID) -> CompanyPage:
+        rows = (
+            self.connection.execute(COMPANY_LIST_SQL, {"snapshot_id": snapshot_id}).mappings().all()
+        )
+        return CompanyPage(
+            snapshot_id=snapshot_id,
+            items=[CompanySummary.model_validate(dict(row)) for row in rows],
+        )
+
+    def company(self, snapshot_id: UUID, company_acronym: str) -> CompanySummary:
+        companies = self.companies(snapshot_id).items
+        try:
+            return next(item for item in companies if item.company_acronym == company_acronym)
+        except StopIteration:
+            raise CompanyNotFound from None
+
+    def company_areas(
+        self,
+        snapshot_id: UUID,
+        company_acronym: str,
+        *,
+        limit: int,
+        after_id: int,
+    ) -> CompanyAreaPage:
+        company = self.company(snapshot_id, company_acronym)
+        rows = (
+            self.connection.execute(
+                COMPANY_AREA_SQL,
+                {
+                    "snapshot_id": snapshot_id,
+                    "company_acronym": company_acronym,
+                    "after_id": after_id,
+                    "limit": limit + 1,
+                },
+            )
+            .mappings()
+            .all()
+        )
+        items = [AreaSummary.model_validate(dict(row)) for row in rows[:limit]]
+        return CompanyAreaPage(
+            snapshot_id=snapshot_id,
+            company=company,
+            items=items,
+            next_after_id=items[-1].source_id if len(rows) > limit else None,
+        )
+
+    def company_feature_collection(
+        self, snapshot_id: UUID, company_acronym: str
+    ) -> CompanyFeatureCollection:
+        page = self.company_areas(
+            snapshot_id,
+            company_acronym,
+            limit=MAX_COMPANY_AREAS,
+            after_id=0,
+        )
+        if page.next_after_id is not None or len(page.items) != page.company.area_count:
+            raise DatasetUnavailable
+        collection = CompanyFeatureCollection(
+            snapshot_id=snapshot_id,
+            company=page.company,
+            features=[self.feature(snapshot_id, item.source_id) for item in page.items],
+        )
+        if len(collection.model_dump_json().encode()) > MAX_COMPANY_GEOMETRY_BYTES:
+            raise GeometryTooLarge
+        return collection
 
     def areas(
         self,

@@ -15,6 +15,11 @@ const mocks = vi.hoisted(() => ({
   waterBodyGeometry: vi.fn(),
   search: vi.fn(),
   hydrologyDetail: vi.fn(),
+  waterSupplyCompanies: vi.fn(),
+  waterSupplyCompanyAreas: vi.fn(),
+  waterSupplyCompanyGeometry: vi.fn(),
+  companyPerformanceCompanies: vi.fn(),
+  companyPerformance: vi.fn(),
   writeText: vi.fn(),
   browserSelection: vi.fn(),
 }));
@@ -32,6 +37,11 @@ vi.mock("./api", () => ({
     waterBodyGeometry: mocks.waterBodyGeometry,
     search: mocks.search,
     hydrologyDetail: mocks.hydrologyDetail,
+    waterSupplyCompanies: mocks.waterSupplyCompanies,
+    waterSupplyCompanyAreas: mocks.waterSupplyCompanyAreas,
+    waterSupplyCompanyGeometry: mocks.waterSupplyCompanyGeometry,
+    companyPerformanceCompanies: mocks.companyPerformanceCompanies,
+    companyPerformance: mocks.companyPerformance,
   },
 }));
 
@@ -71,7 +81,7 @@ vi.mock("./useNearby", () => ({
 }));
 
 vi.mock("./MapView", () => ({
-  MapView: ({ onMapClick, onSelectPoint, bathingWaters, navigation, focus, waterBody: selectedWaterBody }: { onMapClick: (lon: number, lat: number) => void; onSelectPoint: (kind: string, id: string) => void; bathingWaters: Array<{ bathing_water_id: string }>; navigation?: unknown; focus?: unknown; waterBody?: unknown }) => (
+  MapView: ({ onMapClick, onSelectPoint, bathingWaters, navigation, focus, waterBody: selectedWaterBody, companyAreas }: { onMapClick: (lon: number, lat: number) => void; onSelectPoint: (kind: string, id: string) => void; bathingWaters: Array<{ bathing_water_id: string }>; navigation?: unknown; focus?: unknown; waterBody?: unknown; companyAreas?: unknown }) => (
     <div aria-label="Mock map">
       <button type="button" onClick={() => onMapClick(-1, 52)}>Click map</button>
       <button type="button" onClick={() => onSelectPoint("hydrology", "station-1")}>Select station</button>
@@ -79,6 +89,7 @@ vi.mock("./MapView", () => ({
       <span data-testid="map-navigation">{JSON.stringify(navigation)}</span>
       <span data-testid="map-focus">{JSON.stringify(focus)}</span>
       <span data-testid="mapped-water-body">{JSON.stringify(selectedWaterBody)}</span>
+      <span data-testid="mapped-company-areas">{JSON.stringify(companyAreas)}</span>
     </div>
   ),
 }));
@@ -153,6 +164,12 @@ beforeEach(() => {
     ],
   });
   mocks.areaGeometry.mockResolvedValue(areaFeature);
+  const company = { company_acronym: "EW", display_name: "Example Water", publisher_labels: ["Example Water"], area_count: 1 };
+  mocks.waterSupplyCompanies.mockResolvedValue({ snapshot_id: areaFeature.properties.snapshot_id, items: [company] });
+  mocks.waterSupplyCompanyAreas.mockResolvedValue({ snapshot_id: areaFeature.properties.snapshot_id, company, items: [areaFeature.properties], next_after_id: null });
+  mocks.waterSupplyCompanyGeometry.mockResolvedValue({ type: "FeatureCollection", snapshot_id: areaFeature.properties.snapshot_id, company, features: [areaFeature] });
+  mocks.companyPerformanceCompanies.mockResolvedValue({ dataset, items: [{ company_id: "example", company_name: "Example Water", boundary_company_acronym: "EW" }], next_after_id: null });
+  mocks.companyPerformance.mockResolvedValue({ dataset, item: { company_id: "example", company_name: "Example Water", boundary_company_acronym: "EW", measures: [{ reporting_period: "2024-25", measure_code: "M1", measure_name: "Leakage", value: 1, value_state: "reported", unit: "Ml/d", definition: "Fixture", publication: "Fixture" }] } });
   mocks.catchmentDataset.mockResolvedValue(catchmentDataset);
   mocks.waterBody.mockResolvedValue(waterBody);
   mocks.waterBodyGeometry.mockResolvedValue(waterBodyGeometry);
@@ -301,6 +318,83 @@ it("retains overlapping water-supply matches and loads only the chosen geometry"
   await waitFor(() => expect(mocks.areaGeometry).toHaveBeenCalledWith(3, expect.any(AbortSignal)));
   expect(await screen.findByRole("heading", { name: "Example Water" })).toBeInTheDocument();
   expect(screen.getByText(/does not establish the current supplier/)).toBeInTheDocument();
+});
+
+it("selects a complete company view and keeps performance as a separate provenance-bearing selection", async () => {
+  render(<App />);
+  await userEvent.click(screen.getByRole("checkbox", { name: /Water-supply lookup/i }));
+  await userEvent.selectOptions(await screen.findByLabelText("Water company"), "EW");
+  expect(await screen.findByText((_, element) => element?.textContent === "1 verified area")).toBeInTheDocument();
+  expect(mocks.waterSupplyCompanyAreas).toHaveBeenCalledWith(
+    "EW", areaFeature.properties.snapshot_id, undefined, expect.any(AbortSignal),
+  );
+  expect(screen.getByTestId("mapped-company-areas")).toHaveTextContent("FeatureCollection");
+  await userEvent.click(screen.getByRole("button", { name: "View company performance" }));
+  expect(await screen.findByRole("heading", { name: "Example Water" })).toBeInTheDocument();
+  expect(screen.getByText("Company-wide performance")).toBeInTheDocument();
+  expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
+  expect(screen.getByText(/analytically separate from the dated supply-area polygons/)).toBeInTheDocument();
+});
+
+it("clears stale company state before a switched company geometry request fails", async () => {
+  const secondCompany = { company_acronym: "SW", display_name: "Second Water", publisher_labels: ["Second Water"], area_count: 1 };
+  const secondArea = {
+    ...areaFeature,
+    id: 4,
+    properties: { ...areaFeature.properties, source_id: 4, company: "Second Water", company_acronym: "SW" },
+  };
+  mocks.waterSupplyCompanies.mockResolvedValue({
+    snapshot_id: areaFeature.properties.snapshot_id,
+    items: [
+      { company_acronym: "EW", display_name: "Example Water", publisher_labels: ["Example Water"], area_count: 1 },
+      secondCompany,
+    ],
+  });
+  mocks.waterSupplyCompanyAreas.mockImplementation((acronym: string) => Promise.resolve({
+    snapshot_id: areaFeature.properties.snapshot_id,
+    company: acronym === "EW"
+      ? { company_acronym: "EW", display_name: "Example Water", publisher_labels: ["Example Water"], area_count: 1 }
+      : secondCompany,
+    items: [acronym === "EW" ? areaFeature.properties : secondArea.properties],
+    next_after_id: null,
+  }));
+  mocks.waterSupplyCompanyGeometry.mockImplementation((acronym: string) =>
+    acronym === "EW"
+      ? Promise.resolve({
+          type: "FeatureCollection",
+          snapshot_id: areaFeature.properties.snapshot_id,
+          company: { company_acronym: "EW", display_name: "Example Water", publisher_labels: ["Example Water"], area_count: 1 },
+          features: [areaFeature],
+        })
+      : Promise.reject(new Error("geometry unavailable")),
+  );
+  render(<App />);
+  await userEvent.click(screen.getByRole("checkbox", { name: /Water-supply lookup/i }));
+  const selector = await screen.findByLabelText("Water company");
+  await userEvent.selectOptions(selector, "EW");
+  await userEvent.click(await screen.findByRole("button", { name: /Example area/ }));
+  expect(screen.getByRole("heading", { name: "Selected supply area" })).toBeInTheDocument();
+  expect(screen.getByTestId("mapped-company-areas")).toHaveTextContent("FeatureCollection");
+
+  await userEvent.selectOptions(selector, "SW");
+  expect(screen.queryByRole("heading", { name: "Selected supply area" })).not.toBeInTheDocument();
+  expect(screen.getByTestId("mapped-company-areas")).toHaveTextContent("null");
+  expect(await screen.findByText(/complete company-area view could not be verified/u)).toBeInTheDocument();
+  expect(window.location.search).toContain("company=SW");
+
+  await userEvent.selectOptions(selector, "");
+  expect(screen.getByTestId("mapped-company-areas")).toHaveTextContent("null");
+  expect(window.location.search).not.toContain("company=");
+});
+
+it("opens company performance without enabling boundary geometry", async () => {
+  render(<App />);
+  await userEvent.selectOptions(await screen.findByLabelText("Water company"), "EW");
+  await userEvent.click(await screen.findByRole("button", { name: "View company performance" }));
+  expect(screen.getByText("Company-wide performance")).toBeInTheDocument();
+  expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
+  expect(mocks.waterSupplyCompanyAreas).not.toHaveBeenCalled();
+  expect(mocks.waterSupplyCompanyGeometry).not.toHaveBeenCalled();
 });
 
 it("filters exact bathing classifications within the explicitly bounded loaded results", async () => {

@@ -19,7 +19,6 @@ be traced back to the accepted data behind it.
 | [Evidence and governance](docs/architecture/ingestion-and-evidence.md) | See how retrieval, validation and acceptance remain auditable. |
 | [Local demo](docs/guides/local-complete-demo.md) | Run the complete local development stack. |
 | [Roadmap](docs/project/roadmap.md) | Review delivered milestones and separately scoped future work. |
-| [Presentation walkthrough](docs/guides/presentation-walkthrough.md) | Optional guided product and technical tour. |
 
 ## What the platform can do
 
@@ -44,7 +43,7 @@ be traced back to the accepted data behind it.
 | Local API and database | Implemented; operators can retrieve, validate and accept new publisher snapshots. |
 | Hosted public API | No publicly hosted FastAPI/PostgreSQL/PostGIS service. Pages serves files only. |
 | Fabric interoperability | Compatibility/export foundations and examples; no Fabric deployment or cloud resource is required. |
-| Latest milestone | Phase 18A.1 delivered explorer reliability, clearer company discovery, share-state improvements and updated project guidance. |
+| Latest milestone | Phase 18A.2 delivered complete snapshot-pinned water-company inventories, exact multi-area map views and independent company-performance detail. |
 
 Publisher observation/publication time, WaterGeo retrieval time and WaterGeo static
 publication time are separate. A fresh retrieval does not prove a fresh observation.
@@ -210,8 +209,9 @@ publisher-declared measurement period and separate observation from retrieval ti
   feature distributions. A reviewed national point overview is Phase 18C work.
 - Rainfall uses the previous accepted snapshot after a publisher response supplied a
   non-scalar reading on 11 October 2026; validation correctly rejected that refresh.
-- Water-company search groups returned exact areas but does not claim a complete
-  company boundary inventory or current property-supplier result.
+- Water-company exploration verifies every publisher-associated area for the selected
+  acronym and snapshot, then shows the exact features together. It does not dissolve
+  them into a legal boundary or claim a current property-supplier result.
 - The public site is an immutable static edition. Historical rainfall and richer
   Hydrology/Water Quality analytics are Phase 18B work.
 - The public deployment has no FastAPI/PostGIS service. API hosting, access policy,

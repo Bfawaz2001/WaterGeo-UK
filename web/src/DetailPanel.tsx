@@ -73,6 +73,7 @@ const ICONS: Record<SelectedFeature["kind"], IconName> = {
   reservoirs: "reservoirs",
   "thames-discharge": "thames-discharge",
   "water-supply": "water-supply",
+  "company-performance": "water-supply",
   "water-body": "catchment",
 };
 
@@ -151,12 +152,20 @@ export function DetailPanel({ selected, onClose }: Props) {
         {selected.item.properties.premises_disclaimer && <p className="caveat">{selected.item.properties.premises_disclaimer}</p>}
         {selected.item.properties.coastline_disclaimer && <p className="caveat">{selected.item.properties.coastline_disclaimer}</p>}
       </section>
-      {selected.performance && <section aria-labelledby="company-performance-heading"><h3 id="company-performance-heading">Company performance</h3><p>{selected.performance.item.company_name} · company-wide official published measures</p><div className="table-scroll"><table className="measure-table"><thead><tr><th>Measure</th><th>Period</th><th>Value</th></tr></thead><tbody>{selected.performance.item.measures.slice(0, 6).map((measure) => <tr key={`${measure.measure_code}:${measure.reporting_period}`}><th scope="row">{measure.measure_name}</th><td>{measure.reporting_period}</td><td>{measure.value_state === "reported" ? `${measure.value ?? ""}${measure.unit ? ` ${measure.unit}` : ""}` : measure.value_state.replace("_", " ")}</td></tr>)}</tbody></table></div><p className="caveat">These measures apply to the company and reporting period, not specifically to the selected supply-area polygon. Only values with the same publisher definition and unit should be compared across reporting periods.</p><Provenance dataset={selected.performance.dataset} /></section>}
       <details className="technical-disclosure"><summary>Geometry and presentation details</summary><SummaryGrid>
         <Field label="Source ID">{selected.item.id}</Field><Field label="Presentation">{selected.item.presentation.method}</Field>
         <Field label="Policy">{selected.item.presentation.policy_version}</Field><Field label="Review">{selected.item.presentation.review_reference}</Field>
         <Field label="Snapshot"><code>{selected.item.properties.snapshot_id}</code></Field>
       </SummaryGrid></details>
+    </>;
+  } else if (selected.kind === "company-performance") {
+    title = selected.item.company_name;
+    dataset = selected.dataset;
+    body = <>
+      <div className="metric-hero"><span><strong>Company-wide performance</strong><small>Official published measures with their own reporting periods</small></span></div>
+      <div className="table-scroll"><table className="measure-table"><thead><tr><th>Measure</th><th>Period</th><th>Value</th></tr></thead><tbody>{selected.item.measures.map((measure) => <tr key={`${measure.measure_code}:${measure.reporting_period}`}><th scope="row">{measure.measure_name}</th><td>{measure.reporting_period}</td><td>{measure.value_state === "reported" ? `${measure.value ?? ""}${measure.unit ? ` ${measure.unit}` : ""}` : measure.value_state.replace("_", " ")}</td></tr>)}</tbody></table></div>
+      <p className="caveat caveat-prominent">These values describe the company and reporting period. They are analytically separate from the dated supply-area polygons and are not local measurements for any selected area.</p>
+      <details className="technical-disclosure"><summary>Company identity</summary><SummaryGrid><Field label="Performance ID"><code>{selected.item.company_id}</code></Field><Field label="Reviewed boundary acronym">{selected.item.boundary_company_acronym ?? "No reviewed crosswalk"}</Field></SummaryGrid></details>
     </>;
   } else {
     title = selected.item.name;

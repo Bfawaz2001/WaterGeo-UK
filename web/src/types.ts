@@ -230,6 +230,25 @@ export interface AreaPage {
   next_after_id: number | null;
 }
 
+export interface WaterCompany {
+  company_acronym: string;
+  display_name: string;
+  publisher_labels: string[];
+  area_count: number;
+}
+
+export interface WaterCompanyPage {
+  snapshot_id: string;
+  items: WaterCompany[];
+}
+
+export interface WaterCompanyAreaPage {
+  snapshot_id: string;
+  company: WaterCompany;
+  items: AreaSummary[];
+  next_after_id: number | null;
+}
+
 export interface AreaFeature {
   type: "Feature";
   id: number;
@@ -251,6 +270,13 @@ export interface AreaFeature {
     review_reference: string;
     method: "reprojection" | "post_transform_structure";
   };
+}
+
+export interface WaterCompanyFeatureCollection {
+  type: "FeatureCollection";
+  snapshot_id: string;
+  company: WaterCompany;
+  features: AreaFeature[];
 }
 
 export interface CatchmentDataset extends DatasetProvenance {
@@ -326,8 +352,8 @@ export type SelectedFeature =
   | {
       kind: "water-supply";
       item: AreaFeature;
-      performance?: NationalDetail<CompanyPerformance> | null;
     }
+  | { kind: "company-performance"; item: CompanyPerformance; dataset: DatasetProvenance }
   | {
       kind: "water-body";
       item: WaterBodyDetail;

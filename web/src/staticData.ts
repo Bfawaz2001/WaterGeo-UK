@@ -48,6 +48,20 @@ interface StaticItems {
   items: Array<Record<string, unknown>>;
 }
 
+interface StaticCompanyIndex extends StaticItems {
+  snapshot_id: string;
+  items: Array<Record<string, unknown> & { areas: Array<Record<string, unknown>> }>;
+}
+
+function companySummary(item: Record<string, unknown>): Record<string, unknown> {
+  return {
+    company_acronym: item.company_acronym,
+    display_name: item.display_name,
+    publisher_labels: item.publisher_labels,
+    area_count: item.area_count,
+  };
+}
+
 export interface StaticPublicationMetadata {
   publication_id: string;
   generated_at: string;
@@ -222,6 +236,58 @@ export async function staticRequest<T>(path: string, signal?: AbortSignal): Prom
     throw new StaticDataError(
       501,
       "Point-in-polygon lookup requires API mode; use static search to select an area",
+    );
+  }
+  if (url.pathname === "/v1/water-supply/companies") {
+    const source = await asset<StaticCompanyIndex>(
+      "datasets/water-supply/companies.json",
+      signal,
+    );
+    assertSnapshot(source.dataset, url.searchParams.get("snapshot_id"));
+    return {
+      snapshot_id: source.snapshot_id,
+      dataset_url: "/v1/water-supply/dataset",
+      items: source.items.map(companySummary),
+    } as T;
+  }
+  const companyAreas = url.pathname.match(
+    /^\/v1\/water-supply\/companies\/([A-Z0-9]{1,16})\/areas$/u,
+  );
+  if (companyAreas) {
+    const source = await asset<StaticCompanyIndex>(
+      "datasets/water-supply/companies.json",
+      signal,
+    );
+    assertSnapshot(source.dataset, url.searchParams.get("snapshot_id"));
+    const acronym = companyAreas[1]!;
+    const company = source.items.find((item) => item.company_acronym === acronym);
+    if (!company) throw new StaticDataError(404, "Static water company not found");
+    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 50)));
+    const after = Number(url.searchParams.get("after_id") ?? 0);
+    const matches = company.areas.filter((item) => Number(item.source_id) > after);
+    const items = matches.slice(0, limit);
+    return {
+      snapshot_id: source.snapshot_id,
+      company: companySummary(company),
+      items,
+      next_after_id: matches.length > limit ? Number(items.at(-1)?.source_id) : null,
+    } as T;
+  }
+  const companyGeometry = url.pathname.match(
+    /^\/v1\/water-supply\/companies\/([A-Z0-9]{1,16})\/geometry$/u,
+  );
+  if (companyGeometry) {
+    const source = await asset<StaticCompanyIndex>(
+      "datasets/water-supply/companies.json",
+      signal,
+    );
+    assertSnapshot(source.dataset, url.searchParams.get("snapshot_id"));
+    if (!source.items.some((item) => item.company_acronym === companyGeometry[1])) {
+      throw new StaticDataError(404, "Static water company not found");
+    }
+    return await asset<T>(
+      `datasets/water-supply/companies/${companyGeometry[1]}.geojson`,
+      signal,
     );
   }
   const supply = url.pathname.match(/^\/v1\/water-supply\/areas\/(\d+)\/geometry$/u);

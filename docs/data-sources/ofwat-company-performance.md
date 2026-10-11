@@ -17,7 +17,14 @@ It pins both official source files:
 
 ## Boundary crosswalk
 
-Company performance has no point geometry. It may attach to a selected water-supply area only through the reviewed `ofwat-to-water-supply-v1` crosswalk included in accepted evidence. The normalizer rejects row-level mapping fields and unknown crosswalk versions. Mapping is by exact publisher/company identity to the exact boundary acronym; no fuzzy company-name join occurs. The reviewed edition maps 16 identities. Bristol Water and the CAM, ESK, NNE and SST regional identities remain unmapped because the v1.5 boundary product has no exact corresponding company identity.
+Company performance has no point geometry. The explorer exposes it as a separate
+company selection through the reviewed `ofwat-to-water-supply-v1` crosswalk included
+in accepted evidence; it is not attached to an individual area as a local measure.
+The normalizer rejects row-level mapping fields and unknown crosswalk versions.
+Mapping is by exact publisher/company identity to the exact boundary acronym; no fuzzy
+company-name join occurs. The reviewed edition maps 16 identities. Bristol Water and
+the CAM, ESK, NNE and SST regional identities remain unmapped because the v1.5
+boundary product has no exact corresponding company identity.
 
 Ofwat editions are publication-driven. There is no polling workflow. The bounded
 `watergeo-prepare-company-performance` command converts an operator-supplied official

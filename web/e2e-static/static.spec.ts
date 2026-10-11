@@ -134,6 +134,27 @@ async function staticPublication(page: Page): Promise<void> {
           method: "reprojection",
         },
       });
+    } else if (path.endsWith("/datasets/water-supply/companies.json")) {
+      await json(route, {
+        dataset,
+        snapshot_id: snapshot,
+        items: [{
+          company_acronym: "SYN", display_name: "Synthetic Water",
+          publisher_labels: ["Synthetic Water"], area_count: 1,
+          areas: [{ source_id: 3, area_served: "Synthetic area", company: "Synthetic Water", company_acronym: "SYN", company_type: "Water only", area_type: "Appointment", warnings: null, transformed: false }],
+        }],
+      });
+    } else if (path.endsWith("/datasets/water-supply/companies/SYN.geojson")) {
+      await json(route, {
+        type: "FeatureCollection", snapshot_id: snapshot,
+        company: { company_acronym: "SYN", display_name: "Synthetic Water", publisher_labels: ["Synthetic Water"], area_count: 1 },
+        features: [{
+          type: "Feature", id: 3,
+          properties: { source_id: 3, area_served: "Synthetic area", company: "Synthetic Water", company_acronym: "SYN", snapshot_id: snapshot, disclaimer: "Dated boundary." },
+          geometry: { type: "MultiPolygon", coordinates: [] },
+          presentation: { policy_version: "test", review_reference: "test", method: "reprojection" },
+        }],
+      });
     } else if (path.endsWith("/datasets/company-performance/companies.json")) {
       await json(route, {
         dataset: { ...dataset, publisher: "Ofwat" },
@@ -184,6 +205,13 @@ test("static production mode shows national layers, caveats and company facts", 
   await page.getByText("Publication details").click();
   await expect(page.getByText("Publication static-publication-a")).toBeVisible();
   await page.getByRole("button", { name: "Start exploring" }).click();
+  await page.getByLabel("Water company").selectOption("SYN");
+  await expect(page.getByText(/Enable Water-supply lookup/u)).toBeVisible();
+  await page.getByRole("button", { name: "View company performance" }).click();
+  await expect(page.getByText("Company-wide performance")).toBeVisible();
+  await expect(page.getByText(/analytically separate from the dated supply-area polygons/)).toBeVisible();
+  await expect(page.getByText(/Published measure/)).toBeVisible();
+  await page.getByRole("button", { name: "Close selected feature details" }).click();
   await page.getByRole("checkbox", { name: /Hydrology stations/ }).check();
   await page.getByRole("checkbox", { name: /Rainfall gauges/ }).check();
   await page.getByRole("checkbox", { name: /Flood warnings/ }).check();
@@ -208,9 +236,7 @@ test("static production mode shows national layers, caveats and company facts", 
   await search.fill("Synthetic Water");
   await page.getByRole("button", { name: /Synthetic Water.*Synthetic area/ }).click();
   await expect(page.getByRole("heading", { name: "Selected supply area" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Company performance" })).toBeVisible();
-  await expect(page.getByText(/apply to the company and reporting period, not specifically/)).toBeVisible();
-  await expect(page.getByText(/Published measure/)).toBeVisible();
+  await expect(page.getByText("1 verified area", { exact: true })).toBeVisible();
   const base = new URL(page.url()).pathname.startsWith("/WaterGeo-UK/") ? "/WaterGeo-UK" : "";
   expect(requests).toContain(`${base}/watergeo-data/manifest.json`);
   expect(requests).toContain(`${base}/watergeo-data/source-status.json`);

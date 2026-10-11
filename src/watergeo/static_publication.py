@@ -604,6 +604,43 @@ def build_publication(
         files["datasets/water-supply/areas.json"] = _write(
             staging, "datasets/water-supply/areas.json", {"dataset": supply, "items": areas}
         )
+        companies = api.get("/v1/water-supply/companies", {"snapshot_id": supply["snapshot_id"]})
+        if companies.get("snapshot_id") != supply["snapshot_id"]:
+            raise StaticPublicationError("Water-supply company snapshot changed")
+        if sum(company["area_count"] for company in companies["items"]) != len(areas):
+            raise StaticPublicationError("Incomplete water-supply company index")
+        company_inventory: list[dict[str, Any]] = []
+        for company in companies["items"]:
+            company_areas: list[dict[str, Any]] = []
+            after = None
+            for _ in range(20):
+                parameters = {
+                    "snapshot_id": supply["snapshot_id"],
+                    "limit": 100,
+                    **({"after_id": after} if after else {}),
+                }
+                page = api.get(
+                    f"/v1/water-supply/companies/{company['company_acronym']}/areas",
+                    parameters,
+                )
+                if page.get("snapshot_id") != supply["snapshot_id"]:
+                    raise StaticPublicationError("Water-supply company snapshot changed")
+                company_areas.extend(page["items"])
+                after = page.get("next_after_id")
+                if after is None:
+                    break
+            if len(company_areas) != company["area_count"]:
+                raise StaticPublicationError("Incomplete water-supply company inventory")
+            company_inventory.append({**company, "areas": company_areas})
+        files["datasets/water-supply/companies.json"] = _write(
+            staging,
+            "datasets/water-supply/companies.json",
+            {
+                "dataset": supply,
+                "snapshot_id": supply["snapshot_id"],
+                "items": company_inventory,
+            },
+        )
         for area in areas:
             relative = f"datasets/water-supply/areas/{area['source_id']}.geojson"
             files[relative] = _write(
@@ -622,6 +659,26 @@ def build_publication(
                     "latitude": None,
                     "snapshot_id": supply["snapshot_id"],
                 }
+            )
+        for company in company_inventory:
+            features = [
+                json.loads(
+                    (
+                        staging / f"datasets/water-supply/areas/{area['source_id']}.geojson"
+                    ).read_bytes()
+                )
+                for area in company["areas"]
+            ]
+            relative = f"datasets/water-supply/companies/{company['company_acronym']}.geojson"
+            files[relative] = _write(
+                staging,
+                relative,
+                {
+                    "type": "FeatureCollection",
+                    "snapshot_id": supply["snapshot_id"],
+                    "company": {key: value for key, value in company.items() if key != "areas"},
+                    "features": features,
+                },
             )
 
         if analytics:

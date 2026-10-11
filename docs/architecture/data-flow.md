@@ -28,6 +28,9 @@ versions and hashes are part of compatibility, not cosmetic metadata. A dataset 
 unavailable when there is no compatible accepted snapshot; infrastructure failures
 are errors, not proof that nothing was loaded. Loading retries verify stored content.
 Multi-page consumers pin one snapshot and reject changes or non-advancing cursors.
+The company-area browser pins its accepted boundary snapshot across every inventory
+page and the exact geometry collection, then verifies identifiers and total count
+before labelling the view complete.
 Independent Thames map-near requests can observe newer accepted snapshots; selecting
 an entity and iterating/exporting data must preserve the selected snapshot.
 

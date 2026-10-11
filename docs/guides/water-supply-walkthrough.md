@@ -113,6 +113,9 @@ curl --fail 'http://127.0.0.1:8000/v1/water-supply/areas/at-point?lon=-2&lat=52'
 curl --fail http://127.0.0.1:8000/v1/water-supply/areas/4
 mkdir -p data/exports
 curl --fail http://127.0.0.1:8000/v1/water-supply/areas/4/geometry --output data/exports/area-4.geojson
+curl --fail http://127.0.0.1:8000/v1/water-supply/companies
+curl --fail 'http://127.0.0.1:8000/v1/water-supply/companies/ANH/areas?limit=100'
+curl --fail http://127.0.0.1:8000/v1/water-supply/companies/ANH/geometry --output data/exports/anh-areas.geojson
 ```
 
 Use each page's `next_after_id` for the next page; stop at `null`. The example's
@@ -133,12 +136,12 @@ different transformation libraries/grids can cause a protective 503. Read
 changing that contract. A GeoJSON provenance hash describes PostGIS's geometry
 text, not the entire HTTP response file.
 
-In the explorer, company headings group only the exact area matches returned by the
-bounded search. They are not a complete company-area listing. Selecting a result keeps
-its source area and geometry independent; company-wide performance measures appear in
-a separate section and must not be interpreted as measurements for that polygon. A
-reviewed, snapshot-complete company overview would need a distinct listing/index
-contract and is deferred rather than approximated by unioning the first matches.
+In the explorer, global-search company headings still group only the returned area
+matches. The dedicated company browser uses the distinct endpoints above: it pins the
+snapshot across pages, verifies the publisher acronym's total and exact source IDs,
+then draws all reviewed features without dissolving them. Company performance remains
+a separate selection with its own snapshot and provenance; it is not a measurement
+for one area polygon.
 
 ## 6. Reproduce presentation evidence
 

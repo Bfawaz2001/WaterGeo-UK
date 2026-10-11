@@ -200,8 +200,11 @@ def normalize_rainfall(
                 )
         latest = max(station_readings, key=lambda row: row["observed_at"], default=None)
         label = raw.get("label")
+        cleaned_label = label.strip() if isinstance(label, str) else ""
         display_name = (
-            label.strip() if isinstance(label, str) and label != "Rainfall station" else None
+            cleaned_label
+            if cleaned_label and cleaned_label.casefold() != "rainfall station"
+            else None
         )
         entities.append(
             {

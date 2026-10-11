@@ -71,6 +71,19 @@ def test_rainfall_preserves_privacy_and_measurement_time() -> None:
     assert product.entities[0]["latest_observed_at"] == "2026-09-28T12:15:00+00:00"
 
 
+def test_rainfall_uses_only_the_exact_station_record_official_label() -> None:
+    stations, readings = rainfall_payloads()
+    station = stations["items"][0]  # type: ignore[index]
+    station["label"] = "  Bradford Chellow Heights  "
+    product = normalize_rainfall(stations, readings)  # type: ignore[arg-type]
+    assert product.entities[0]["station_id"] == "R1"
+    assert product.entities[0]["display_name"] == "Bradford Chellow Heights"
+    assert product.entities[0]["publisher_uri"].endswith("/stations/R1")
+
+    station["label"] = " RAINFALL STATION "
+    assert normalize_rainfall(stations, readings).entities[0]["display_name"] is None  # type: ignore[arg-type]
+
+
 def test_rainfall_rejects_schema_licence_and_timestamp_drift() -> None:
     stations, readings = rainfall_payloads()
     stations["meta"]["licence"] = "unexpected"  # type: ignore[index]
@@ -84,6 +97,27 @@ def test_rainfall_rejects_non_scalar_publisher_reading_value() -> None:
     readings["items"][0]["value"] = [0.0, 0.0]  # type: ignore[index]
     with pytest.raises(Phase15SourceError, match="Invalid rainfall value"):
         normalize_rainfall(stations, readings)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected", "message"),
+    [
+        (0, 0.0, None),
+        (None, None, None),
+        (-0.1, None, "Negative rainfall value"),
+        (float("inf"), None, "Invalid rainfall value"),
+        (float("nan"), None, "Invalid rainfall value"),
+    ],
+)
+def test_rainfall_scalar_missing_and_invalid_value_contract(value, expected, message) -> None:
+    stations, readings = rainfall_payloads()
+    readings["items"][0]["value"] = value  # type: ignore[index]
+    if message:
+        with pytest.raises(Phase15SourceError, match=message):
+            normalize_rainfall(stations, readings)  # type: ignore[arg-type]
+    else:
+        product = normalize_rainfall(stations, readings)  # type: ignore[arg-type]
+        assert product.entities[0]["latest_value"] == expected
 
 
 def test_rainfall_preserves_unlocated_station_and_missing_latest_value() -> None:

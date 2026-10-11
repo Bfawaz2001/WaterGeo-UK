@@ -67,7 +67,7 @@ def api():
                             {
                                 "ID": source_id,
                                 "COMPANY": "Synthetic Dŵr Company",
-                                "Acronym": "SYN",
+                                "Acronym": "SNA" if source_id < 3 else "SYN",
                                 "CoType": "Synthetic company type",
                                 "AreaServed": f"Synthetic area {source_id}",
                                 "AreaType": "Source label retained",
@@ -167,6 +167,34 @@ def test_listing_paginates_without_geometry_or_private_source_fields(api):
     assert client.get(PREFIX + "/areas?after_id=99").json()["items"] == []
 
 
+def test_company_index_inventory_and_exact_geometry_are_complete_and_pinned(api):
+    client, _, snapshot = api
+    companies = client.get(PREFIX + "/companies").json()
+    assert companies["snapshot_id"] == str(snapshot)
+    assert [(item["company_acronym"], item["area_count"]) for item in companies["items"]] == [
+        ("SNA", 2),
+        ("SYN", 2),
+    ]
+    assert companies["items"][0]["publisher_labels"] == ["Synthetic Dŵr Company"]
+
+    first = client.get(PREFIX + f"/companies/SNA/areas?snapshot_id={snapshot}&limit=1").json()
+    assert [item["source_id"] for item in first["items"]] == [1]
+    assert first["next_after_id"] == 1
+    second = client.get(
+        PREFIX + f"/companies/SNA/areas?snapshot_id={snapshot}&limit=1&after_id=1"
+    ).json()
+    assert [item["source_id"] for item in second["items"]] == [2]
+    assert second["next_after_id"] is None
+
+    geometry = client.get(PREFIX + f"/companies/SNA/geometry?snapshot_id={snapshot}")
+    assert geometry.status_code == 200
+    assert geometry.headers["content-type"] == "application/geo+json"
+    assert [feature["id"] for feature in geometry.json()["features"]] == [1, 2]
+    assert geometry.json()["company"]["area_count"] == 2
+    assert client.get(PREFIX + "/companies/NOPE/areas").status_code == 404
+    assert client.get(PREFIX + f"/companies/SNA/areas?snapshot_id={uuid4()}").status_code == 503
+
+
 def test_detail_preserves_notices_and_review_provenance(api):
     client, _, _ = api
     data = client.get(PREFIX + "/areas/3").json()
@@ -249,6 +277,13 @@ def test_geometry_size_limit_is_explicit(api, monkeypatch):
     client, _, _ = api
     monkeypatch.setattr("watergeo.db.water_supply.MAX_GEOMETRY_BYTES", 10)
     response = client.get(PREFIX + "/areas/1/geometry")
+    assert response.status_code == 413
+
+
+def test_company_geometry_size_limit_is_explicit(api, monkeypatch):
+    client, _, _ = api
+    monkeypatch.setattr("watergeo.db.water_supply.MAX_COMPANY_GEOMETRY_BYTES", 10)
+    response = client.get(PREFIX + "/companies/SNA/geometry")
     assert response.status_code == 413
 
 

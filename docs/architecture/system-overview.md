@@ -49,6 +49,13 @@ have dedicated snapshot tables; national rainfall/flood/bathing/company products
 a shared snapshot/retrieval envelope and separate entity tables. No universal physical
 pipeline, cross-source join or global publisher transaction is implied.
 
+Water-company discovery is derived from the accepted Ofwat boundary edition. The API
+publishes a small acronym index, a cursor-paginated area inventory and one bounded
+FeatureCollection of the same exact reviewed features. Static publication materializes
+the equivalent index and per-company collection from its already verified per-area
+GeoJSON. Company-performance data keeps its own snapshot and is selected separately
+through the reviewed exact acronym crosswalk.
+
 Continue with [data flow](data-flow.md), [evidence](ingestion-and-evidence.md),
 [data model](data-model.md) and [geospatial model](geospatial-model.md).
 Historical phase documents and ADRs retain their original decision context.

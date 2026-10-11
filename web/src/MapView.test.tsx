@@ -1,6 +1,6 @@
 import { act, render } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import type { AreaFeature, GeoJSONFeatureCollection } from "./types";
+import type { AreaFeature, GeoJSONFeatureCollection, WaterCompanyFeatureCollection } from "./types";
 import type { Overview } from "./overview";
 
 const mock = vi.hoisted(() => {
@@ -59,7 +59,7 @@ import { MapView } from "./MapView";
 
 beforeEach(() => { window.matchMedia = vi.fn().mockReturnValue({ matches: false }); });
 
-function renderMap(overview: Overview | null = null, focus?: { key: string; longitude?: number; latitude?: number }) {
+function renderMap(overview: Overview | null = null, focus?: { key: string; longitude?: number; latitude?: number }, companyAreas?: WaterCompanyFeatureCollection) {
   const area = { type: "Feature", geometry: { type: "MultiPolygon", coordinates: [] } } as unknown as AreaFeature;
   const waterBody: GeoJSONFeatureCollection = { type: "FeatureCollection", features: [] };
   const { unmount } = render(<MapView
@@ -68,11 +68,25 @@ function renderMap(overview: Overview | null = null, focus?: { key: string; long
     initial={{ longitude: -1, latitude: 52, zoom: 8 }}
     activeLayers={new Set(["water-supply"])}
     hydrology={[]} waterQuality={[]} reservoirs={[]}
-    area={area} waterBody={waterBody}
+    area={area} companyAreas={companyAreas ?? null} waterBody={waterBody}
     onViewport={vi.fn()} onMapClick={vi.fn()} onSelectPoint={vi.fn()}
   />);
   return { area, waterBody, map: mock.Map.latest, unmount };
 }
+
+it("draws the company collection beneath the stronger selected-area layers", () => {
+  const companyAreas = {
+    type: "FeatureCollection", snapshot_id: "snapshot",
+    company: { company_acronym: "ANH", display_name: "Anglian Water", publisher_labels: ["Anglian Water"], area_count: 1 },
+    features: [],
+  } satisfies WaterCompanyFeatureCollection;
+  const { map } = renderMap(null, undefined, companyAreas);
+  act(() => { map.loaded = true; map.emit("load"); });
+  expect(map.getSource("watergeo-company-areas")?.setData).toHaveBeenLastCalledWith(companyAreas);
+  const companyLine = map.addLayer.mock.calls.findIndex(([layer]) => layer.id === "watergeo-company-areas-line");
+  const selectedFill = map.addLayer.mock.calls.findIndex(([layer]) => layer.id === "watergeo-area-fill");
+  expect(companyLine).toBeLessThan(selectedFill);
+});
 
 it("restores current data only after the initial and fallback styles fully load", () => {
   const { area, waterBody, map, unmount } = renderMap();
@@ -200,6 +214,31 @@ it("navigates once per intent, waits for style load, and respects reduced motion
   rerender(<MapView {...props} navigation={{ id: 2, bounds: [[-1, 52], [-1, 52]] }} />);
   expect(map.easeTo).toHaveBeenLastCalledWith({ center: [-1, 52], zoom: 12, duration: 0 });
   matchMedia.mockRestore();
+});
+
+it("fits an individually selected company area only through the selected-geometry intent", () => {
+  const props = {
+    initial: { longitude: -1, latitude: 52, zoom: 8 }, activeLayers: new Set<import("./types").LayerId>(["water-supply"]),
+    hydrology: [], waterQuality: [], reservoirs: [], area: null, waterBody: null,
+    onViewport: vi.fn(), onMapClick: vi.fn(), onSelectPoint: vi.fn(),
+  };
+  const { rerender } = render(<MapView {...props} />);
+  const map = mock.Map.latest;
+  act(() => { map.loaded = true; map.emit("load"); });
+  map.fitBounds.mockClear();
+  const area = {
+    type: "Feature",
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: [[[[-2, 51], [-1, 51], [-1, 52], [-2, 51]]]],
+    },
+  } as unknown as AreaFeature;
+  const focus = { key: "water-supply:3" };
+
+  rerender(<MapView {...props} area={area} focus={focus} />);
+  expect(map.fitBounds).toHaveBeenCalledOnce();
+  rerender(<MapView {...props} area={area} focus={focus} hydrology={[]} />);
+  expect(map.fitBounds).toHaveBeenCalledOnce();
 });
 
 

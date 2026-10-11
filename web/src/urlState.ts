@@ -6,6 +6,7 @@ export interface ExplorerState {
   zoom: number;
   layers: Set<LayerId>;
   selected: string | null;
+  company: string | null;
   floodSeverity: "" | "1" | "2" | "3" | "4";
   bathingClassification: "" | "Excellent" | "Good" | "Sufficient" | "Poor" | "unclassified";
 }
@@ -16,6 +17,7 @@ export const DEFAULT_STATE: ExplorerState = {
   zoom: 5.2,
   layers: new Set<LayerId>(["hydrology"]),
   selected: null,
+  company: null,
   floodSeverity: "",
   bathingClassification: "",
 };
@@ -33,6 +35,7 @@ const LAYERS = new Set<LayerId>([
 const SELECTION = /^(hydrology|rainfall|water-quality|flood-warnings|bathing-waters|reservoirs|thames-discharge|water-supply|water-body):.{1,160}$/u;
 const FLOOD_SEVERITIES = new Set(["1", "2", "3", "4"] as const);
 const BATHING_CLASSIFICATIONS = new Set(["Excellent", "Good", "Sufficient", "Poor", "unclassified"] as const);
+const COMPANY = /^[A-Z0-9]{1,16}$/u;
 
 export function parseWaterSupplyId(value: string): number | null {
   if (!/^[0-9]+$/u.test(value)) return null;
@@ -64,12 +67,14 @@ export function parseExplorerState(search: string): ExplorerState {
   const selectedValue = params.get("selected");
   const floodSeverity = params.get("flood");
   const bathingClassification = params.get("bathing");
+  const company = params.get("company");
   return {
     longitude,
     latitude,
     zoom,
     layers: layers.size > 0 ? layers : new Set(DEFAULT_STATE.layers),
     selected: validSelection(selectedValue) ? selectedValue : null,
+    company: company !== null && COMPANY.test(company) ? company : null,
     floodSeverity: FLOOD_SEVERITIES.has(floodSeverity as "1")
       ? floodSeverity as ExplorerState["floodSeverity"]
       : "",
@@ -89,6 +94,7 @@ export function explorerSearch(state: ExplorerState): string {
   if (validSelection(state.selected)) {
     params.set("selected", state.selected);
   }
+  if (state.company && COMPANY.test(state.company)) params.set("company", state.company);
   if (state.floodSeverity) params.set("flood", state.floodSeverity);
   if (state.bathingClassification) params.set("bathing", state.bathingClassification);
   return `?${params.toString()}`;
