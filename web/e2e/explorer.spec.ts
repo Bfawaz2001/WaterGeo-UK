@@ -63,6 +63,18 @@ async function syntheticApi(page: Page) {
       } });
       return;
     }
+    if (url.pathname === "/v1/flood-monitoring/areas") {
+      await route.fulfill({ json: { dataset, items: [
+        "Severe Flood Warning", "Flood Warning", "Flood Alert", "Warning no longer in force",
+      ].map((severity, index) => ({
+        area_id: `F${index + 1}`, warning_id: `W${index + 1}`,
+        label: `Warning area ${index + 1}`, severity_level: index + 1, severity,
+        message: `Publisher message ${index + 1}`, description: "Synthetic area",
+        time_message_changed: "2026-09-26T11:45:00Z",
+        geometry: { type: "Polygon", coordinates: [[[-2.6, 54.4], [-2.4, 54.4], [-2.5, 54.6], [-2.6, 54.4]]] },
+      })), next_after_id: null } });
+      return;
+    }
     if (url.pathname === "/v1/search") {
       const term = url.searchParams.get("q") ?? "";
       const found = term.includes("quality")
@@ -169,7 +181,10 @@ test("explorer loads bounded data and shows selected provenance", async ({ page 
   await page.getByText("Browse nearby results without the map").click();
   const station = page.getByRole("button", { name: /Synthetic station/ });
   await expect(station).toBeVisible({ timeout: 10_000 });
-  await station.click();
+  const canvas = page.getByTestId("map-canvas");
+  const box = await canvas.boundingBox();
+  expect(box).not.toBeNull();
+  await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
   await expect(page.getByRole("heading", { name: "Synthetic station" })).toBeVisible();
   await expect(page.getByText("Synthetic acceptance data")).toBeVisible();
   await expect(page.locator('time[datetime="2026-09-26T12:00:00Z"]')).toBeVisible();
@@ -267,4 +282,31 @@ test("source health expands from a compact product summary", async ({ page }) =>
   await expect(
     page.getByLabel("Company performance: Edition WCPR 2024-25 / PR24 V6.0"),
   ).toBeVisible();
+});
+
+
+test("regional navigation and exact flood-state filters preserve selected provenance", async ({ page }) => {
+  await syntheticApi(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start exploring" }).click();
+  await page.getByRole("button", { name: "Midlands", exact: true }).click();
+  await expect(page).not.toHaveURL(/lon=-2.50000/);
+  await page.getByRole("checkbox", { name: /Flood warnings/ }).check();
+  await page.getByText("Browse nearby results without the map").click();
+  const warnings = page.getByRole("button", { name: /Flood area: Warning area/ });
+  await expect(warnings).toHaveCount(4);
+  const severity = page.getByLabel("Publisher severity");
+  for (const level of ["1", "2", "3", "4"]) {
+    await severity.selectOption(level);
+    await expect(warnings).toHaveCount(1);
+    await expect(warnings).toHaveText(`Flood area: Warning area ${level} · ${["Severe Flood Warning", "Flood Warning", "Flood Alert", "Warning no longer in force"][Number(level) - 1]}`);
+  }
+  await warnings.click();
+  await expect(page.getByRole("heading", { name: "Warning area 4" })).toBeVisible();
+  await expect(page.getByText("Warning no longer in force", { exact: true }).last()).toBeVisible();
+  await severity.selectOption("1");
+  await expect(page.getByRole("heading", { name: "Warning area 4" })).toBeVisible();
+  await expect(page.getByText("Synthetic acceptance data")).toBeVisible();
+  await severity.selectOption("");
+  await expect(warnings).toHaveCount(4);
 });

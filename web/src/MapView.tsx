@@ -5,6 +5,7 @@ import {
   NavigationControl,
   ScaleControl,
   type GeoJSONSource,
+  type ExpressionSpecification,
   type MapMouseEvent,
   setWorkerUrl,
   addProtocol,
@@ -12,6 +13,8 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
+import { geometryBounds, type MapNavigation } from "./mapNavigation";
+import { FLOOD_STATES } from "./floodFilters";
 import { FALLBACK_STYLE, basemapStyle } from "./config";
 import type {
   AreaFeature,
@@ -30,6 +33,12 @@ import type { ViewportQuery } from "./useNearby";
 import { Protocol } from "pmtiles";
 import type { Overview } from "./overview";
 
+const FLOOD_COLOR: ExpressionSpecification = [
+  "match", ["get", "severity_level"],
+  1, FLOOD_STATES[0].color, 2, FLOOD_STATES[1].color,
+  3, FLOOD_STATES[2].color, FLOOD_STATES[3].color,
+];
+
 setWorkerUrl(workerUrl);
 const tileProtocol = new Protocol();
 addProtocol("pmtiles", tileProtocol.tile);
@@ -44,6 +53,7 @@ const SOURCE_LAYERS = {
 } as const;
 
 interface Props {
+  navigation?: MapNavigation | null;
   overview?: Overview | null;
   focus?: { key: string; longitude?: number; latitude?: number } | null;
   initial: { longitude: number; latitude: number; zoom: number };
@@ -136,7 +146,7 @@ function addExplorerSources(map: MapLibreMap): void {
         source,
         type: "symbol",
         filter: ["has", "point_count"],
-        layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12 },
+        layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12, "text-font": ["Noto Sans Regular"] },
         paint: { "text-color": "#ffffff" },
       });
     }
@@ -165,13 +175,13 @@ function addExplorerSources(map: MapLibreMap): void {
       id: "watergeo-flood-warnings-fill",
       source: "watergeo-flood-warnings",
       type: "fill",
-      paint: { "fill-color": "#c33b32", "fill-opacity": 0.28 },
+      paint: { "fill-color": FLOOD_COLOR, "fill-opacity": 0.22 },
     });
     map.addLayer({
       id: "watergeo-flood-warnings-line",
       source: "watergeo-flood-warnings",
       type: "line",
-      paint: { "line-color": "#8b211b", "line-width": 2 },
+      paint: { "line-color": FLOOD_COLOR, "line-width": 2 },
     });
   }
   if (!map.getSource("watergeo-area")) {
@@ -227,6 +237,7 @@ function addExplorerSources(map: MapLibreMap): void {
 
 export function MapView({
   overview,
+  navigation,
   focus,
   initial,
   activeLayers,
@@ -243,6 +254,7 @@ export function MapView({
   onMapClick,
   onSelectPoint,
 }: Props) {
+  const lastNavigation = useRef<number | undefined>(undefined);
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | undefined>(undefined);
   const callbacks = useRef({ onViewport, onMapClick, onSelectPoint, activeLayers });
@@ -251,7 +263,7 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    if (!map?.getSource("watergeo-selection")) return;
     if (map.getLayer("watergeo-overview")) map.removeLayer("watergeo-overview");
     if (map.getSource("watergeo-overview")) map.removeSource("watergeo-overview");
     if (overview) {
@@ -324,7 +336,7 @@ export function MapView({
         const center = feature.geometry.coordinates as [number, number];
         if (source) {
           void source.getClusterExpansionZoom(clusterId).then((zoom) => {
-            map.easeTo({ center, zoom });
+            map.easeTo({ center, zoom, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500 });
           });
         }
         return;
@@ -367,7 +379,7 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    if (!map?.getSource("watergeo-selection")) return;
     addExplorerSources(map);
     setData(
       map,
@@ -447,7 +459,7 @@ export function MapView({
         type: "Feature",
         id: item.area_id,
         geometry: item.geometry,
-        properties: { identity: item.area_id, label: item.label, kind: "flood-warnings" },
+        properties: { identity: item.area_id, label: item.label, kind: "flood-warnings", severity_level: item.severity_level },
       })),
     });
     const floodVisibility = activeLayers.has("flood-warnings") ? "visible" : "none";
@@ -464,7 +476,7 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    if (!map?.getSource("watergeo-selection")) return;
     if (!focus) {
       setData(map, "watergeo-selection", { type: "FeatureCollection", features: [] });
       return;
@@ -474,44 +486,38 @@ export function MapView({
         type: "FeatureCollection",
         features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [focus.longitude, focus.latitude] } }],
       });
-      map.easeTo({ center: [focus.longitude, focus.latitude], zoom: Math.max(map.getZoom(), 11) });
+      map.easeTo({ center: [focus.longitude, focus.latitude], zoom: Math.max(map.getZoom(), 11), duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500 });
       return;
     }
     setData(map, "watergeo-selection", { type: "FeatureCollection", features: [] });
-    const bounds = { west: 180, south: 90, east: -180, north: -90, found: false };
-    const inspect = (value: unknown) => {
-      if (!Array.isArray(value)) return;
-      if (value.length >= 2 && typeof value[0] === "number" && typeof value[1] === "number") {
-        bounds.west = Math.min(bounds.west, value[0]);
-        bounds.east = Math.max(bounds.east, value[0]);
-        bounds.south = Math.min(bounds.south, value[1]);
-        bounds.north = Math.max(bounds.north, value[1]);
-        bounds.found = true;
-        return;
-      }
-      for (const child of value) inspect(child);
-    };
-    if (area) inspect(area.geometry.coordinates);
-    if (waterBody) for (const feature of waterBody.features) {
-      if ("coordinates" in feature.geometry) inspect(feature.geometry.coordinates);
-      else for (const geometry of feature.geometry.geometries) {
-        if ("coordinates" in geometry) inspect(geometry.coordinates);
-      }
-    }
-    if (bounds.found) {
-      map.fitBounds([[bounds.west, bounds.south], [bounds.east, bounds.north]], {
-        padding: 64,
-        maxZoom: 12,
-      });
-    }
+    const bounds = geometryBounds([
+      ...(area ? [area.geometry] : []),
+      ...(waterBody?.features.map((feature) => feature.geometry) ?? []),
+    ]);
+    if (bounds) map.fitBounds(bounds, { padding: 64, maxZoom: 12, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500 });
   }, [area, focus, styleRevision, waterBody]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    // Source installation marks initial style readiness. Updating GeoJSON tiles can
+    // temporarily make isStyleLoaded false without preventing a camera movement.
+    if (!map?.getSource("watergeo-selection") || !navigation || lastNavigation.current === navigation.id) return;
+    lastNavigation.current = navigation.id;
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 650;
+    const [southWest, northEast] = navigation.bounds;
+    if (southWest[0] === northEast[0] && southWest[1] === northEast[1]) {
+      map.easeTo({ center: southWest, zoom: Math.min(navigation.maxZoom ?? 12, 12), duration });
+    } else {
+      map.fitBounds(navigation.bounds, { padding: window.innerWidth > 1100 ? { top: 64, bottom: 64, left: 48, right: 360 } : 48, maxZoom: navigation.maxZoom ?? 12, duration });
+    }
+  }, [navigation, styleRevision]);
 
   return (
     <div className="map-region" aria-label="Interactive map workspace">
       <div ref={container} className="map-canvas" data-testid="map-canvas" />
       {mapMessage && <p className="map-message" role="status">{mapMessage}</p>}
       <p className="map-instruction">
-        Move the map to refresh nearby results. Water-supply lookup runs only when its layer is enabled.
+        Clusters count loaded results only. Move or zoom to explore nearby features. Water-supply lookup runs only when its layer is enabled.
       </p>
     </div>
   );

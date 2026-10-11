@@ -1,5 +1,5 @@
 import { act, render } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 import type { AreaFeature, GeoJSONFeatureCollection } from "./types";
 import type { Overview } from "./overview";
 
@@ -40,7 +40,7 @@ const mock = vi.hoisted(() => {
     easeTo = vi.fn();
     fitBounds = vi.fn();
     getLayer(id: string) { return this.layers.has(id); }
-    addLayer(layer: { id: string }) { this.layers.add(layer.id); }
+    addLayer = vi.fn((layer: { id: string }) => { this.layers.add(layer.id); });
     setStyle = vi.fn(() => {
       this.operations.push("setStyle");
       this.sources.clear();
@@ -56,6 +56,8 @@ vi.mock("maplibre-gl", () => ({
 vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({ default: "mock-worker" }));
 
 import { MapView } from "./MapView";
+
+beforeEach(() => { window.matchMedia = vi.fn().mockReturnValue({ matches: false }); });
 
 function renderMap(overview: Overview | null = null, focus?: { key: string; longitude?: number; latitude?: number }) {
   const area = { type: "Feature", geometry: { type: "MultiPolygon", coordinates: [] } } as unknown as AreaFeature;
@@ -112,7 +114,7 @@ it("renders a source-independent selection halo for a focused point", () => {
     type: "FeatureCollection",
     features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [-1.5, 52.5] } }],
   });
-  expect(map.easeTo).toHaveBeenCalledWith({ center: [-1.5, 52.5], zoom: 11 });
+  expect(map.easeTo).toHaveBeenCalledWith({ center: [-1.5, 52.5], zoom: 11, duration: 500 });
 });
 
 it("installs the PMTiles overview only after load and restores it after fallback", () => {
@@ -137,7 +139,7 @@ it("expands a point cluster instead of treating it as an individual feature", as
   act(() => map.emit("click", { point: { x: 10, y: 10 }, lngLat: { lng: -1.5, lat: 52.5 } }));
   await act(async () => Promise.resolve());
   expect(map.getSource("watergeo-hydrology")?.getClusterExpansionZoom).toHaveBeenCalledWith(7);
-  expect(map.easeTo).toHaveBeenCalledWith({ center: [-1.5, 52.5], zoom: 12 });
+  expect(map.easeTo).toHaveBeenCalledWith({ center: [-1.5, 52.5], zoom: 12, duration: 500 });
 });
 
 it("removes a pending fallback listener and ignores a captured late callback on teardown", () => {
@@ -153,4 +155,51 @@ it("removes a pending fallback listener and ignores a captured late callback on 
   act(() => lateCallback?.());
   expect(map.addSource).toHaveBeenCalledTimes(additionsBeforeUnmount);
   expect(map.remove).toHaveBeenCalledOnce();
+});
+
+
+it("navigates once per intent, waits for style load, and respects reduced motion", () => {
+  const props = {
+    initial: { longitude: -1, latitude: 52, zoom: 8 }, activeLayers: new Set<import("./types").LayerId>(),
+    hydrology: [], waterQuality: [], reservoirs: [], area: null, waterBody: null,
+    onViewport: vi.fn(), onMapClick: vi.fn(), onSelectPoint: vi.fn(),
+  };
+  const navigation = { id: 1, bounds: [[-2, 51], [0, 53]] as [[number, number], [number, number]] };
+  const { rerender } = render(<MapView {...props} navigation={navigation} />);
+  const map = mock.Map.latest;
+  expect(map.fitBounds).not.toHaveBeenCalled();
+  act(() => { map.loaded = true; map.emit("load"); });
+  expect(map.fitBounds).toHaveBeenCalledOnce();
+  expect(map.fitBounds).toHaveBeenLastCalledWith(navigation.bounds, expect.objectContaining({ maxZoom: 12, duration: 650 }));
+  expect(map.addLayer).toHaveBeenCalledWith(expect.objectContaining({
+    id: "watergeo-hydrology-cluster-count", layout: expect.objectContaining({ "text-font": ["Noto Sans Regular"] }),
+  }));
+  act(() => map.emit("moveend"));
+  rerender(<MapView {...props} navigation={{ ...navigation }} hydrology={[]} />);
+  expect(map.fitBounds).toHaveBeenCalledOnce();
+  act(() => map.emit("error"));
+  act(() => { map.loaded = true; map.emit("style.load"); });
+  expect(map.fitBounds).toHaveBeenCalledOnce();
+  map.loaded = false; // GeoJSON tiles are updating; explicit navigation still works.
+  const matchMedia = vi.spyOn(window, "matchMedia").mockReturnValue({ matches: true } as MediaQueryList);
+  rerender(<MapView {...props} navigation={{ id: 2, bounds: [[-1, 52], [-1, 52]] }} />);
+  expect(map.easeTo).toHaveBeenLastCalledWith({ center: [-1, 52], zoom: 12, duration: 0 });
+  matchMedia.mockRestore();
+});
+
+
+it("updates geometry and visibility while previously installed sources are still loading", () => {
+  const props = {
+    initial: { longitude: -1, latitude: 52, zoom: 8 }, activeLayers: new Set<import("./types").LayerId>(),
+    hydrology: [], waterQuality: [], reservoirs: [], area: null, waterBody: null,
+    onViewport: vi.fn(), onMapClick: vi.fn(), onSelectPoint: vi.fn(),
+  };
+  const { rerender } = render(<MapView {...props} />);
+  const map = mock.Map.latest;
+  act(() => { map.loaded = true; map.emit("load"); });
+  map.loaded = false;
+  const area: AreaFeature = { type: "Feature", properties: {}, geometry: { type: "MultiPolygon", coordinates: [] } } as unknown as AreaFeature;
+  rerender(<MapView {...props} area={area} activeLayers={new Set(["hydrology"])} />);
+  expect(map.getSource("watergeo-area")?.setData).toHaveBeenLastCalledWith(area);
+  expect(map.setLayoutProperty).toHaveBeenCalledWith("watergeo-hydrology", "visibility", "visible");
 });

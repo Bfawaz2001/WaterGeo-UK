@@ -435,3 +435,12 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
 .static-snapshot-banner details span,
 .static-snapshot-banner code { display: block; margin-top: .25rem; }
 .static-snapshot-banner a { color: inherit; }
+
+/* Phase 17B: orientation before layers; concise controls retain map space. */
+.orientation p { font-size: 12px; color: var(--muted); }
+.region-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.region-grid button { font-size: 11px; padding: 7px; }
+.control-panel > .panel-section > label { display: block; margin: 10px 0; }
+.control-panel select { max-width: 100%; }
+.control-panel > details > summary { font-weight: 750; }
+@media (min-width: 1101px) { .selection-region { width: 340px; } }

@@ -1,6 +1,7 @@
 # Contributing
 
-WaterGeo UK is at the first geospatial schema stage. Small, coherent changes with clear
+WaterGeo UK publishes a governed static explorer and supports a local geospatial API.
+Small, coherent changes with clear
 reasoning are welcome. For a new source or a significant architecture change,
 open an issue describing the problem and proposed scope before building it.
 Keep discussion respectful and constructive.

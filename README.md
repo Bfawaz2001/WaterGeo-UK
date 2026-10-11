@@ -1,32 +1,109 @@
 # WaterGeo UK
 
-An independent, open-source project working towards a consistent geospatial API
-for public UK water data, preserving publisher identifiers, provenance,
-attribution, and dataset licensing.
+**[Explore public water data on the map](https://bfawaz2001.github.io/WaterGeo-UK/)**
 
-**Status: Phase 16 is complete. The governed static explorer is published at
-[bfawaz2001.github.io/WaterGeo-UK](https://bfawaz2001.github.io/WaterGeo-UK/) from an
-accepted ten-source evidence package.** It is an immutable GitHub Pages publication,
-not a live feed: publisher observation/publication time, WaterGeo retrieval time and
-WaterGeo publication time remain distinct. The reviewed April 2024 water-supply
-release contains 1,141 canonical areas with explicit transformation and presentation
-provenance.
+WaterGeo UK brings public water datasets into a governed geospatial platform for
+exploration, reproducible analysis and software development. It retains publisher
+identities, source evidence, licensing and time semantics so that a map feature can
+be traced back to the accepted data behind it.
 
-GitHub Pages serves static public data and the React explorer; it does not run FastAPI
-or PostgreSQL/PostGIS. Local development supports React → FastAPI → PostgreSQL/PostGIS.
-There is currently no hosted public FastAPI/PostGIS service. The repository also
-defines a separate production API architecture, immutable image workflow, fail-closed
-configuration, versioned evidence gate and deployment smoke checks. See the
-[production operations runbook](docs/guides/production-operations.md) and
-[hosting assessment](docs/deployment/hosting-assessment-2026-09-24.md).
+**Ingest once, govern once, consume anywhere — including Fabric.**
 
-The [map explorer](docs/guides/explorer-local-development.md) is a separate React,
-TypeScript and MapLibre application under `web/`. It shows bounded nearby point
-layers, demand-loaded water-supply and Water Body geometry, source status and
-provenance without adding browser CORS or API credentials. Search runs against the
-latest compatible indexed database snapshots, then pins the selected feature to the
-search result's snapshot. Node 24.15+ within the
-Node 24 LTS line is required:
+## What WaterGeo does
+
+- Retrieves public datasets into retained, checksum-verified evidence.
+- Validates and normalizes source-specific snapshots and versioned releases.
+- Supports spatial queries through PostgreSQL/PostGIS and FastAPI.
+- Publishes an independent React/MapLibre explorer as immutable static assets.
+- Exports reviewed GeoJSON, optional Parquet/GeoParquet and water-supply PMTiles.
+- Provides optional Fabric Lakehouse, Map and Power BI consumption guidance.
+
+## Current status
+
+| Surface | Status |
+| --- | --- |
+| Public explorer | Phase 16 complete: a governed ten-source static GitHub Pages publication. It is not a live feed. |
+| Local API and database | Implemented; operators can retrieve, validate and accept new publisher snapshots. |
+| Hosted public API | No publicly hosted FastAPI/PostgreSQL/PostGIS service. Pages serves files only. |
+| Fabric interoperability | Compatibility/export foundations and examples; no Fabric deployment or cloud resource is required. |
+| Current development | Phase 17B documentation, regional navigation and flood filtering; see the roadmap. |
+
+Publisher observation/publication time, WaterGeo retrieval time and WaterGeo static
+publication time are separate. A fresh retrieval does not prove a fresh observation.
+
+## Data portfolio
+
+| Primary product | Publisher / scope | Semantics and refresh |
+| --- | --- | --- |
+| Water-supply boundaries | Ofwat / England and Wales | Reviewed April 2024 edition, 1,141 areas; manual release acceptance |
+| Hydrology | EA / England | Latest accepted stations, measures and observations; dynamic refresh |
+| Catchments and Water Bodies | EA / England | Cycle 3 plan hierarchy and publisher geometry; version review |
+| Water Quality sampling points | EA / England | Dynamic metadata; sample observations are a separate bounded product |
+| Reservoir levels | Severn Trent via Stream / company | 2025 edition, 14 reservoirs and 728 readings; edition review |
+| Discharge monitoring | Thames Water / company | Accepted EDM indications; dynamic refresh, not volume or water quality |
+| Rainfall | EA / England | Latest accepted accumulated readings; reduced location precision |
+| Flood warnings and areas | EA / England | Accepted warning states and official areas; not an emergency service |
+| Bathing waters | EA / England | Designations, annual classification and sample/advice context; seasonal refresh |
+| Company performance | Ofwat / England and Wales | Reporting-period measures; reviewed workbook and dictionary |
+
+The [source portfolio](docs/data-sources/source-portfolio.md) is the authoritative
+index for endpoints, licences, evidence contracts, geographic gaps and cadence.
+Hydrology history and Water Quality observations are bounded on-demand products,
+not additional national source families.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  P[Public publishers] --> E[Retained evidence]
+  E --> V[Validation and normalization]
+  V --> D[Accepted PostGIS products]
+  D --> A[FastAPI and local explorer]
+  A --> S[Governed static publication]
+  S --> G[GitHub Pages explorer]
+  A --> X[Analytical exports]
+  X --> F[Optional Fabric and analytics]
+```
+
+Static publication replays governed evidence and consumes snapshot-pinned WaterGeo
+API representations. It does not fetch publishers from the browser. Optional PMTiles
+are a separate reviewed export, not a replacement for exact selected GeoJSON.
+See [system overview](docs/architecture/system-overview.md).
+
+## Local development
+
+Prerequisites: Python 3.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/),
+a running Docker engine with Compose, and Node 24.15+ within Node 24.
+Run from the repository root:
+
+```bash
+uv sync --locked
+cp .env.example .env
+```
+
+**Before continuing:** edit `.env` and replace all four password placeholders with
+separate strong values (long alphanumeric values avoid dotenv quoting problems).
+There are no usable default passwords. Never commit `.env`. Existing volumes retain
+their database roles/passwords: follow the [volume instructions](docs/guides/local-platform-reference.md#existing-database-volumes)
+instead of assuming an environment edit rotates credentials.
+
+```bash
+docker compose up --build --wait db
+uv run --locked alembic upgrade head
+uv run --locked watergeo-demo-bootstrap --dry-run
+uv run --locked watergeo-demo-bootstrap
+```
+
+The legacy bootstrap loads **six core source families** and may fetch missing
+publisher evidence. It is distinct from the **ten-source static publication**.
+Use `--offline` when replaying retained evidence without network retrieval.
+Current schema readiness is `0012`. Start the API in one terminal:
+
+```bash
+uv run --locked uvicorn watergeo.api.app:create_app --factory --reload --no-access-log --no-proxy-headers
+```
+
+Start the explorer in another terminal:
 
 ```bash
 cd web
@@ -34,440 +111,63 @@ npm ci
 npm run dev
 ```
 
-Run the local API on `127.0.0.1:8000`; Vite proxies same-origin API paths during local
-development. The public Pages explorer reads immutable static assets and makes no
-FastAPI requests.
-
-Phase 8 adds collapsible controls, overlay details, source-backed drill-down and an
-optional national PMTiles overview. The [export guide](docs/guides/phase-8-exports.md)
-builds reviewed GeoJSON, GeoParquet and PMTiles with snapshot manifests. The
-[Fabric compatibility guide](docs/guides/fabric-compatibility.md) describes optional
-Lakehouse, Map and Power BI consumption; Fabric is not part of WaterGeo's runtime.
-
-Phase 9 adds source-identified Thames Water EDM monitor locations from the publisher's
-public v2 API. Status and recent-activity filters run on the server before
-bounded map results. See the [source semantics](docs/data-sources/thames-water-discharge-status.md)
-and [analytics guide](docs/guides/phase-9-company-analytics.md). Monitor indications
-do not establish discharge volume, water quality or bathing safety.
-
-Phase 11 turns the explorer into a stronger product workflow: grouped search moves
-from current indexed entities to snapshot-consistent detail, bounded point layers
-cluster at regional zooms, Hydrology cards separate observation from retrieval time,
-and reservoir selections show an accessible same-unit trend. See the
-[measured Phase 11 results](docs/performance/phase-11-product-experience.md).
-
-Phase 13 gives those workflows one coherent, dependency-light product design. The
-map remains the primary canvas; source status and technical metadata use progressive
-disclosure, while observation timing, caveats and provenance remain visible. See the
-[Phase 13 explorer design](docs/design/phase-13-explorer.md).
-
-Phase 15 adds governed Environment Agency rainfall, flood-monitoring and bathing-water
-products plus a generic Ofwat company-performance model. The same accepted snapshots
-feed FastAPI/PostGIS, optional analytical exports and the vendor-neutral static explorer
-bundle. The governed ten-source bundle is now published through GitHub Pages. See the
-[source portfolio](docs/data-sources/source-portfolio.md),
-[refresh policy](docs/guides/data-refresh-policy.md) and
-[zero-cost preview contract](docs/deployment/zero-cost-static-preview.md).
-
-Phase 16 completed the checksum-pinned private evidence handoff, deterministic
-ten-source replay, static publication, browser acceptance and protected GitHub Pages
-deployment. The public result remains a reviewed snapshot rather than a hosted API or
-publisher-live service.
-
-Start with the [end-to-end walkthrough](docs/guides/water-supply-walkthrough.md)
-for setup, loading, querying, exporting GeoJSON and diagnosing failures.
-
-## Run the complete local demo
-
-After starting PostgreSQL and migrating to `0012`, one command inspects the database,
-preserves compatible snapshots, replays retained verified evidence where available,
-and loads only missing accepted sources for the six-core-source local API demo:
+Vite proxies the local API on `127.0.0.1:8000`. Open the Vite URL printed in the terminal;
+OpenAPI is at <http://127.0.0.1:8000/docs>. From the repository root, explicitly refresh
+the six dynamic products if desired, then smoke-test the running API:
 
 ```bash
-uv run --locked watergeo-demo-bootstrap --dry-run
-uv run --locked watergeo-demo-bootstrap
 uv run --locked watergeo-demo-refresh-dynamic
 uv run --locked watergeo-demo-smoke http://127.0.0.1:8000 --complete
 ```
 
-The optional dynamic-refresh command sequentially retrieves the six dynamic products
-through the governed evidence, validation and atomic publication path. Its accepted
-retrieval times do not assert publisher observation freshness or a live feed.
+Refresh uses publisher networks and may take time. See the [local demo guide](docs/guides/local-complete-demo.md),
+[full setup/API reference](docs/guides/local-platform-reference.md), and
+[SDK/CLI quickstart](docs/guides/developer-quickstart.md).
 
-See the [complete local demo guide](docs/guides/local-complete-demo.md) for offline and
-selected-source modes, source semantics and failure handling. This legacy local
-bootstrap is distinct from the governed ten-source static publication. The
-[v1 production rehearsal](docs/guides/v1-production-rehearsal.md) serves the built
-explorer and API from one local origin and defines guarded recovery, scheduling, cost
-and monitoring contracts. It does not claim public hosting or cloud provisioning.
+## Refreshing and publishing
 
-Phase 2D now includes source status and bounded refresh commands. Query
-`GET /v1/sources/status` for accepted retrieval and observation ages; dynamic freshness
-uses explicit operator-configured limits. Run
-`uv run --locked python scripts/refresh_sources.py hydrology` for one refresh job.
-See the [source operations guide](docs/guides/source-operations.md) for all sources,
-offline retries, exit codes and external scheduling, and
-[ADR 0010](docs/adr/0010-source-freshness-refresh-operations.md) for the design.
+Local refresh accepts new database snapshots; failed validation preserves the previous
+accepted snapshot. Six opt-in GitHub refresh workflows require a reachable database,
+verified TLS and durable private evidence storage. Their schedules do not prove jobs
+are enabled or succeeding. The gated daily static preview replays accepted evidence;
+**public Pages deployment is separately and manually triggered**. Refreshing your
+local database does not update the public site.
 
-The opt-in [scheduled Hydrology workflow](docs/guides/scheduled-hydrology-refresh.md)
-provides hourly/manual refresh, retained operational logs and GitHub failure summaries.
-Separate opt-in workflows cover Thames, Water Quality metadata, rainfall, flood
-monitoring and bathing waters at their reviewed cadences.
-Production refresh jobs require reachable PostgreSQL, verified TLS and private
-versioned S3-compatible evidence storage. No hosted FastAPI/PostGIS deployment is
-claimed.
+Read [refresh and publication](docs/guides/refresh-and-publication.md) for the current
+operator path and the explicitly future automation design.
 
-## Independence and licensing
+## Documentation
 
-WaterGeo UK is a personal, independent open-source project. It is not an official
-Ofwat product and is not affiliated with, endorsed by, or maintained by Ofwat,
-the Environment Agency, Stream, or any water company. Views and design decisions
-are the maintainer's own.
-
-Only appropriately licensed public/open data may be integrated. Internal employer
-data, systems, credentials, code, and unpublished material must never be used.
-The [MIT licence](LICENSE) covers WaterGeo UK source code; it does **not** relicense
-third-party datasets. Each future integration needs its own documented licence
-and attribution assessment before implementation.
-
-## Local development
-
-Prerequisites: Python 3.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/),
-and a running Docker engine with Docker Compose v2. Development and CI use Python
-3.12. The container build targets native ARM64 and AMD64, including Apple Silicon;
-both architectures have CI integration jobs.
-
-```bash
-uv sync --locked
-cp .env.example .env
-```
-
-Edit `.env` and fill in **four distinct password values**: `POSTGRES_PASSWORD`,
-`WATERGEO_MIGRATION_PASSWORD`, `WATERGEO_DB_PASSWORD`, and
-`WATERGEO_INGESTION_PASSWORD`. Generate each with:
-
-```bash
-python3 -c 'import secrets; print(secrets.token_hex(24))'
-```
-
-Passwords must be at least 16 characters. Hex values avoid dotenv quoting issues.
-Do not commit `.env`. There are no working default passwords.
-
-```bash
-docker compose up --build --wait db
-uv run --locked alembic upgrade head
-uv run --locked uvicorn watergeo.api.app:create_app --factory --reload --no-access-log --no-proxy-headers
-```
-
-Open <http://127.0.0.1:8000/docs> for OpenAPI documentation.
-
-For typed Python client and read-only CLI examples, see the
-[developer quickstart](docs/guides/developer-quickstart.md). WaterGeo has no hosted
-FastAPI endpoint; configure the client or CLI with a local or self-hosted server URL.
-
-Existing databases from before the ingestion role was introduced need that role
-provisioned before migration `0003`; editing `.env` alone does not create it. See
-the [existing-volume instructions](#existing-database-volumes).
-
-| Endpoint | Meaning |
+| Need | Start here |
 | --- | --- |
-| `GET /health` | HTTP 200: the application can respond, independent of database health. |
-| `GET /ready` | HTTP 200: PostGIS is available and the migration revision matches; otherwise HTTP 503 with a generic response. |
-| `GET /v1/water-supply/dataset` | Release, source identity, attribution, licence, counts and caveats. |
-| `GET /v1/sources/status` | Accepted source availability, retrieval/observation ages and explicit freshness policy. |
-| `GET /v1/search?q=river&limit=24` | Bounded current-snapshot prefix/identity search across nine explorer entity types. |
-| `GET /v1/rainfall/dataset` | Latest accepted rainfall snapshot, licence, provenance and precision caveat. |
-| `GET /v1/rainfall/stations[/near]` | Paginated or bounded nearby EA rainfall gauges and latest publisher-period accumulation. |
-| `GET /v1/flood-monitoring/dataset` | Latest accepted operational flood snapshot and emergency-service caveat. |
-| `GET /v1/flood-monitoring/areas` | Official flood-area geometry with exact publisher warning severity where present. |
-| `GET /v1/bathing-waters[/near]` | Publisher bathing-water identity, classification and sample/advice relations. |
-| `GET /v1/company-performance/companies/{company_id}` | Generic publication-period Ofwat measures with explicit missing/N/A states. |
-| `GET /v1/severn-trent/reservoir-levels/dataset` | Pinned 2025 company reservoir-level edition and provenance. |
-| `GET /v1/severn-trent/reservoir-levels/reservoirs` | Keyset-paginated reservoir locations and latest edition reading. |
-| `GET /v1/severn-trent/reservoir-levels/reservoirs/near` | Bounded WGS84 distance search over publisher points. |
-| `GET /v1/severn-trent/reservoir-levels/reservoirs/{reservoir_id}` | Reservoir detail with exact publisher identity. |
-| `GET /v1/severn-trent/reservoir-levels/reservoirs/{reservoir_id}/readings` | Pinned timestamp-keyset readings without unit conversion or risk inference. |
-| `GET /v1/water-quality/dataset` | Compatible sampling-point snapshot, provenance and spatial completeness. |
-| `GET /v1/water-quality/sampling-points` | Snapshot-pinned keyset listing of sampling points. |
-| `GET /v1/water-quality/sampling-points/near` | Bounded WGS84 geography search, ordered by distance and identity. |
-| `GET /v1/water-quality/sampling-points/{sampling_point_id}` | Sampling-point detail; opaque spaces and slash IDs are preserved. |
-| `GET /v1/water-quality/observations/{retrieval_id}` | Pinned bounded observations with determinand, unit, result qualifiers and sample provenance. |
-| `GET /v1/water-supply/areas` | Paginated area summaries without geometry. |
-| `GET /v1/water-supply/areas/at-point?lon=-2&lat=52` | All covering areas, including boundary matches, with pagination. |
-| `GET /v1/water-supply/areas/{source_id}` | Area labels, publisher notices and reviewed transformation provenance. |
-| `GET /v1/water-supply/areas/{source_id}/geometry` | One GeoJSON Feature in WGS84 longitude/latitude. |
-| `GET /v1/hydrology/dataset` | Current reviewed Environment Agency hydrology snapshot metadata and coverage. |
-| `GET /v1/hydrology/stations` | Paginated river level/flow station summaries. |
-| `GET /v1/hydrology/stations/near` | Nearby located stations using WGS84 geography distance. |
-| `GET /v1/hydrology/stations/{station_id}` | Station, measures and latest available observations. |
-| `GET /v1/hydrology/history/{retrieval_id}` | One explicit bounded historical retrieval with cursor pagination. |
-| `GET /v1/catchments/dataset` | Current reviewed Catchment Data Explorer Cycle 3 snapshot metadata and hierarchy counts. |
-| `GET /v1/catchments/river-basin-districts` | Snapshot-pinned paginated River Basin District summaries. |
-| `GET /v1/catchments/river-basin-districts/{entity_id}` | One River Basin District with publisher provenance. |
-| `GET /v1/catchments/management-catchments` | Snapshot-pinned paginated Management Catchments. |
-| `GET /v1/catchments/management-catchments/{entity_id}` | One Management Catchment and its River Basin District identity. |
-| `GET /v1/catchments/operational-catchments` | Snapshot-pinned paginated Operational Catchments. |
-| `GET /v1/catchments/operational-catchments/{entity_id}` | One Operational Catchment with its publisher hierarchy. |
-| `GET /v1/catchments/water-bodies` | Snapshot-pinned paginated Water Body summaries. |
-| `GET /v1/catchments/water-bodies/{entity_id}` | One Water Body with full publisher hierarchy identities. |
-| `GET /v1/catchments/water-bodies/{entity_id}/geometry` | Publisher Water Body geometry features as WGS84 GeoJSON. |
+| Understand the platform | [System](docs/architecture/system-overview.md), [data flow](docs/architecture/data-flow.md), [evidence](docs/architecture/ingestion-and-evidence.md) |
+| Understand the data | [Data model](docs/architecture/data-model.md), [geospatial model](docs/architecture/geospatial-model.md), [source portfolio](docs/data-sources/source-portfolio.md) |
+| Use the explorer | [Data interpretation](docs/guides/explorer-data-interpretation.md), [navigation and basemap](docs/design/explorer-navigation.md) |
+| Operate or publish | [Source operations](docs/guides/source-operations.md), [static publication](docs/deployment/zero-cost-static-preview.md), [production operations](docs/guides/production-operations.md) |
+| Export or integrate | [GeoJSON/PMTiles/GeoParquet](docs/guides/phase-8-exports.md), [Fabric compatibility](docs/guides/fabric-compatibility.md) |
+| Develop and validate | [Contribution guide](CONTRIBUTING.md), [checks](docs/guides/local-platform-reference.md#checks), [security](SECURITY.md) |
+| Review decisions | [ADRs](docs/adr/), [development history](docs/project/development-history.md), [roadmap](docs/project/roadmap.md) |
 
-See the [Water Quality walkthrough](docs/guides/water-quality-walkthrough.md) for
-metadata and bounded observation refresh, pinned reads and evidence retries.
+## Independence, licensing and limitations
 
-The database and API ports bind only to loopback. If port 5432 is occupied, change
-`WATERGEO_DB_PORT` in `.env`; Compose and host-based Python tools use the same value.
-The Compose database name is `watergeo` and its role names are fixed.
+WaterGeo UK is a personal, independent open-source project. It is not an Ofwat product
+and is not affiliated with, endorsed by or maintained by Ofwat, the Environment Agency,
+Stream or any water company. Views and design decisions are the maintainer's own.
+Internal employer data, systems, credentials, code and unpublished material must never
+be used. Only appropriately licensed public/open data may be integrated.
 
-### Run the application in containers
+The [MIT licence](LICENSE) covers WaterGeo source code, **not third-party datasets**.
+Each source retains its own terms and attribution; new integrations require a licence
+assessment. The water-supply source does not identify its OGL edition: this remains
+unknown, not silently assumed to be OGL 3.0.
 
-With passwords configured in `.env`:
+Bounded nearby clusters are not national totals. Dated boundaries do not establish a
+property's current supplier. Monitor indications do not establish pollution volume,
+supply risk or bathing safety. For flood safety use the official EA service, not this
+snapshot explorer. Source-specific caveats remain attached to detail and provenance.
 
-```bash
-docker compose --profile app up --build --wait
-```
+## Development history
 
-This starts PostgreSQL/PostGIS, runs Alembic as a one-shot migration service, then
-starts the API as a non-root user with a read-only filesystem. Only the migration
-service receives migration credentials; the API receives its read-only credential.
-The default Compose profile starts just the database for host-based development.
-
-```bash
-docker compose --profile app down
-```
-
-The named database volume survives `down`. Initialisation SQL runs only on an
-empty volume: changing passwords in `.env` does not rotate existing database roles.
-See [database operations](docs/architecture/phase-0.md#database-lifecycle).
-
-### Existing database volumes
-
-Fresh volumes receive all roles from `docker/postgres/init.sql`. For a pre-0003
-volume, first set `WATERGEO_INGESTION_PASSWORD` in `.env` and recreate the database
-container to refresh its environment (the existing volume is retained):
-
-```bash
-docker compose up --wait --force-recreate db
-docker compose exec -T db psql -X -U postgres -d watergeo -v ON_ERROR_STOP=1 <<'SQL'
-\getenv ingestion_password WATERGEO_INGESTION_PASSWORD
-CREATE ROLE watergeo_ingest LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
-    PASSWORD :'ingestion_password';
-GRANT CONNECT ON DATABASE watergeo TO watergeo_ingest;
-GRANT USAGE ON SCHEMA watergeo TO watergeo_ingest;
-SQL
-uv run --locked alembic upgrade head
-```
-
-Run this bootstrap only if the role is missing. Migration `0003` grants SELECT and
-INSERT on the three ingestion tables; the ingestion role has no UPDATE, DELETE,
-schema CREATE, or blanket future-table write grants. The API continues to use the
-separate read-only `watergeo_app` role.
-
-## Load and query the reviewed dataset
-
-With the database at migration head (`0012`), run these from the repository root:
-
-```bash
-uv run --locked python scripts/fetch_ofwat_water_supply.py
-uv run --locked python scripts/validate_ofwat_water_supply.py
-uv run --locked python scripts/load_ofwat_water_supply.py
-```
-
-Retrieval verifies the exact source ZIP and retains it with a provenance manifest
-under ignored `data/raw/ofwat/water-supply/`. Validation reports five invalid
-publisher polygons (IDs 1, 4, 6, 28, 30). Its strict raw-geometry eligibility result
-is separate from canonical acceptance: [ADR 0004](docs/adr/0004-ofwat-v1_5-canonical-transformation.md)
-approves those five transformations for this exact archive and pinned runtime only.
-Canonical loading produces **1,141 areas and five transformation records**, atomically.
-Repeating the load verifies stored content and returns a **verified no-op**.
-
-The raw ZIP remains authoritative source evidence. Canonical geometry is an
-explicit WaterGeo transformation for analysis; it is not the definitive legal
-record. There is no generic automatic repair policy. The source declares
-`Open Government Licence`, with **`licence_version = null`** because the edition
-is unidentified. The API preserves this uncertainty and exposes the generic
-official licence URL, attribution and publisher notices.
-
-Once the API is running:
-
-```bash
-curl --fail http://127.0.0.1:8000/v1/water-supply/dataset
-curl --fail 'http://127.0.0.1:8000/v1/water-supply/areas?limit=10'
-curl --fail 'http://127.0.0.1:8000/v1/water-supply/areas/at-point?lon=-2&lat=52'
-curl --fail http://127.0.0.1:8000/v1/water-supply/areas/1
-curl --fail http://127.0.0.1:8000/v1/water-supply/areas/1/geometry
-```
-
-Use `next_after_id` as the next request's `after_id`; `null` means the final page.
-The maximum page size is 100. Point pagination must retain the same coordinates.
-Point queries use PostGIS `ST_Covers`: shared boundaries, overlaps and inset areas
-can return multiple results, and points inside holes do not match that area.
-This dated snapshot does not establish a property's current supplier. Valid
-coordinates outside the conservative GB processing extent (-9..3 longitude,
-49..61 latitude) return an empty page.
-
-GeoJSON uses `application/geo+json`, longitude/latitude order, and query-time
-reprojection from the stored EPSG:27700 geometry. Output rings follow the right-hand
-rule. No simplification is applied; geometry above 8 MiB returns 413, and an invalid
-serialized representation or reviewed output hash mismatch returns 503. Transform
-accuracy depends on installed PROJ grids and is not a legal or centimetre-accuracy
-guarantee. Bbox filtering is
-not implemented; unknown parameters, including `bbox`, return 422.
-
-**Reviewed WGS84 presentation:** plain reprojection makes areas **3, 4, 16 and 21**
-self-intersecting in the assessed runtime. [ADR 0006](docs/adr/0006-water-supply-wgs84-presentation.md)
-defines a presentation-only structure repair for those exact source IDs and
-canonical geometry hashes. Each repaired output must match its reviewed GeoJSON
-hash and pass the final validity check; all other areas use plain reprojection.
-All **1,141 HTTP GeoJSON outputs** were verified valid in the reviewed environment,
-with canonical rows unchanged. Different library/grid outputs fail closed with
-503 and require another review. Dataset `presentation_version` and each Feature's
-`presentation` member keep output provenance separate from canonical ingestion.
-
-To reproduce the baseline and candidate evidence without changing database data:
-
-```bash
-uv run --locked python scripts/assess_water_supply_presentation.py
-```
-
-The offline diagnostic writes a new report under ignored `data/validation/` and
-uses a bounded 60-second statement timeout; the API retains its three-second
-timeout. It never approves transformations or modifies the API policy.
-
-Data routes return 503 until the reviewed snapshot is loaded or if the database
-is unavailable; unknown area IDs return 404 once it is loaded. `/ready` checks
-infrastructure and migration head (`0012`), not dataset availability. See the
-[API decision](docs/adr/0005-water-supply-api.md) for contracts and limits.
-
-## Query the Catchment Data Explorer hierarchy
-
-After loading a reviewed Cycle 3 snapshot with `scripts/load_ea_catchments.py`, the public API exposes publisher hierarchy entities without inventing a Hydrology station-to-catchment relationship.
-
-Example requests:
-
-    curl --fail http://127.0.0.1:8000/v1/catchments/dataset
-    curl --fail 'http://127.0.0.1:8000/v1/catchments/river-basin-districts?limit=10'
-    curl --fail http://127.0.0.1:8000/v1/catchments/river-basin-districts/4
-    curl --fail http://127.0.0.1:8000/v1/catchments/management-catchments/3101
-    curl --fail http://127.0.0.1:8000/v1/catchments/operational-catchments/3471
-    curl --fail 'http://127.0.0.1:8000/v1/catchments/water-bodies?limit=10'
-    curl --fail http://127.0.0.1:8000/v1/catchments/water-bodies/GB104028047290
-    curl --fail http://127.0.0.1:8000/v1/catchments/water-bodies/GB104028047290/geometry
-
-List endpoints use keyset pagination. Pass both `snapshot_id` and `next_after_id` from the previous response to remain pinned to the same accepted snapshot. Page size is limited to 100, and malformed identifiers or unexpected query parameters return 422.
-
-Water Body geometry responses use `application/geo+json` and preserve separate publisher features such as `Catchment` and `RiverLine`; they are not dissolved into a WaterGeo-created parent polygon. Geometry responses above 8 MiB return 413. Missing entities return 404 only after a compatible snapshot is available; source/database contract failures return a generic 503.
-
-## Checks
-
-The default tests need no database or `.env`; integration tests are explicitly skipped.
-
-```bash
-uv run --locked pytest
-uv run --locked ruff check .
-uv run --locked ruff format --check .
-uv run --locked mypy src
-uv build
-uv run --locked pre-commit install
-```
-
-The pre-commit hooks use tools from `uv.lock`. CI repeats the checks independently.
-
-Integration tests temporarily downgrade and re-upgrade the schema. Run them only
-against a disposable database. To use a separate local Compose volume and port:
-
-```bash
-WATERGEO_DB_PORT=55432 docker compose -p watergeo-test up --build --wait db
-WATERGEO_DB_PORT=55432 WATERGEO_TEST_DATABASE=1 uv run --locked pytest -m integration
-WATERGEO_DB_PORT=55432 docker compose -p watergeo-test down --volumes
-```
-
-The last command deletes **that test project's** database volume. The tests verify
-actual migrations, readiness, geometry acceptance/rejection, snapshot provenance,
-transaction rollback, and database permission denials. All geometry fixtures are
-synthetic. They do not substitute SQLite for PostgreSQL.
-
-For the locked dependency audit (requires internet access):
-
-```bash
-uv export --locked --all-groups --no-emit-project --format requirements-txt --output-file /tmp/watergeo-requirements.txt
-uv run --locked pip-audit --strict --require-hashes -r /tmp/watergeo-requirements.txt
-```
-
-## Repository map
-
-```text
-.github/                 CI, security scans, dependency updates
-docker/postgres/         Native PostgreSQL/PostGIS build and role provisioning
-docs/architecture/       Current design and operational boundaries
-docs/adr/                Significant architectural decisions
-docs/data-sources/       Source acceptance and provenance requirements
-migrations/              Alembic revisions through national products (0012)
-scripts/                 Source retrieval, validation, assessment and canonical loader
-src/watergeo/
-  api/                   Operational, water-supply, hydrology and catchment public routes
-  core/                  Validated configuration and JSON application logs
-  db/                    Connection pool, queries and offline presentation assessment
-  ingestion/             Verified public-source retrieval, normalization and atomic load
-tests/                   Configuration and HTTP behaviour tests
-  integration/           Opt-in PostGIS and migration tests
-Dockerfile               Non-root application image
-docker-compose.yml       Local database and optional containerised API
-pyproject.toml           Package, dependency, and quality-tool configuration
-uv.lock                  Resolved dependencies and distribution hashes
-```
-
-## Design and next milestone
-
-See the [Phase 0 architecture](docs/architecture/phase-0.md),
-[foundation decision record](docs/adr/0001-engineering-foundation.md),
-[water-supply schema decision](docs/adr/0002-water-supply-snapshots.md),
-[canonical transformation](docs/adr/0004-ofwat-v1_5-canonical-transformation.md), and
-[public API decision](docs/adr/0005-water-supply-api.md) and
-[WGS84 presentation review](docs/adr/0006-water-supply-wgs84-presentation.md) for rationale,
-trade-offs, and known limits. Contribution and vulnerability-reporting guidance are
-in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
-
-The [first source assessment](docs/data-sources/ofwat-company-boundaries.md)
-examines Ofwat's publicly distributed water-supply and sewerage boundaries, including
-their actual fields and geometry quality. ADR 0004 and migration `0003` now provide
-the reviewed canonical ingestion path; the versioned API exposes its provenance
-and analytical boundaries. Historical ADRs describe decisions at their acceptance
-dates; consult later ADRs for subsequent source-specific decisions.
-
-**Phase 2A and 2B:** Environment Agency station metadata, measures, latest available
-observations, nearby search and bounded historical observations are implemented for
-river level/flow. See the
-[source assessment](docs/data-sources/environment-agency-hydrology.md),
-[ADR 0007](docs/adr/0007-environment-agency-hydrology.md),
-[ADR 0008](docs/adr/0008-hydrology-history.md) and
-[hydrology walkthrough](docs/guides/hydrology-walkthrough.md). Unlocated stations
-remain available by identity; nearby search reports its spatial coverage limitation.
-Historical retrievals are explicit immutable evidence products: WaterGeo does not
-silently stitch overlapping windows or pretend publisher readings are globally immutable.
-
-Phase 2C now includes the reviewed Catchment Data Explorer Cycle 3 hierarchy:
-River Basin District, Management Catchment, Operational Catchment and Water Body
-relationships, plus publisher Water Body geometry features. No Hydrology
-station-to-catchment assignment is asserted by the publisher or inferred by this
-phase. Phase 2D provides freshness monitoring, hardened bounded refresh jobs and an
-opt-in GitHub Actions schedule for Hydrology latest. Phase 2 now covers
-ingestion → validation → storage → API → freshness → refresh scheduling.
-Deployment-specific notification integrations remain future operational work.
-Phase 3 adds Water Quality sampling-point metadata, nearby search, source status,
-refresh operations and bounded historical observations with determinand/unit evidence.
-See the [walkthrough](docs/guides/water-quality-walkthrough.md) and
-[ADR 0012](docs/adr/0012-bounded-water-quality-observations.md). Observation retrievals
-preserve publisher sample relationships, censored results and unspecified timezones;
-they do not claim a complete or publisher-atomic archive. Water Quality observation
-scheduling, unit conversion and cross-source geographic assignments remain deferred.
-The public static explorer is hosted on GitHub Pages; hosting a FastAPI/PostGIS service
-still requires the deployment controls described in SECURITY.md.
-
-Phase 4's first company-data slice integrates Severn Trent Water's public 2025
-raw-water reservoir levels from Stream: 14 reservoirs and 728 weekly source readings,
-licensed CC BY 4.0. It preserves exact publisher timestamps, including the reviewed
-summer-time offset discrepancy, and does not derive restriction, safety or supply-risk
-status. See the [source assessment](docs/data-sources/stream-company-source-assessment.md),
-[ADR 0013](docs/adr/0013-severn-trent-reservoir-levels.md) and
-[walkthrough](docs/guides/stream-reservoir-levels-walkthrough.md).
+Delivered capabilities and phase references are recorded in the
+[development history](docs/project/development-history.md). Planned hosting security,
+publication automation and analytics work are separated in the [roadmap](docs/project/roadmap.md).
