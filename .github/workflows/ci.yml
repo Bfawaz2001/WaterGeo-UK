@@ -83,7 +83,7 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:8000/health
           status=$(curl --silent --show-error --max-time 15 --output /tmp/readiness.json --write-out '%{http_code}' http://127.0.0.1:8000/ready)
           test "$status" = 503
-          docker compose up --wait db
+          docker compose start --wait --wait-timeout 60 db
           curl --fail --silent --show-error http://127.0.0.1:8000/ready
       - name: Container logs on failure
         if: failure()
