@@ -12,7 +12,9 @@ import type {
 
 interface Props {
   initialCompany?: string | null;
+  boundariesEnabled: boolean;
   selectedAreaId?: number | null;
+  onCompanyChange: (acronym: string | null) => void;
   onShowCompany: (collection: WaterCompanyFeatureCollection) => void;
   onSelectArea: (feature: AreaFeature) => void;
   onSelectPerformance: (performance: NationalDetail<CompanyPerformance>) => void;
@@ -70,7 +72,9 @@ async function companyPerformance(
 
 export function CompanyExplorer({
   initialCompany,
+  boundariesEnabled,
   selectedAreaId,
+  onCompanyChange,
   onShowCompany,
   onSelectArea,
   onSelectPerformance,
@@ -82,10 +86,20 @@ export function CompanyExplorer({
   const [collection, setCollection] = useState<WaterCompanyFeatureCollection>();
   const [performance, setPerformance] = useState<NationalDetail<CompanyPerformance> | null>();
   const [filter, setFilter] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>();
-  const request = useRef<AbortController | undefined>(undefined);
+  const [indexError, setIndexError] = useState<string>();
+  const [boundaryLoading, setBoundaryLoading] = useState(false);
+  const [boundaryError, setBoundaryError] = useState<string>();
+  const [performanceLoading, setPerformanceLoading] = useState(false);
+  const [performanceError, setPerformanceError] = useState<string>();
+  const boundaryRequest = useRef<AbortController | undefined>(undefined);
+  const performanceRequest = useRef<AbortController | undefined>(undefined);
+  const previousBoundariesEnabled = useRef(boundariesEnabled);
+  const onShowCompanyRef = useRef(onShowCompany);
   const initialApplied = useRef(false);
+
+  useEffect(() => {
+    onShowCompanyRef.current = onShowCompany;
+  }, [onShowCompany]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -94,40 +108,37 @@ export function CompanyExplorer({
       setSnapshotId(page.snapshot_id);
     }).catch((reason: unknown) => {
       if (!(reason instanceof DOMException && reason.name === "AbortError")) {
-        setError("The verified water-company index is currently unavailable.");
+        setIndexError("The verified water-company index is currently unavailable.");
       }
     });
     return () => controller.abort();
   }, []);
 
-  const selectCompany = useCallback(async (acronym: string) => {
-    request.current?.abort();
-    setSelectedAcronym(acronym);
+  const selectedCompany = companies.find(
+    (company) => company.company_acronym === selectedAcronym,
+  );
+
+  const loadBoundary = useCallback((company: WaterCompany, acceptedSnapshotId: string) => {
+    boundaryRequest.current?.abort();
+    const controller = new AbortController();
+    boundaryRequest.current = controller;
     setInventory([]);
     setCollection(undefined);
-    setPerformance(undefined);
-    setFilter("");
-    setError(undefined);
-    setLoading(false);
-    if (!acronym) return;
-    const company = companies.find((candidate) => candidate.company_acronym === acronym);
-    if (!company || !snapshotId) {
-      setError("The selected company is not in this accepted boundary snapshot.");
-      return;
-    }
-    const controller = new AbortController();
-    request.current = controller;
-    setLoading(true);
-    try {
-      const [areas, geometry] = await Promise.all([
-        completeInventory(company, snapshotId, controller.signal),
-        api.waterSupplyCompanyGeometry(acronym, snapshotId, controller.signal),
-      ]);
+    setBoundaryError(undefined);
+    setBoundaryLoading(true);
+    void Promise.all([
+      completeInventory(company, acceptedSnapshotId, controller.signal),
+      api.waterSupplyCompanyGeometry(
+        company.company_acronym,
+        acceptedSnapshotId,
+        controller.signal,
+      ),
+    ]).then(([areas, geometry]) => {
       const areaIds = areas.map((area) => area.source_id);
       const geometryIds = geometry.features.map((feature) => feature.id);
       if (
-        geometry.snapshot_id !== snapshotId ||
-        geometry.company.company_acronym !== acronym ||
+        geometry.snapshot_id !== acceptedSnapshotId ||
+        geometry.company.company_acronym !== company.company_acronym ||
         geometry.company.area_count !== areas.length ||
         areaIds.some((identifier, index) => identifier !== geometryIds[index])
       ) {
@@ -136,31 +147,75 @@ export function CompanyExplorer({
       if (!controller.signal.aborted) {
         setInventory(areas);
         setCollection(geometry);
-        onShowCompany(geometry);
+        onShowCompanyRef.current(geometry);
       }
-      try {
-        const result = await companyPerformance(acronym, controller.signal);
-        if (!controller.signal.aborted) setPerformance(result);
-      } catch (reason) {
-        if (reason instanceof DOMException && reason.name === "AbortError") throw reason;
-        if (!controller.signal.aborted) setPerformance(null);
-      }
-    } catch (reason) {
+    }).catch((reason: unknown) => {
       if (!(reason instanceof DOMException && reason.name === "AbortError")) {
-        setError("The complete company-area view could not be verified and was not shown.");
+        setBoundaryError("The complete company-area view could not be verified and was not shown.");
       }
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
+    }).finally(() => {
+      if (!controller.signal.aborted) setBoundaryLoading(false);
+    });
+  }, []);
+
+  const loadPerformance = useCallback((acronym: string) => {
+    performanceRequest.current?.abort();
+    const controller = new AbortController();
+    performanceRequest.current = controller;
+    setPerformanceLoading(true);
+    void companyPerformance(acronym, controller.signal).then((result) => {
+      if (!controller.signal.aborted) setPerformance(result);
+    }).catch((reason: unknown) => {
+      if (!(reason instanceof DOMException && reason.name === "AbortError")) {
+        setPerformanceError("Company-performance data is currently unavailable.");
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setPerformanceLoading(false);
+    });
+  }, []);
+
+  const selectCompany = useCallback((acronym: string) => {
+    boundaryRequest.current?.abort();
+    performanceRequest.current?.abort();
+    setSelectedAcronym(acronym);
+    setInventory([]);
+    setCollection(undefined);
+    setPerformance(undefined);
+    setFilter("");
+    setBoundaryError(undefined);
+    setBoundaryLoading(false);
+    setPerformanceError(undefined);
+    setPerformanceLoading(false);
+    onCompanyChange(acronym || null);
+    if (!acronym) return;
+    const company = companies.find((candidate) => candidate.company_acronym === acronym);
+    if (!company || !snapshotId) {
+      setBoundaryError("The selected company is not in this accepted boundary snapshot.");
+      return;
     }
-  }, [companies, onShowCompany, snapshotId]);
+    if (boundariesEnabled) loadBoundary(company, snapshotId);
+    loadPerformance(acronym);
+  }, [boundariesEnabled, companies, loadBoundary, loadPerformance, onCompanyChange, snapshotId]);
+
+  useEffect(() => {
+    const wasEnabled = previousBoundariesEnabled.current;
+    previousBoundariesEnabled.current = boundariesEnabled;
+    if (wasEnabled && !boundariesEnabled) boundaryRequest.current?.abort();
+    if (!wasEnabled && boundariesEnabled && selectedCompany && snapshotId) {
+      loadBoundary(selectedCompany, snapshotId);
+    }
+  }, [boundariesEnabled, loadBoundary, selectedCompany, snapshotId]);
+
+  useEffect(() => () => {
+    boundaryRequest.current?.abort();
+    performanceRequest.current?.abort();
+  }, []);
 
   useEffect(() => {
     if (initialApplied.current || !initialCompany || !companies.length || !snapshotId) return;
     initialApplied.current = true;
-    void selectCompany(initialCompany);
+    selectCompany(initialCompany);
   }, [companies, initialCompany, selectCompany, snapshotId]);
-
-  useEffect(() => () => request.current?.abort(), []);
 
   const matchingAreas = useMemo(() => {
     const term = filter.trim().toLocaleLowerCase();
@@ -175,10 +230,6 @@ export function CompanyExplorer({
     () => new Map(collection?.features.map((feature) => [feature.id, feature]) ?? []),
     [collection],
   );
-  const selectedCompany = companies.find(
-    (company) => company.company_acronym === selectedAcronym,
-  );
-
   return (
     <section className="panel-section company-explorer" aria-labelledby="company-explorer-heading">
       <p className="eyebrow">Reviewed boundary edition</p>
@@ -188,7 +239,7 @@ export function CompanyExplorer({
         Water company
         <select
           value={selectedAcronym}
-          onChange={(event) => void selectCompany(event.target.value)}
+          onChange={(event) => selectCompany(event.target.value)}
         >
           <option value="">Choose a company</option>
           {companies.map((company) => (
@@ -198,9 +249,11 @@ export function CompanyExplorer({
           ))}
         </select>
       </label>
-      {loading && <p role="status">Loading and verifying the complete company inventory…</p>}
-      {error && <p className="state-error" role="alert">{error}</p>}
-      {collection && selectedCompany && (
+      {indexError && <p className="state-error" role="alert">{indexError}</p>}
+      {selectedCompany && !boundariesEnabled && <p className="caveat">Enable Water-supply lookup to load this company's exact reviewed area geometry. Company performance remains available separately.</p>}
+      {boundariesEnabled && boundaryLoading && <p role="status">Loading and verifying the complete company inventory…</p>}
+      {boundariesEnabled && boundaryError && <p className="state-error" role="alert">{boundaryError}</p>}
+      {boundariesEnabled && collection && selectedCompany && (
         <>
           <p className="company-total" role="status"><strong>{inventory.length}</strong> verified area{inventory.length === 1 ? "" : "s"}</p>
           <button className="secondary-button" type="button" onClick={() => onShowCompany(collection)}>
@@ -233,17 +286,20 @@ export function CompanyExplorer({
               </li>
             ))}
           </ul>
-          <section className="company-performance-summary" aria-labelledby="company-performance-summary-heading">
-            <h3 id="company-performance-summary-heading">Company performance</h3>
-            {performance === undefined && <p>Loading the separate company-level publication…</p>}
-            {performance === null && <p>No reviewed company-performance crosswalk is available for this acronym.</p>}
-            {performance && <>
-              <p><strong>{performance.item.company_name}</strong> · {performance.item.measures.length} published measure rows</p>
-              <button className="secondary-button" type="button" onClick={() => onSelectPerformance(performance)}>View company performance</button>
-              <p className="caveat">These company-wide measures use their own publication and reporting periods. They do not describe an individual area polygon.</p>
-            </>}
-          </section>
         </>
+      )}
+      {selectedCompany && (
+        <section className="company-performance-summary" aria-labelledby="company-performance-summary-heading">
+          <h3 id="company-performance-summary-heading">Company performance</h3>
+          {performanceLoading && <p role="status">Loading the separate company-level publication…</p>}
+          {performanceError && <p className="state-error" role="alert">{performanceError}</p>}
+          {!performanceLoading && !performanceError && performance === null && <p>No reviewed company-performance crosswalk is available for this acronym.</p>}
+          {performance && <>
+            <p><strong>{performance.item.company_name}</strong> · {performance.item.measures.length} published measure rows</p>
+            <button className="secondary-button" type="button" onClick={() => onSelectPerformance(performance)}>View company performance</button>
+            <p className="caveat">These company-wide measures use their own publication and reporting periods. They do not describe an individual area polygon.</p>
+          </>}
+        </section>
       )}
     </section>
   );

@@ -336,6 +336,67 @@ it("selects a complete company view and keeps performance as a separate provenan
   expect(screen.getByText(/analytically separate from the dated supply-area polygons/)).toBeInTheDocument();
 });
 
+it("clears stale company state before a switched company geometry request fails", async () => {
+  const secondCompany = { company_acronym: "SW", display_name: "Second Water", publisher_labels: ["Second Water"], area_count: 1 };
+  const secondArea = {
+    ...areaFeature,
+    id: 4,
+    properties: { ...areaFeature.properties, source_id: 4, company: "Second Water", company_acronym: "SW" },
+  };
+  mocks.waterSupplyCompanies.mockResolvedValue({
+    snapshot_id: areaFeature.properties.snapshot_id,
+    items: [
+      { company_acronym: "EW", display_name: "Example Water", publisher_labels: ["Example Water"], area_count: 1 },
+      secondCompany,
+    ],
+  });
+  mocks.waterSupplyCompanyAreas.mockImplementation((acronym: string) => Promise.resolve({
+    snapshot_id: areaFeature.properties.snapshot_id,
+    company: acronym === "EW"
+      ? { company_acronym: "EW", display_name: "Example Water", publisher_labels: ["Example Water"], area_count: 1 }
+      : secondCompany,
+    items: [acronym === "EW" ? areaFeature.properties : secondArea.properties],
+    next_after_id: null,
+  }));
+  mocks.waterSupplyCompanyGeometry.mockImplementation((acronym: string) =>
+    acronym === "EW"
+      ? Promise.resolve({
+          type: "FeatureCollection",
+          snapshot_id: areaFeature.properties.snapshot_id,
+          company: { company_acronym: "EW", display_name: "Example Water", publisher_labels: ["Example Water"], area_count: 1 },
+          features: [areaFeature],
+        })
+      : Promise.reject(new Error("geometry unavailable")),
+  );
+  render(<App />);
+  await userEvent.click(screen.getByRole("checkbox", { name: /Water-supply lookup/i }));
+  const selector = await screen.findByLabelText("Water company");
+  await userEvent.selectOptions(selector, "EW");
+  await userEvent.click(await screen.findByRole("button", { name: /Example area/ }));
+  expect(screen.getByRole("heading", { name: "Selected supply area" })).toBeInTheDocument();
+  expect(screen.getByTestId("mapped-company-areas")).toHaveTextContent("FeatureCollection");
+
+  await userEvent.selectOptions(selector, "SW");
+  expect(screen.queryByRole("heading", { name: "Selected supply area" })).not.toBeInTheDocument();
+  expect(screen.getByTestId("mapped-company-areas")).toHaveTextContent("null");
+  expect(await screen.findByText(/complete company-area view could not be verified/u)).toBeInTheDocument();
+  expect(window.location.search).toContain("company=SW");
+
+  await userEvent.selectOptions(selector, "");
+  expect(screen.getByTestId("mapped-company-areas")).toHaveTextContent("null");
+  expect(window.location.search).not.toContain("company=");
+});
+
+it("opens company performance without enabling boundary geometry", async () => {
+  render(<App />);
+  await userEvent.selectOptions(await screen.findByLabelText("Water company"), "EW");
+  await userEvent.click(await screen.findByRole("button", { name: "View company performance" }));
+  expect(screen.getByText("Company-wide performance")).toBeInTheDocument();
+  expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
+  expect(mocks.waterSupplyCompanyAreas).not.toHaveBeenCalled();
+  expect(mocks.waterSupplyCompanyGeometry).not.toHaveBeenCalled();
+});
+
 it("filters exact bathing classifications within the explicitly bounded loaded results", async () => {
   render(<App />);
   await userEvent.click(screen.getByRole("checkbox", { name: /Bathing waters/i }));

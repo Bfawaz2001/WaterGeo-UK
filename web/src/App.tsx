@@ -226,7 +226,6 @@ export function App() {
       if (layers.has("water-supply") && selected?.kind === "water-supply") setSelected(null);
       if (layers.has("water-supply")) {
         setCompanyAreas(null);
-        setCompanyAcronym(null);
       }
     }
   };
@@ -507,34 +506,44 @@ export function App() {
           errors={nearby.errors}
           onToggle={toggleLayer}
         />
-        {layers.has("water-supply") && (
-          <CompanyExplorer
-            initialCompany={initial.company}
-            selectedAreaId={selected?.kind === "water-supply" ? selected.item.id : null}
-            onShowCompany={(collection) => {
-              setCompanyAreas(collection);
-              setCompanyAcronym(collection.company.company_acronym);
-              setSelected(null);
-              setMapFocus(null);
-              setMapNotice(undefined);
-              navigate(geometryBounds(collection.features.map((feature) => feature.geometry)));
-            }}
-            onSelectArea={(item) => {
-              setSelected({ kind: "water-supply", item });
-              setMapFocus(null);
-              setMapNotice(undefined);
-              navigate(geometryBounds([item.geometry]));
-            }}
-            onSelectPerformance={(performance) => {
-              setSelected({
-                kind: "company-performance",
-                item: performance.item,
-                dataset: performance.dataset,
-              });
-              setMapFocus(null);
-            }}
-          />
-        )}
+        <CompanyExplorer
+          initialCompany={initial.company}
+          boundariesEnabled={layers.has("water-supply")}
+          selectedAreaId={selected?.kind === "water-supply" ? selected.item.id : null}
+          onCompanyChange={(acronym) => {
+            setCompanyAreas(null);
+            setCompanyAcronym(acronym);
+            setAreaMatches(null);
+            setAreaError(undefined);
+            setSelected((current) =>
+              current?.kind === "water-supply" || current?.kind === "company-performance"
+                ? null
+                : current,
+            );
+            setMapFocus(null);
+            setMapNotice(undefined);
+          }}
+          onShowCompany={(collection) => {
+            setCompanyAreas(collection);
+            setSelected((current) => current?.kind === "water-supply" ? null : current);
+            setMapFocus(null);
+            setMapNotice(undefined);
+            navigate(geometryBounds(collection.features.map((feature) => feature.geometry)));
+          }}
+          onSelectArea={(item) => {
+            setSelected({ kind: "water-supply", item });
+            setMapFocus({ key: `water-supply:${item.id}` });
+            setMapNotice(undefined);
+          }}
+          onSelectPerformance={(performance) => {
+            setSelected({
+              kind: "company-performance",
+              item: performance.item,
+              dataset: performance.dataset,
+            });
+            setMapFocus(null);
+          }}
+        />
         {layers.has("flood-warnings") && (
           <section className="panel-section" aria-labelledby="flood-filter-heading">
             <p className="eyebrow">Active filters</p>

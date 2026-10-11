@@ -216,6 +216,31 @@ it("navigates once per intent, waits for style load, and respects reduced motion
   matchMedia.mockRestore();
 });
 
+it("fits an individually selected company area only through the selected-geometry intent", () => {
+  const props = {
+    initial: { longitude: -1, latitude: 52, zoom: 8 }, activeLayers: new Set<import("./types").LayerId>(["water-supply"]),
+    hydrology: [], waterQuality: [], reservoirs: [], area: null, waterBody: null,
+    onViewport: vi.fn(), onMapClick: vi.fn(), onSelectPoint: vi.fn(),
+  };
+  const { rerender } = render(<MapView {...props} />);
+  const map = mock.Map.latest;
+  act(() => { map.loaded = true; map.emit("load"); });
+  map.fitBounds.mockClear();
+  const area = {
+    type: "Feature",
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: [[[[-2, 51], [-1, 51], [-1, 52], [-2, 51]]]],
+    },
+  } as unknown as AreaFeature;
+  const focus = { key: "water-supply:3" };
+
+  rerender(<MapView {...props} area={area} focus={focus} />);
+  expect(map.fitBounds).toHaveBeenCalledOnce();
+  rerender(<MapView {...props} area={area} focus={focus} hydrology={[]} />);
+  expect(map.fitBounds).toHaveBeenCalledOnce();
+});
+
 
 it("updates geometry and visibility while previously installed sources are still loading", () => {
   const props = {

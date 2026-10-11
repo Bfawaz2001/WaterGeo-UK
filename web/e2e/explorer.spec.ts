@@ -262,17 +262,20 @@ test("company-first water-supply exploration keeps performance analytically sepa
   await syntheticApi(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Dismiss explorer introduction" }).click();
-  await page.getByRole("checkbox", { name: /Water-supply lookup/i }).check();
   await page.getByLabel("Water company").selectOption("SW");
+  await expect(page.getByText(/Enable Water-supply lookup/u)).toBeVisible();
+  await page.getByRole("button", { name: "View company performance" }).click();
+  await expect(page.getByText("Company-wide performance")).toBeVisible();
+  await expect(page.getByText("Synthetic leakage")).toBeVisible();
+  await expect(page.getByText(/analytically separate from the dated supply-area polygons/)).toBeVisible();
+  await page.getByRole("button", { name: "Close selected feature details" }).click();
+
+  await page.getByRole("checkbox", { name: /Water-supply lookup/i }).check();
   await expect(page.getByText("1 verified area", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Show all company areas" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Synthetic area/ })).toBeVisible();
   await page.getByRole("button", { name: /Synthetic area/ }).click();
   await expect(page.getByRole("heading", { name: "Selected supply area" })).toBeVisible();
-  await page.getByRole("button", { name: "View company performance" }).click();
-  await expect(page.getByText("Company-wide performance")).toBeVisible();
-  await expect(page.getByText("Synthetic leakage")).toBeVisible();
-  await expect(page.getByText(/analytically separate from the dated supply-area polygons/)).toBeVisible();
   await expect(page).toHaveURL(/company=SW/);
 });
 

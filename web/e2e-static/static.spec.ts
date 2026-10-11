@@ -205,6 +205,13 @@ test("static production mode shows national layers, caveats and company facts", 
   await page.getByText("Publication details").click();
   await expect(page.getByText("Publication static-publication-a")).toBeVisible();
   await page.getByRole("button", { name: "Start exploring" }).click();
+  await page.getByLabel("Water company").selectOption("SYN");
+  await expect(page.getByText(/Enable Water-supply lookup/u)).toBeVisible();
+  await page.getByRole("button", { name: "View company performance" }).click();
+  await expect(page.getByText("Company-wide performance")).toBeVisible();
+  await expect(page.getByText(/analytically separate from the dated supply-area polygons/)).toBeVisible();
+  await expect(page.getByText(/Published measure/)).toBeVisible();
+  await page.getByRole("button", { name: "Close selected feature details" }).click();
   await page.getByRole("checkbox", { name: /Hydrology stations/ }).check();
   await page.getByRole("checkbox", { name: /Rainfall gauges/ }).check();
   await page.getByRole("checkbox", { name: /Flood warnings/ }).check();
@@ -229,12 +236,7 @@ test("static production mode shows national layers, caveats and company facts", 
   await search.fill("Synthetic Water");
   await page.getByRole("button", { name: /Synthetic Water.*Synthetic area/ }).click();
   await expect(page.getByRole("heading", { name: "Selected supply area" })).toBeVisible();
-  await page.getByLabel("Water company").selectOption("SYN");
   await expect(page.getByText("1 verified area", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "View company performance" }).click();
-  await expect(page.getByText("Company-wide performance")).toBeVisible();
-  await expect(page.getByText(/analytically separate from the dated supply-area polygons/)).toBeVisible();
-  await expect(page.getByText(/Published measure/)).toBeVisible();
   const base = new URL(page.url()).pathname.startsWith("/WaterGeo-UK/") ? "/WaterGeo-UK" : "";
   expect(requests).toContain(`${base}/watergeo-data/manifest.json`);
   expect(requests).toContain(`${base}/watergeo-data/source-status.json`);

@@ -43,6 +43,17 @@ const features = areas.map((area) => ({
     method: "reprojection",
   },
 })) as AreaFeature[];
+const performanceDataset = { snapshot_id: "performance", publisher: "Ofwat", attribution: "Ofwat", licence: "OGL", retrieval_completed_at: "2026-01-01T00:00:00Z" };
+const performance = { dataset: performanceDataset, item: { company_id: "anglian", company_name: "Anglian Water", boundary_company_acronym: "ANH", measures: [] } };
+
+function mockPerformance(): void {
+  vi.spyOn(api, "companyPerformanceCompanies").mockResolvedValue({
+    dataset: performanceDataset,
+    items: [{ company_id: "anglian", company_name: "Anglian Water", boundary_company_acronym: "ANH" }],
+    next_after_id: null,
+  });
+  vi.spyOn(api, "companyPerformance").mockResolvedValue(performance);
+}
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -54,17 +65,11 @@ it("pins every page, verifies completeness, and supports company and area naviga
   vi.spyOn(api, "waterSupplyCompanyGeometry").mockResolvedValue({
     type: "FeatureCollection", snapshot_id: snapshot, company, features,
   });
-  const performanceDataset = { snapshot_id: "performance", publisher: "Ofwat", attribution: "Ofwat", licence: "OGL", retrieval_completed_at: "2026-01-01T00:00:00Z" };
-  vi.spyOn(api, "companyPerformanceCompanies").mockResolvedValue({
-    dataset: performanceDataset,
-    items: [{ company_id: "anglian", company_name: "Anglian Water", boundary_company_acronym: "ANH" }], next_after_id: null,
-  });
-  const performance = { dataset: performanceDataset, item: { company_id: "anglian", company_name: "Anglian Water", boundary_company_acronym: "ANH", measures: [] } };
-  vi.spyOn(api, "companyPerformance").mockResolvedValue(performance);
+  mockPerformance();
   const onShowCompany = vi.fn();
   const onSelectArea = vi.fn();
   const onSelectPerformance = vi.fn();
-  render(<CompanyExplorer onShowCompany={onShowCompany} onSelectArea={onSelectArea} onSelectPerformance={onSelectPerformance} />);
+  render(<CompanyExplorer boundariesEnabled onCompanyChange={vi.fn()} onShowCompany={onShowCompany} onSelectArea={onSelectArea} onSelectPerformance={onSelectPerformance} />);
 
   await userEvent.selectOptions(await screen.findByLabelText("Water company"), "ANH");
   expect(await screen.findByText((_, element) => element?.textContent === "2 verified areas")).toBeInTheDocument();
@@ -95,13 +100,50 @@ it("fails closed when geometry does not match the verified inventory", async () 
   vi.spyOn(api, "waterSupplyCompanyGeometry").mockResolvedValue({
     type: "FeatureCollection", snapshot_id: snapshot, company, features: [features[0]!],
   });
+  mockPerformance();
   const onShowCompany = vi.fn();
-  render(<CompanyExplorer onShowCompany={onShowCompany} onSelectArea={vi.fn()} onSelectPerformance={vi.fn()} />);
+  const onSelectPerformance = vi.fn();
+  render(<CompanyExplorer boundariesEnabled onCompanyChange={vi.fn()} onShowCompany={onShowCompany} onSelectArea={vi.fn()} onSelectPerformance={onSelectPerformance} />);
   await userEvent.selectOptions(await screen.findByLabelText("Water company"), "ANH");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "complete company-area view could not be verified",
   );
   await waitFor(() => expect(onShowCompany).not.toHaveBeenCalled());
+  await userEvent.click(await screen.findByRole("button", { name: "View company performance" }));
+  expect(onSelectPerformance).toHaveBeenCalledWith(performance);
+});
+
+it("loads performance without requesting boundaries when the map layer is disabled", async () => {
+  vi.spyOn(api, "waterSupplyCompanies").mockResolvedValue({ snapshot_id: snapshot, items: [company] });
+  const areasRequest = vi.spyOn(api, "waterSupplyCompanyAreas");
+  const geometryRequest = vi.spyOn(api, "waterSupplyCompanyGeometry");
+  mockPerformance();
+  const onSelectPerformance = vi.fn();
+  render(<CompanyExplorer boundariesEnabled={false} onCompanyChange={vi.fn()} onShowCompany={vi.fn()} onSelectArea={vi.fn()} onSelectPerformance={onSelectPerformance} />);
+
+  await userEvent.selectOptions(await screen.findByLabelText("Water company"), "ANH");
+  expect(await screen.findByText(/Enable Water-supply lookup/u)).toBeInTheDocument();
+  expect(areasRequest).not.toHaveBeenCalled();
+  expect(geometryRequest).not.toHaveBeenCalled();
+  await userEvent.click(await screen.findByRole("button", { name: "View company performance" }));
+  expect(onSelectPerformance).toHaveBeenCalledWith(performance);
+});
+
+it("keeps verified boundaries available when the independent performance request fails", async () => {
+  vi.spyOn(api, "waterSupplyCompanies").mockResolvedValue({ snapshot_id: snapshot, items: [company] });
+  vi.spyOn(api, "waterSupplyCompanyAreas").mockResolvedValue({
+    snapshot_id: snapshot, company, items: areas, next_after_id: null,
+  });
+  vi.spyOn(api, "waterSupplyCompanyGeometry").mockResolvedValue({
+    type: "FeatureCollection", snapshot_id: snapshot, company, features,
+  });
+  vi.spyOn(api, "companyPerformanceCompanies").mockRejectedValue(new Error("unavailable"));
+  render(<CompanyExplorer boundariesEnabled onCompanyChange={vi.fn()} onShowCompany={vi.fn()} onSelectArea={vi.fn()} onSelectPerformance={vi.fn()} />);
+
+  await userEvent.selectOptions(await screen.findByLabelText("Water company"), "ANH");
+  expect(await screen.findByText((_, element) => element?.textContent === "2 verified areas")).toBeInTheDocument();
+  expect(await screen.findByText("Company-performance data is currently unavailable.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Area 1/ })).toBeInTheDocument();
 });
 
 it("clears the loading state when an in-flight company selection is cleared", async () => {
@@ -121,7 +163,10 @@ it("clears the loading state when an in-flight company selection is cleared", as
       signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     }),
   );
-  render(<CompanyExplorer onShowCompany={vi.fn()} onSelectArea={vi.fn()} onSelectPerformance={vi.fn()} />);
+  vi.spyOn(api, "companyPerformanceCompanies").mockResolvedValue({
+    dataset: performanceDataset, items: [], next_after_id: null,
+  });
+  render(<CompanyExplorer boundariesEnabled onCompanyChange={vi.fn()} onShowCompany={vi.fn()} onSelectArea={vi.fn()} onSelectPerformance={vi.fn()} />);
 
   const selector = await screen.findByLabelText("Water company");
   await userEvent.selectOptions(selector, "ANH");
