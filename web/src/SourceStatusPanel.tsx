@@ -100,6 +100,7 @@ export function SourceStatusPanel({ status, error, loading }: Props) {
               <span>
                 <strong>{LABELS[source.source]}</strong>
                 <small>{state.label}</small>
+                {source.observation_newest_at && <small>Latest publisher observation: <time dateTime={source.observation_newest_at}>{new Date(source.observation_newest_at).toLocaleString()}</time></small>}
               </span>
             </li>;
           })}
@@ -109,7 +110,7 @@ export function SourceStatusPanel({ status, error, loading }: Props) {
         <p className="status-guidance">No compatible local snapshot is loaded for sources marked Not loaded.</p>
       )}
       {visible.some((source) => source.semantics === "dynamic_snapshot" && source.availability === "available") && (
-        <p className="status-guidance">Current or stale uses configured WaterGeo retrieval policy. Where only an age is shown, no freshness policy is configured. Retrieved ages are WaterGeo retrieval times, not publisher observation times.</p>
+        <p className="status-guidance">Current or stale uses configured WaterGeo retrieval policy. Where only an age is shown, no freshness policy is configured. Retrieved ages are WaterGeo retrieval times, not publisher observation times. Static publication time is separate, and a recent retrieval does not make an old observation current.</p>
       )}
     </details>
   );

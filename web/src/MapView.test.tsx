@@ -107,6 +107,21 @@ it("restores current data only after the initial and fallback styles fully load"
   expect(map.listeners.size).toBe(0);
 });
 
+it("styles bathing-water points by exact publisher classification", () => {
+  const { map } = renderMap();
+  act(() => { map.loaded = true; map.emit("load"); });
+  expect(map.addLayer).toHaveBeenCalledWith(expect.objectContaining({
+    id: "watergeo-bathing-waters",
+    paint: expect.objectContaining({
+      "circle-color": [
+        "match", ["get", "classification"],
+        "Excellent", "#087566", "Good", "#2477a8", "Sufficient", "#b17918",
+        "Poor", "#b53b4b", "#68777a",
+      ],
+    }),
+  }));
+});
+
 it("renders a source-independent selection halo for a focused point", () => {
   const { map } = renderMap(null, { key: "hydrology:station", longitude: -1.5, latitude: 52.5 });
   act(() => { map.loaded = true; map.emit("load"); });

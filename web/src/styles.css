@@ -176,7 +176,6 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
 }
 .caveat-prominent { border-radius: 0 8px 8px 0; padding: 10px 11px; background: #f3f7f5; font-size: 12px; }
 .secondary-copy { color: var(--muted); font-size: 12px; }
-
 .section-toggle, .status-section > summary {
   display: flex;
   width: 100%;
@@ -205,6 +204,9 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
 .result-list button:hover { border-color: #73a297; background: #eff7f4; }
 .result-list strong, .result-list small { display: block; }
 .result-list small { margin-top: 2px; color: var(--muted); }
+.search-company-group h3 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 8px 10px 4px; color: var(--ink); }
+.search-company-group h3 small { color: var(--muted); font-size: 10px; font-weight: 650; }
+.search-results mark { border-radius: 2px; padding: 0 1px; color: inherit; background: #f8dfa9; }
 
 .status-section summary::-webkit-details-marker { display: none; }
 .status-summary { border-radius: 99px; padding: 4px 7px; color: #276652; background: #e2f1eb; font-size: 10px; font-weight: 800; }
@@ -221,6 +223,16 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
 .status-stale { background: #a66b16; }
 .status-unknown { background: #766a8f; }
 .status-guidance { margin: 10px 0 0; color: var(--muted); font-size: 10px; }
+
+.hierarchy-path { display: grid; gap: 0; margin: 12px 0; }
+.hierarchy-path span { position: relative; display: grid; gap: 3px; border-left: 2px solid var(--catchment); padding: 5px 0 9px 14px; color: var(--muted); font-size: 11px; }
+.hierarchy-path span::before { position: absolute; top: 9px; left: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--catchment); content: ""; }
+.hierarchy-path code { color: var(--ink); }
+.table-scroll { max-width: 100%; overflow-x: auto; }
+.measure-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.measure-table th, .measure-table td { border-bottom: 1px solid var(--line); padding: 7px 6px; text-align: left; vertical-align: top; }
+.measure-table thead th { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+.measure-table tbody th { min-width: 150px; font-weight: 700; }
 
 .map-workspace { position: relative; grid-area: map; min-width: 0; background: #dbe5e1; }
 .map-region, .map-canvas, .map-loading { width: 100%; height: 100%; }

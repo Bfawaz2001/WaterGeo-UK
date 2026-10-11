@@ -5,7 +5,7 @@ type LayerGroup = "monitoring" | "environment" | "companies";
 
 const LAYERS: Array<{ id: LayerId; icon: IconName; label: string; description: string; group: LayerGroup }> = [
   { id: "hydrology", icon: "hydrology", label: "Hydrology stations", description: "Latest accepted EA data", group: "monitoring" },
-  { id: "rainfall", icon: "hydrology", label: "Rainfall gauges", description: "Latest accepted 15-minute accumulations", group: "monitoring" },
+  { id: "rainfall", icon: "hydrology", label: "Rainfall gauges", description: "Latest accepted publisher accumulation", group: "monitoring" },
   {
     id: "water-quality",
     icon: "water-quality", label: "Water Quality sampling points",
@@ -74,7 +74,7 @@ export function LayerControls({ active, counts, loading, errors, onToggle }: Pro
                 <small className={errors[layer.id] ? "state-error" : "state-detail"}>
                   {loading.has(layer.id)
                     ? `Updating nearby results… ${counts[layer.id] ?? 0} previous points retained until ready.`
-                    : errors[layer.id] ?? (layer.id === "flood-warnings" ? `${counts[layer.id] ?? 0} accepted warning areas shown` : `${counts[layer.id] ?? 0} nearest results shown (maximum 100)`)}
+                    : errors[layer.id] ?? (layer.id === "flood-warnings" ? `${counts[layer.id] ?? 0} accepted warning areas shown` : `${counts[layer.id] ?? 0} loaded nearby results (maximum 100)`)}
                 </small>
               )}
             </span>

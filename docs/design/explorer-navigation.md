@@ -14,6 +14,13 @@ navigation and cluster expansion lead to bounded local data and selected detail.
 **There is no new nationwide point-distribution layer.** Scotland navigation does
 not imply Scottish coverage for England-only products.
 
+Phase 18A retains this one-shot navigation contract and improves the path from region
+buttons to bounded layer results. Bathing-water classification filters can fit matching loaded points once. They
+operate after the bounded nearest-100 query and label both the match count and scope;
+they do not represent all classified bathing waters nationally. Search groups returned
+water-supply areas under their verified company label without collapsing identities or
+claiming the bounded response is a complete company inventory.
+
 The existing optional water-supply PMTiles overview remains under “Coverage and
 overview”, configured via its reviewed same-origin export manifest. It is labelled
 as a simplified derivative; selected geometry remains exact reviewed GeoJSON. It
@@ -34,6 +41,8 @@ does not supply a nationwide point overview. See [geospatial model](../architect
   coordinates do not become arbitrary map targets. Animations respect reduced motion.
 - Nearby lists, labelled selects and buttons provide keyboard alternatives to map
   interaction. Detail remains separate from the scrollable control panel.
+- Bathing-water points use publisher classification colours plus written classification
+  labels and accessible controls, so meaning does not depend on colour alone.
 
 ## Publisher flood states
 

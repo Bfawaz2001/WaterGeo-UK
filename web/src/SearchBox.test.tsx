@@ -105,3 +105,18 @@ it("reports a failed feature selection separately from search availability", asy
   await userEvent.click(await screen.findByRole("button", { name: /River Avon/ }));
   expect(await screen.findAllByText(/feature is unavailable in the selected snapshot/)).toHaveLength(2);
 });
+
+it("groups distinct water-supply areas under their verified company label", async () => {
+  const areas: SearchResult[] = [
+    { ...result, kind: "water-supply", identity: "3", label: "Affinity Water", context: "Central area", publisher: "Ofwat", longitude: null, latitude: null },
+    { ...result, kind: "water-supply", identity: "4", label: "Affinity Water", context: "East area", publisher: "Ofwat", longitude: null, latitude: null },
+  ];
+  vi.spyOn(api, "search").mockResolvedValue({ query: "aff", items: areas, truncated: true, available_kinds: ["water-supply"], unavailable_kinds: [] });
+  render(<SearchBox onSelect={vi.fn()} />);
+  await userEvent.type(screen.getByRole("searchbox"), "aff");
+  await act(() => vi.advanceTimersByTimeAsync(250));
+  expect(await screen.findByRole("heading", { name: /Affinity Water 2 area matches/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Central area/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /East area/ })).toBeInTheDocument();
+  expect(screen.getAllByText(/refine your search/)).toHaveLength(2);
+});

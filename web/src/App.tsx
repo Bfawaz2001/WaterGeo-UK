@@ -17,6 +17,7 @@ import { Icon } from "./Icon";
 import { geometryBounds, REGIONS, type MapNavigation } from "./mapNavigation";
 import { filterFloods, FLOOD_STATES, type FloodFilter } from "./floodFilters";
 import { Onboarding } from "./Onboarding";
+import { BATHING_CLASSIFICATIONS, filterBathingWaters, type BathingClassification } from "./explorerPresentation";
 
 const MapView = lazy(async () => {
   const module = await import("./MapView");
@@ -44,6 +45,7 @@ export function App() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [thamesStatus, setThamesStatus] = useState<ThamesAlertStatus | "">("");
   const [floodSeverity, setFloodSeverity] = useState<FloodFilter>("");
+  const [bathingClassification, setBathingClassification] = useState<BathingClassification>("");
   const [navigation, setNavigation] = useState<MapNavigation | null>(null);
   const navigationId = useRef(0);
   const navigate = (bounds: MapNavigation["bounds"] | null, maxZoom = 12) => {
@@ -65,7 +67,14 @@ export function App() {
     [nearby.thamesDischarge],
   );
   const rainfall = nearby.rainfall ?? [];
-  const bathingWaters = nearby.bathingWaters ?? [];
+  const loadedBathingWaters = useMemo(
+    () => nearby.bathingWaters ?? [],
+    [nearby.bathingWaters],
+  );
+  const bathingWaters = useMemo(
+    () => filterBathingWaters(loadedBathingWaters, bathingClassification),
+    [loadedBathingWaters, bathingClassification],
+  );
   const floodWarnings = useMemo(
     () => filterFloods(nearby.floodWarnings ?? [], floodSeverity),
     [nearby.floodWarnings, floodSeverity],
@@ -483,6 +492,32 @@ export function App() {
             <button className="secondary-button" disabled={!floodWarnings.length || nearby.loading.has("flood-warnings") || Boolean(nearby.errors["flood-warnings"])} onClick={() => navigate(geometryBounds(floodWarnings.map((item) => item.geometry)))}>Show matching warning areas</button>
             <p className="caveat">All includes warnings no longer in force. Unknown states remain in All. A selected detail retains its original snapshot even when filtered out.</p>
             <a href="https://check-for-flooding.service.gov.uk/" target="_blank" rel="noreferrer">Official EA flood guidance</a>
+          </section>
+        )}
+        {layers.has("bathing-waters") && (
+          <section className="panel-section" aria-labelledby="bathing-filter-heading">
+            <p className="eyebrow">Loaded-result filter</p>
+            <h2 id="bathing-filter-heading">Bathing-water classification</h2>
+            <label>Annual publisher classification <select value={bathingClassification} onChange={(event) => {
+              const value = event.target.value as BathingClassification;
+              setBathingClassification(value);
+              if (!nearby.loading.has("bathing-waters") && !nearby.errors["bathing-waters"]) {
+                const matches = filterBathingWaters(loadedBathingWaters, value);
+                navigate(geometryBounds(matches.map((item) => ({ type: "Point", coordinates: [item.longitude, item.latitude] }))));
+              }
+            }}>
+              <option value="">All classifications</option>
+              {BATHING_CLASSIFICATIONS.map((classification) => <option key={classification}>{classification}</option>)}
+              <option value="unclassified">Unclassified / no published classification</option>
+            </select></label>
+            <p role="status">{bathingWaters.length} match{bathingWaters.length === 1 ? "" : "es"} within {loadedBathingWaters.length} loaded nearby result{loadedBathingWaters.length === 1 ? "" : "s"}.</p>
+            {!bathingWaters.length && !nearby.loading.has("bathing-waters") && !nearby.errors["bathing-waters"] && <p>No loaded bathing waters match this classification. The map position is unchanged.</p>}
+            <button
+              className="secondary-button"
+              disabled={!bathingWaters.length || nearby.loading.has("bathing-waters") || Boolean(nearby.errors["bathing-waters"])}
+              onClick={() => navigate(geometryBounds(bathingWaters.map((item) => ({ type: "Point", coordinates: [item.longitude, item.latitude] }))))}
+            >Show loaded classification matches</button>
+            <p className="caveat">Filtering applies after the bounded nearest-100 query in both static and API modes. Counts are not national totals. Annual classification is not daily swimming-safety advice.</p>
           </section>
         )}
         {layers.has("thames-discharge") && (

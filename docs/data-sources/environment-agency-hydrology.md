@@ -79,6 +79,14 @@ is now implemented as a separate evidence product. A later retrieval of the same
 measure/time window may legitimately contain different publisher content and is
 therefore stored separately rather than updating an earlier retrieval.
 
+The API detail contract exposes each measure's publisher identity, observed property,
+unit, declared period, source fields and latest accepted observation. The explorer
+uses those fields for readable measurement headings and period labels while retaining
+the exact measure identifier under technical details. It does not combine unlike
+measures into a chart. Bounded historical retrievals remain separate accepted evidence;
+they are not included in the public static publication and broader history presentation
+is deferred to Phase 18B.
+
 ## Requests, limits and completeness
 
 The research request URLs, effective limits, counts and exact response hashes are

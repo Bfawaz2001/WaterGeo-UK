@@ -40,9 +40,16 @@ export interface HydrologyStation {
 
 export interface HydrologyMeasure {
   measure_id: string;
+  source_uri?: string;
   parameter: string;
   unit_name: string;
-  latest_observation: { value: number | null; observed_at: string } | null;
+  period: number;
+  source_fields: Record<string, unknown>;
+  latest_observation: {
+    value: number | null;
+    observed_at: string;
+    source_fields?: Record<string, unknown>;
+  } | null;
 }
 
 export interface HydrologyDetail extends HydrologyStation {
