@@ -187,7 +187,7 @@ test("explorer loads bounded data and shows selected provenance", async ({ page 
   await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
   await expect(page.getByRole("heading", { name: "Synthetic station" })).toBeVisible();
   await expect(page.getByText("Synthetic acceptance data")).toBeVisible();
-  await expect(page.locator('time[datetime="2026-09-26T12:00:00Z"]')).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Selected feature information" }).locator('time[datetime="2026-09-26T12:00:00Z"]')).toBeVisible();
 });
 
 test("unified search opens a snapshot-consistent feature with observation timing", async ({ page }) => {
@@ -200,7 +200,7 @@ test("unified search opens a snapshot-consistent feature with observation timing
   await result.click();
   await expect(page.getByRole("heading", { name: "Synthetic station" })).toBeVisible();
   await expect(page.getByText("0.82 m")).toBeVisible();
-  await expect(page.getByText(/Publisher observed/)).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Selected feature information" }).getByText("Observed:")).toBeVisible();
   await expect(page.getByText("WaterGeo retrieved")).toBeVisible();
 });
 
@@ -264,7 +264,7 @@ test("Water Body browser explains loaded scope and selection hierarchy", async (
   await syntheticApi(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Dismiss explorer introduction" }).click();
-  await page.getByRole("button", { name: /Water Bodies/ }).click();
+  await page.getByRole("button", { name: /Rivers & Catchments/ }).click();
   await expect(page.getByText(/filter applies only to records loaded below/)).toBeVisible();
   await page.getByRole("button", { name: /Synthetic Water Body/ }).click();
   await expect(page.getByRole("heading", { name: "Synthetic Water Body" })).toBeVisible();

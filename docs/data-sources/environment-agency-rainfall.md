@@ -21,6 +21,13 @@ The API describes roughly 1,000 telemetry gauges and states that data transfer i
 
 Each bounded retrieval retains exact station and latest-reading responses before strict validation. WaterGeo rejects licence, API-version, identifier, measure-period, unit, timestamp, coordinate or completeness drift. An accepted append-only snapshot powers the API, map, static snapshot and optional GeoParquet export. No unlimited rainfall history is retained.
 
+The explorer uses the accepted publisher label when present and otherwise displays
+`Rainfall gauge <publisher ID>`. It never derives a name from nearby features or an
+external search. Detail shows the exact gauge ID, declared unit and period, publisher
+observation time and separate WaterGeo retrieval time. A missing latest observation is
+labelled unavailable and remains distinct from numeric zero. Historical rainfall series
+and charts require a separately governed history product and are deferred to Phase 18B.
+
 The reviewed live response contains one empty root station record and can contain a latest
 reading whose measure is absent from the station response. WaterGeo retains both in raw
 evidence, excludes them from canonical station/latest associations, and records the exact

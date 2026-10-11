@@ -76,6 +76,7 @@ interface PointItem {
   geometry: PointGeometry | null;
   id: string;
   label: string;
+  classification?: string | null;
 }
 
 function pointCollection(items: PointItem[], kind: LayerId): GeoJSON {
@@ -86,7 +87,7 @@ function pointCollection(items: PointItem[], kind: LayerId): GeoJSON {
         ? [{
         type: "Feature",
         geometry: item.geometry,
-        properties: { identity: item.id, label: item.label, kind },
+        properties: { identity: item.id, label: item.label, kind, classification: item.classification },
           } as const]
         : [],
     ),
@@ -158,7 +159,11 @@ function addExplorerSources(map: MapLibreMap): void {
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 5, 12, 8.5],
-          "circle-color": color,
+          "circle-color": kind === "bathing-waters" ? [
+            "match", ["get", "classification"],
+            "Excellent", "#087566", "Good", "#2477a8", "Sufficient", "#b17918",
+            "Poor", "#b53b4b", "#68777a",
+          ] : color,
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 2,
           "circle-opacity": 0.96,
@@ -391,7 +396,7 @@ export function MapView({
               ? null
               : { type: "Point", coordinates: [item.longitude, item.latitude] },
           id: item.station_id,
-          label: item.display_name ?? `Rainfall station ${item.station_id}`,
+          label: item.display_name ?? `Rainfall gauge ${item.station_id}`,
         })),
         "rainfall",
       ),
@@ -416,6 +421,7 @@ export function MapView({
           geometry: { type: "Point", coordinates: [item.longitude, item.latitude] },
           id: item.bathing_water_id,
           label: item.name,
+          classification: item.classification,
         })),
         "bathing-waters",
       ),

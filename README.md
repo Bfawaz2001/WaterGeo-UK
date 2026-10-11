@@ -26,7 +26,7 @@ be traced back to the accepted data behind it.
 | Local API and database | Implemented; operators can retrieve, validate and accept new publisher snapshots. |
 | Hosted public API | No publicly hosted FastAPI/PostgreSQL/PostGIS service. Pages serves files only. |
 | Fabric interoperability | Compatibility/export foundations and examples; no Fabric deployment or cloud resource is required. |
-| Current development | Phase 17B documentation, regional navigation and flood filtering; see the roadmap. |
+| Current development | Phase 18A explorer intelligence, data clarity and discovery; see the roadmap. |
 
 Publisher observation/publication time, WaterGeo retrieval time and WaterGeo static
 publication time are separate. A fresh retrieval does not prove a fresh observation.
@@ -165,6 +165,9 @@ Bounded nearby clusters are not national totals. Dated boundaries do not establi
 property's current supplier. Monitor indications do not establish pollution volume,
 supply risk or bathing safety. For flood safety use the official EA service, not this
 snapshot explorer. Source-specific caveats remain attached to detail and provenance.
+The explorer filters bathing-water classifications within the loaded nearest results,
+not across an implied national inventory. Rainfall and Hydrology details retain each
+publisher-declared measurement period and separate observation from retrieval time.
 
 ## Development history
 

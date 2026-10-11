@@ -27,7 +27,7 @@ it("renders accessible layer toggles and reports bounded results", async () => {
   );
   await userEvent.click(screen.getByRole("checkbox", { name: /Hydrology stations/i }));
   expect(toggle).toHaveBeenCalledWith("hydrology");
-  expect(screen.getByText(/12 nearest results shown/)).toBeInTheDocument();
+  expect(screen.getByText(/12 loaded nearby results/)).toBeInTheDocument();
   expect(screen.getByText("Latest accepted EA data")).toBeInTheDocument();
   expect(screen.getByText(/Spatial overlap does not establish/)).toBeInTheDocument();
 });
@@ -232,4 +232,45 @@ it("shows Thames monitor semantics and an offset-free status timeline", () => {
   expect(screen.getByRole("heading", { name: "Test overflow" })).toBeInTheDocument();
   expect(screen.getAllByText(/timezone not supplied/)).toHaveLength(2);
   expect(screen.getByText(/does not measure discharge volume/)).toBeInTheDocument();
+});
+
+it("distinguishes a missing rainfall observation from numeric zero and preserves identity", () => {
+  const rainfall = {
+    station_id: "585122_", publisher_uri: "https://example.test/rainfall/585122_",
+    display_name: null, latitude: 54.42, longitude: -2.98, grid_reference: "SD123456",
+    latest_observed_at: null, latest_value_mm: null, latest_value: null,
+    latest_unit: null, latest_period_seconds: null, distance_m: 10,
+  };
+  const view = render(<DetailPanel onClose={vi.fn()} selected={{ kind: "rainfall", dataset, item: rainfall }} />);
+  expect(screen.getByRole("heading", { name: "Rainfall gauge 585122_" })).toBeInTheDocument();
+  expect(screen.getByText("No accepted latest rainfall reading available")).toBeInTheDocument();
+  expect(screen.getByText("Missing is distinct from zero rainfall")).toBeInTheDocument();
+  expect(screen.getByText("585122_")).toBeInTheDocument();
+
+  view.rerender(<DetailPanel onClose={vi.fn()} selected={{ kind: "rainfall", dataset, item: {
+    ...rainfall, latest_observed_at: "2026-09-24T11:45:00Z", latest_value_mm: 0,
+    latest_value: 0, latest_unit: "mm", latest_period_seconds: 900,
+  } }} />);
+  expect(screen.getByText("0 mm")).toBeInTheDocument();
+  expect(screen.getAllByText(/15 minutes/)).toHaveLength(2);
+});
+
+it("describes bathing classifications and Water Quality locations without safety claims", () => {
+  const view = render(<DetailPanel onClose={vi.fn()} selected={{ kind: "bathing-waters", dataset, item: {
+    bathing_water_id: "uk123", publisher_uri: "https://example.test/bathing/uk123",
+    name: "Clevedon Beach", latitude: 51.44, longitude: -2.86, classification: "Good",
+    assessment_year: 2025, latest_sample_uri: null, latest_risk_prediction: null, distance_m: 20,
+  } }} />);
+  expect(screen.getByText("Good")).toBeInTheDocument();
+  expect(screen.getByText(/Annual publisher classification · 2025/)).toBeInTheDocument();
+  expect(screen.getByText(/not a daily swimming-safety rating/)).toBeInTheDocument();
+
+  view.rerender(<DetailPanel onClose={vi.fn()} selected={{ kind: "water-quality", dataset, item: {
+    sampling_point_id: "GB/POINT 1", source_uri: "https://example.test/quality/GB%2FPOINT%201",
+    alt_label: "Point one", pref_label: null, latitude: 51, longitude: -2,
+    geometry: { type: "Point", coordinates: [-2, 51] }, location_status: "available", distance_m: 5,
+  } }} />);
+  expect(screen.getByText("Sampling location")).toBeInTheDocument();
+  expect(screen.getByText(/Observation series are separate bounded retrievals/)).toBeInTheDocument();
+  expect(screen.getByText("GB/POINT 1")).toBeInTheDocument();
 });

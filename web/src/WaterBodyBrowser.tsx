@@ -75,11 +75,12 @@ export function WaterBodyBrowser({ open, onToggle, onSelect }: Props) {
   return (
     <section className="panel-section water-body-browser" aria-labelledby="water-body-heading">
       <button className="section-toggle" type="button" onClick={toggle} aria-expanded={open}>
-        <span><span className="eyebrow">Catchment Data Explorer</span><strong id="water-body-heading">Water Bodies</strong></span>
+        <span><span className="eyebrow">Catchment Data Explorer</span><strong id="water-body-heading">Rivers &amp; Catchments</strong></span>
         <span aria-hidden="true">{open ? "−" : "+"}</span>
       </button>
       {open && (
         <div className="browser-content">
+          <p>Browse the Environment Agency hierarchy: River Basin District → Management Catchment → Operational Catchment → Water Body.</p>
           <label htmlFor="water-body-search">Find in loaded Water Bodies</label>
           <input id="water-body-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name or publisher ID" />
           <label>Type within loaded Water Bodies <select value={bodyType} onChange={(event) => setBodyType(event.target.value)}><option value="">All loaded types</option>{[...new Set(items.flatMap((item) => item.water_body_type ? [item.water_body_type] : []))].sort().map((type) => <option key={type}>{type}</option>)}</select></label>
@@ -90,7 +91,7 @@ export function WaterBodyBrowser({ open, onToggle, onSelect }: Props) {
             {filtered.slice(0, shown).map((item) => (
               <li key={item.water_body_id}>
                 <button type="button" onClick={() => void select(item)}>
-                  <strong>{item.name}</strong><small>{item.water_body_id} · {item.water_body_type ?? "type not stated"}</small>
+                  <strong>{item.name}</strong><small>{item.water_body_type ?? "type not stated"} · {item.operational_catchment_id} → {item.water_body_id}</small>
                 </button>
               </li>
             ))}

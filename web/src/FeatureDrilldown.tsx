@@ -5,6 +5,7 @@ import { dataMode } from "./config";
 import { MetadataValue } from "./MetadataValue";
 import { TrendChart } from "./TrendChart";
 import type { HydrologyMeasure, ReservoirReading, SelectedFeature } from "./types";
+import { hydrologyMeasureLabel, periodLabel, sourceFieldLabel } from "./explorerPresentation";
 
 type Drilldown =
   | { kind: "hydrology"; measures: HydrologyMeasure[] }
@@ -49,21 +50,28 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
     return () => controller.abort();
   }, [selected, staticMode]);
   if (selected.kind === "water-supply" || selected.kind === "water-body" || selected.kind === "thames-discharge") return null;
-  if (staticMode) return <p className="caveat" role="note">Detailed observations are available in API mode; this static publication contains the mapped snapshot summary.</p>;
+  if (staticMode) return <p className="caveat" role="note">{selected.kind === "water-quality" ? "This public static publication contains sampling locations and metadata, not a Water Quality observation series." : "Detailed observations are available in API mode; this static publication contains the mapped snapshot summary."}</p>;
   if (error) return <p className="state-error" role="alert">Details unavailable or snapshot changed. Reselect a current result to retry.</p>;
   if (!detail) return <p role="status">Loading source details…</p>;
 
   if (detail.kind === "hydrology") {
     const measures = detail.measures.filter((measure) => !parameter || measure.parameter === parameter);
     return <section aria-label="Source detail drill-down">
-      <h3>Latest publisher observations</h3>
+      <h3>Latest measurements</h3>
       <label>Measurement type at this station <select value={parameter} onChange={(event) => setParameter(event.target.value)}><option value="">All measures</option>{[...new Set(detail.measures.map((row) => row.parameter))].map((label) => <option key={label}>{label}</option>)}</select></label>
       {measures.length === 0 && <p>No accepted observations for this measurement type.</p>}
-      <div className="observation-list">{measures.map((measure) => <article key={measure.measure_id}>
-        <header><strong>{measure.parameter}</strong><code title="Publisher measure identifier">{measure.measure_id}</code></header>
+      <div className="observation-list">{measures.map((measure) => {
+        const quality = sourceFieldLabel(measure.latest_observation?.source_fields, "quality");
+        const completeness = sourceFieldLabel(measure.latest_observation?.source_fields, "completeness");
+        return <article key={measure.measure_id}>
+        <header><strong>{hydrologyMeasureLabel(measure)}</strong></header>
         <span className="observation-value">{measure.latest_observation ? `${measure.latest_observation.value ?? "Missing"} ${measure.unit_name}` : "No accepted observation"}</span>
-        {measure.latest_observation && <span>Publisher observed <time dateTime={measure.latest_observation.observed_at}>{new Date(measure.latest_observation.observed_at).toLocaleString()}</time></span>}
-      </article>)}</div>
+        <span>Declared measurement period: {periodLabel(measure.period)}</span>
+        {measure.latest_observation && <span><strong>Observed:</strong> <time dateTime={measure.latest_observation.observed_at}>{new Date(measure.latest_observation.observed_at).toLocaleString()}</time></span>}
+        {(quality || completeness) && <span>{quality && <>Quality: {quality}</>}{quality && completeness && " · "}{completeness && <>Completeness: {completeness}</>}</span>}
+        <details className="technical-disclosure"><summary>Publisher measure identity</summary><code>{measure.measure_id}</code></details>
+      </article>;
+      })}</div>
       <p className="caveat">Latest values are publisher observations. WaterGeo retrieval time is shown separately under provenance.</p>
     </section>;
   }

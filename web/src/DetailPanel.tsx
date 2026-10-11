@@ -1,5 +1,6 @@
 import { FeatureDrilldown } from "./FeatureDrilldown";
 import { Icon, type IconName } from "./Icon";
+import { periodLabel } from "./explorerPresentation";
 import type { DatasetProvenance, SelectedFeature } from "./types";
 
 interface Props {
@@ -18,13 +19,19 @@ function safePublisherUrl(value: string | undefined): string | null {
 }
 
 function retrievalAge(value: string): string {
-  const minutes = Math.floor(Math.max(0, Date.now() - new Date(value).getTime()) / 60_000);
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp) || timestamp > Date.now()) return "Retrieval time unavailable";
+  const minutes = Math.floor((Date.now() - timestamp) / 60_000);
   if (minutes < 1) return "Retrieved less than a minute ago";
   if (minutes < 60) return `Retrieved ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 48) return `Retrieved ${hours} hour${hours === 1 ? "" : "s"} ago`;
   const days = Math.floor(hours / 24);
   return `Retrieved ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function Timestamp({ value }: { value: string }) {
+  return <time dateTime={value}>{new Date(value).toLocaleString()}</time>;
 }
 
 function Provenance({ dataset }: { dataset: DatasetProvenance }) {
@@ -80,15 +87,24 @@ export function DetailPanel({ selected, onClose }: Props) {
   if (selected.kind === "hydrology") {
     title = selected.item.labels[0] ?? selected.item.station_id;
     dataset = selected.dataset;
-    body = <SummaryGrid><Field label="Station ID"><code>{selected.item.station_id}</code></Field><Field label="Location">{selected.item.latitude?.toFixed(5)}, {selected.item.longitude?.toFixed(5)}</Field></SummaryGrid>;
+    body = <>
+      <div className="metric-hero"><span><strong>Hydrology monitoring station</strong><small>Latest accepted measurements are listed below when available</small></span></div>
+      <SummaryGrid><Field label="Station status">{selected.item.location_status === "available" ? "Mapped publisher location" : "Publisher location unavailable"}</Field><Field label="Location">{selected.item.latitude === null || selected.item.longitude === null ? "Not published" : `${selected.item.latitude.toFixed(5)}, ${selected.item.longitude.toFixed(5)}`}</Field></SummaryGrid>
+      <details className="technical-disclosure"><summary>Publisher station identity</summary><SummaryGrid><Field label="Station ID"><code>{selected.item.station_id}</code></Field><Field label="Publisher URI"><code>{selected.item.source_uri}</code></Field></SummaryGrid></details>
+    </>;
   } else if (selected.kind === "rainfall") {
-    title = selected.item.display_name ?? `Rainfall station ${selected.item.station_id}`;
+    title = selected.item.display_name ?? `Rainfall gauge ${selected.item.station_id}`;
     dataset = selected.dataset;
-    body = <><div className="metric-hero"><span><strong>{selected.item.latest_value === null ? "No latest value" : `${selected.item.latest_value} ${selected.item.latest_unit ?? "publisher unit not stated"}`}</strong><small>Publisher accumulation{selected.item.latest_period_seconds ? ` over ${selected.item.latest_period_seconds / 60} minutes` : ""}</small></span></div><SummaryGrid><Field label="Station ID"><code>{selected.item.station_id}</code></Field><Field label="Publisher observed">{selected.item.latest_observed_at ? <time dateTime={selected.item.latest_observed_at}>{new Date(selected.item.latest_observed_at).toLocaleString()}</time> : "Not supplied"}</Field><Field label="Published location">{selected.item.latitude === null || selected.item.longitude === null ? "Not published" : `${selected.item.latitude.toFixed(5)}, ${selected.item.longitude.toFixed(5)}`}</Field></SummaryGrid><p className="caveat">The publisher may omit station names and locations, and reduces published positions to a 100 m grid. WaterGeo does not infer a more precise location.</p></>;
+    body = <>
+      <div className="metric-hero"><span><strong>{selected.item.latest_value === null ? "No accepted latest rainfall reading available" : `${selected.item.latest_value} ${selected.item.latest_unit ?? "unit not declared"}`}</strong><small>{selected.item.latest_value === null ? "Missing is distinct from zero rainfall" : `Publisher accumulation · ${periodLabel(selected.item.latest_period_seconds)}`}</small></span></div>
+      <SummaryGrid><Field label="Publisher observed">{selected.item.latest_observed_at ? <Timestamp value={selected.item.latest_observed_at} /> : "No accepted observation timestamp"}</Field><Field label="Measurement period">{periodLabel(selected.item.latest_period_seconds)}</Field><Field label="Reading availability">{selected.item.latest_value === null ? "Missing observation" : "Accepted latest observation"}</Field><Field label="Published location">{selected.item.latitude === null || selected.item.longitude === null ? "Not published" : `${selected.item.latitude.toFixed(5)}, ${selected.item.longitude.toFixed(5)}`}</Field></SummaryGrid>
+      <details className="technical-disclosure"><summary>Publisher gauge identity</summary><SummaryGrid><Field label="Gauge ID"><code>{selected.item.station_id}</code></Field><Field label="Publisher URI"><code>{selected.item.publisher_uri}</code></Field>{selected.item.grid_reference && <Field label="Grid reference"><code>{selected.item.grid_reference}</code></Field>}</SummaryGrid></details>
+      <p className="caveat">The publisher may omit gauge names and reduces published positions to a 100 m grid. WaterGeo does not infer a name or more precise location. This snapshot contains the latest accepted reading, not a complete rainfall history.</p>
+    </>;
   } else if (selected.kind === "bathing-waters") {
     title = selected.item.name;
     dataset = selected.dataset;
-    body = <><div className="metric-hero"><span><strong>{selected.item.classification ?? "Classification not published"}</strong><small>{selected.item.assessment_year ? `Publisher classification for ${selected.item.assessment_year}` : "No assessment year supplied"}</small></span></div><SummaryGrid><Field label="Bathing-water ID"><code>{selected.item.bathing_water_id}</code></Field><Field label="Latest sample context">{selected.item.latest_sample_uri ? <a href={selected.item.latest_sample_uri} target="_blank" rel="noreferrer">Publisher record</a> : "Not supplied"}</Field></SummaryGrid><p className="caveat">Classification, individual samples and publisher advice are separate facts. WaterGeo does not make a safe-to-swim judgement.</p></>;
+    body = <><div className="metric-hero"><span><strong>{selected.item.classification ?? "Unclassified / no published classification"}</strong><small>{selected.item.assessment_year ? `Annual publisher classification · ${selected.item.assessment_year}` : "Assessment year not published"}</small></span></div><SummaryGrid><Field label="Sampling location">{selected.item.latitude.toFixed(5)}, {selected.item.longitude.toFixed(5)}</Field><Field label="Latest sample reference">{selected.item.latest_sample_uri ? <a href={selected.item.latest_sample_uri} target="_blank" rel="noreferrer">Open publisher record</a> : "Not supplied in this snapshot"}</Field><Field label="Short-term advice context">{selected.item.latest_risk_prediction ? "Publisher risk-prediction metadata is present" : "Not supplied in this snapshot"}</Field></SummaryGrid><p className="caveat caveat-prominent">An annual classification is not a daily swimming-safety rating. Samples, short-term pollution advice and classifications have different dates. WaterGeo does not make a safe-to-swim judgement.</p><details className="technical-disclosure"><summary>Publisher identity</summary><SummaryGrid><Field label="Bathing-water ID"><code>{selected.item.bathing_water_id}</code></Field></SummaryGrid></details></>;
   } else if (selected.kind === "flood-warnings") {
     title = selected.item.label;
     dataset = selected.dataset;
@@ -96,7 +112,7 @@ export function DetailPanel({ selected, onClose }: Props) {
   } else if (selected.kind === "water-quality") {
     title = selected.item.pref_label ?? selected.item.alt_label;
     dataset = selected.dataset;
-    body = <SummaryGrid><Field label="Sampling-point ID"><code>{selected.item.sampling_point_id}</code></Field><Field label="Location">{selected.item.latitude?.toFixed(5)}, {selected.item.longitude?.toFixed(5)}</Field></SummaryGrid>;
+    body = <><div className="metric-hero"><span><strong>Sampling location</strong><small>A place where monitoring can occur; not a measurement or safety classification</small></span></div><SummaryGrid><Field label="Location status">{selected.item.location_status === "available" ? "Mapped publisher location" : "Publisher location unavailable"}</Field><Field label="Location">{selected.item.latitude === null || selected.item.longitude === null ? "Not published" : `${selected.item.latitude.toFixed(5)}, ${selected.item.longitude.toFixed(5)}`}</Field></SummaryGrid><p className="caveat caveat-prominent">This location is included in the sampling-point dataset. Observation series are separate bounded retrievals and are not included in the public static snapshot.</p><details className="technical-disclosure"><summary>Publisher sampling-point identity</summary><SummaryGrid><Field label="Sampling-point ID"><code>{selected.item.sampling_point_id}</code></Field><Field label="Publisher URI"><code>{selected.item.source_uri}</code></Field></SummaryGrid></details></>;
   } else if (selected.kind === "reservoirs") {
     title = selected.item.name;
     dataset = selected.dataset;
@@ -132,7 +148,7 @@ export function DetailPanel({ selected, onClose }: Props) {
       {selected.item.properties.source_provenance && <p className="secondary-copy">{selected.item.properties.source_provenance}</p>}
       {selected.item.properties.premises_disclaimer && <p className="caveat">{selected.item.properties.premises_disclaimer}</p>}
       {selected.item.properties.coastline_disclaimer && <p className="caveat">{selected.item.properties.coastline_disclaimer}</p>}
-      {selected.performance && <section aria-labelledby="company-performance-heading"><h3 id="company-performance-heading">Company performance</h3><p>{selected.performance.item.company_name} · official published measures</p><ul>{selected.performance.item.measures.slice(0, 6).map((measure) => <li key={`${measure.measure_code}:${measure.reporting_period}`}><strong>{measure.measure_name}</strong>: {measure.value_state === "reported" ? `${measure.value ?? ""}${measure.unit ? ` ${measure.unit}` : ""}` : measure.value_state.replace("_", " ")} ({measure.reporting_period})</li>)}</ul><p className="caveat">Regulatory performance facts use their own reporting periods and do not change the dated boundary meaning.</p><Provenance dataset={selected.performance.dataset} /></section>}
+      {selected.performance && <section aria-labelledby="company-performance-heading"><h3 id="company-performance-heading">Company performance</h3><p>{selected.performance.item.company_name} · official published measures</p><div className="table-scroll"><table className="measure-table"><thead><tr><th>Measure</th><th>Period</th><th>Value</th></tr></thead><tbody>{selected.performance.item.measures.slice(0, 6).map((measure) => <tr key={`${measure.measure_code}:${measure.reporting_period}`}><th scope="row">{measure.measure_name}</th><td>{measure.reporting_period}</td><td>{measure.value_state === "reported" ? `${measure.value ?? ""}${measure.unit ? ` ${measure.unit}` : ""}` : measure.value_state.replace("_", " ")}</td></tr>)}</tbody></table></div><p className="caveat">Only values with the same publisher definition and unit should be compared across reporting periods. Performance reporting periods do not change the dated boundary meaning.</p><Provenance dataset={selected.performance.dataset} /></section>}
       <details className="technical-disclosure"><summary>Geometry and presentation details</summary><SummaryGrid>
         <Field label="Source ID">{selected.item.id}</Field><Field label="Presentation">{selected.item.presentation.method}</Field>
         <Field label="Policy">{selected.item.presentation.policy_version}</Field><Field label="Review">{selected.item.presentation.review_reference}</Field>
@@ -144,7 +160,7 @@ export function DetailPanel({ selected, onClose }: Props) {
     dataset = selected.dataset;
     body = <>
       <div className="metric-hero"><span><strong>{selected.item.water_body_type ?? "Type not stated"}</strong><small>Catchment Data Explorer classification</small></span><span className="edition-badge">{selected.geometry.features.length} geometry feature{selected.geometry.features.length === 1 ? "" : "s"}</span></div>
-      <SummaryGrid><Field label="Operational catchment"><code>{selected.item.operational_catchment_id}</code></Field><Field label="Management catchment"><code>{selected.item.management_catchment_id}</code></Field><Field label="River basin district"><code>{selected.item.river_basin_district_id}</code></Field></SummaryGrid>
+      <nav className="hierarchy-path" aria-label="Publisher catchment hierarchy"><span>River Basin District <code>{selected.item.river_basin_district_id}</code></span><span>Management Catchment <code>{selected.item.management_catchment_id}</code></span><span>Operational Catchment <code>{selected.item.operational_catchment_id}</code></span><span>Water Body <code>{selected.item.water_body_id}</code></span></nav>
       <p className="caveat">Publisher geometry features are shown individually. No relationship to stations, sampling points, companies or reservoirs is inferred.</p>
       <details className="technical-disclosure"><summary>Publisher identifiers</summary><SummaryGrid><Field label="Water Body ID"><code>{selected.item.water_body_id}</code></Field></SummaryGrid></details>
     </>;

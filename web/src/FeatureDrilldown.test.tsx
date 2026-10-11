@@ -10,14 +10,16 @@ const selected: SelectedFeature = { kind: "hydrology", dataset, item: { station_
 
 it("shows loading then source observations, with a station-scoped measurement filter", async () => {
   vi.spyOn(api, "hydrologyDetail").mockResolvedValue({ ...selected.item, dataset, measures: [
-    { measure_id: "m1", parameter: "level", unit_name: "m", latest_observation: { value: 1.2, observed_at: "2026-01-01T00:00:00Z" } },
-    { measure_id: "m2", parameter: "flow", unit_name: "m3/s", latest_observation: null },
+    { measure_id: "m1", parameter: "level", unit_name: "m", period: 900, source_fields: { valueStatistic: { "@id": "http://environment.data.gov.uk/reference/def/core/instantaneous" } }, latest_observation: { value: 1.2, observed_at: "2026-01-01T00:00:00Z", source_fields: { quality: "Good", completeness: "Complete" } } },
+    { measure_id: "m2", parameter: "flow", unit_name: "m3/s", period: 86400, source_fields: {}, latest_observation: null },
   ] });
   render(<FeatureDrilldown selected={selected} />);
   expect(screen.getByRole("status")).toHaveTextContent("Loading");
   expect(await screen.findByText(/1.2 m/)).toBeInTheDocument();
-  expect(screen.getAllByTitle("Publisher measure identifier")[0]).toHaveTextContent("m1");
-  expect(screen.getByText(/Publisher observed/).querySelector("time")).toHaveAttribute("datetime", "2026-01-01T00:00:00Z");
+  expect(screen.getByText("Latest level observation")).toBeInTheDocument();
+  expect(screen.getByText("Declared measurement period: 15 minutes")).toBeInTheDocument();
+  expect(screen.getByText("Quality: Good · Completeness: Complete")).toBeInTheDocument();
+  expect(screen.getByText("Observed:").parentElement?.querySelector("time")).toHaveAttribute("datetime", "2026-01-01T00:00:00Z");
   await userEvent.selectOptions(screen.getByRole("combobox"), "level");
   expect(screen.queryByText("No accepted observation")).not.toBeInTheDocument();
 });

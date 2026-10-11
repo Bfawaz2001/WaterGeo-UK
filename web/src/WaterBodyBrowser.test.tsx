@@ -60,7 +60,7 @@ it("loads a snapshot-pinned Water Body and preserves publisher geometry features
     );
   }
   render(<Harness />);
-  await userEvent.click(screen.getByRole("button", { name: /Water Bodies/ }));
+  await userEvent.click(screen.getByRole("button", { name: /Rivers & Catchments/ }));
   await userEvent.click(await screen.findByRole("button", { name: /Example Beck/ }));
   await waitFor(() => expect(selected).toHaveBeenCalledOnce());
   expect(selected.mock.calls[0]?.[0].geometry.features).toHaveLength(2);
@@ -78,7 +78,7 @@ it("labels type filters as loaded-only and keeps continuation available", async 
     return <WaterBodyBrowser open={open} onToggle={() => setOpen(!open)} onSelect={vi.fn()} />;
   }
   render(<Harness />);
-  await userEvent.click(screen.getByRole("button", { name: /Water Bodies/ }));
+  await userEvent.click(screen.getByRole("button", { name: /Rivers & Catchments/ }));
   await screen.findByRole("button", { name: /River One/ });
   await userEvent.selectOptions(screen.getByRole("combobox"), "River");
   expect(screen.queryByRole("button", { name: /Lake Two/ })).not.toBeInTheDocument();

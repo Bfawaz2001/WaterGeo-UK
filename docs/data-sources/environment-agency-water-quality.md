@@ -232,3 +232,10 @@ The source is mutable metadata, not a static edition or publisher-atomic snapsho
 Actual observation contracts are reviewed separately in the
 [bounded observation assessment](environment-agency-water-quality-observations.md).
 Sampling-point publication alone does not complete Phase 3.
+
+The explorer labels this product as sampling locations and metadata. A point means
+monitoring can occur there; it is not itself an observation or a safety assessment.
+API mode can display the accepted publisher metadata attached to the selected point.
+The public static publication has no observation-series asset and says so directly
+instead of exposing a dead control. Existing bounded observation evidence remains a
+separate contract; broader history and analysis presentation is deferred to Phase 18B.

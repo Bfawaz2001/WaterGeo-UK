@@ -28,7 +28,7 @@ export function Onboarding() {
       <h2 id="onboarding-heading">Explore public water data in context</h2>
       <ol>
         <li><strong>Search</strong><span>Find a station, reservoir, Water Body or company.</span></li>
-        <li><strong>Explore</strong><span>Switch layers on and move the map to refresh nearby results.</span></li>
+        <li><strong>Explore</strong><span>Choose a region, switch layers on and move the map to refresh bounded nearby results.</span></li>
         <li><strong>Inspect</strong><span>Select a feature to see its values, timing and source.</span></li>
       </ol>
       <button type="button" className="primary-button" onClick={dismiss}>Start exploring</button>

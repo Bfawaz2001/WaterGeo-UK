@@ -48,6 +48,10 @@ vi.mock("./useNearby", () => ({
       },
     ],
     waterQuality: [],
+    bathingWaters: [
+      { bathing_water_id: "excellent", publisher_uri: "https://example.test/excellent", name: "Excellent Bay", latitude: 51, longitude: -2, classification: "Excellent", assessment_year: 2025, latest_sample_uri: null, latest_risk_prediction: null, distance_m: 1 },
+      { bathing_water_id: "none", publisher_uri: "https://example.test/none", name: "Unclassified Bay", latitude: 52, longitude: -3, classification: null, assessment_year: null, latest_sample_uri: null, latest_risk_prediction: null, distance_m: 2 },
+    ],
     reservoirs: [],
     thamesDischarge: [{
       site_id: "TWL00001", location_name: "Test overflow", permit_number: "CTCR.0001",
@@ -58,17 +62,18 @@ vi.mock("./useNearby", () => ({
       most_recent_discharge_start: "2026-09-20T12:00:00",
       most_recent_discharge_stop: null, distance_m: 10,
     }],
-    provenance: { hydrology: dataset, "thames-discharge": dataset },
+    provenance: { hydrology: dataset, "thames-discharge": dataset, "bathing-waters": dataset },
     loading: new Set(),
     errors: {},
   }),
 }));
 
 vi.mock("./MapView", () => ({
-  MapView: ({ onMapClick, onSelectPoint }: { onMapClick: (lon: number, lat: number) => void; onSelectPoint: (kind: string, id: string) => void }) => (
+  MapView: ({ onMapClick, onSelectPoint, bathingWaters }: { onMapClick: (lon: number, lat: number) => void; onSelectPoint: (kind: string, id: string) => void; bathingWaters: Array<{ bathing_water_id: string }> }) => (
     <div aria-label="Mock map">
       <button type="button" onClick={() => onMapClick(-1, 52)}>Click map</button>
       <button type="button" onClick={() => onSelectPoint("hydrology", "station-1")}>Select station</button>
+      <span data-testid="mapped-bathing-waters">{bathingWaters.map((item) => item.bathing_water_id).join(",")}</span>
     </div>
   ),
 }));
@@ -222,6 +227,16 @@ it("retains overlapping water-supply matches and loads only the chosen geometry"
   await waitFor(() => expect(mocks.areaGeometry).toHaveBeenCalledWith(3, expect.any(AbortSignal)));
   expect(await screen.findByRole("heading", { name: "Example Water" })).toBeInTheDocument();
   expect(screen.getByText(/does not establish the current supplier/)).toBeInTheDocument();
+});
+
+it("filters exact bathing classifications within the explicitly bounded loaded results", async () => {
+  render(<App />);
+  await userEvent.click(screen.getByRole("checkbox", { name: /Bathing waters/i }));
+  expect(screen.getByText(/2 matches within 2 loaded nearby results/)).toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Annual publisher classification" }), "Excellent");
+  expect(screen.getByText(/1 match within 2 loaded nearby results/)).toBeInTheDocument();
+  expect(screen.getByTestId("mapped-bathing-waters")).toHaveTextContent("excellent");
+  expect(screen.getByText(/Counts are not national totals/)).toBeInTheDocument();
 });
 
 

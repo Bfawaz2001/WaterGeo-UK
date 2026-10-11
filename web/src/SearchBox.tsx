@@ -25,6 +25,13 @@ interface Props {
   onSelect: (result: SearchResult) => Promise<void>;
 }
 
+function Highlighted({ value, term }: { value: string; term: string }) {
+  const query = term.trim().toLocaleLowerCase();
+  const index = value.toLocaleLowerCase().indexOf(query);
+  if (!query || index < 0) return value;
+  return <>{value.slice(0, index)}<mark>{value.slice(index, index + query.length)}</mark>{value.slice(index + query.length)}</>;
+}
+
 export function SearchBox({ onSelect }: Props) {
   const statusId = useId();
   const [term, setTerm] = useState("");
@@ -84,6 +91,16 @@ export function SearchBox({ onSelect }: Props) {
     } catch {
       if (selectionGeneration.current === generation) setState("selection-error");
     }
+  };
+
+  const resultButton = (result: SearchResult) => {
+    const index = orderedResults.indexOf(result);
+    return <li key={`${result.kind}:${result.identity}`}>
+      <button id={`watergeo-search-result-${index}`} className={activeIndex === index ? "active" : ""} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => void choose(result)} disabled={state === "selecting"}>
+        <span className={`search-result-icon layer-${result.kind}`}><Icon name={KIND_ICONS[result.kind]} /></span>
+        <span><strong><Highlighted value={result.label} term={term} /></strong><small>{result.context} · {result.publisher}</small></span>
+      </button>
+    </li>;
   };
 
   const status = state === "loading"
@@ -149,19 +166,18 @@ export function SearchBox({ onSelect }: Props) {
           {Array.from(groups, ([kind, items]) => (
             <section key={kind} aria-labelledby={`search-group-${kind}`}>
               <h2 id={`search-group-${kind}`}>{KIND_LABELS[kind]}</h2>
-              <ul>
-                {items.map((result) => {
-                  const index = orderedResults.indexOf(result);
-                  return (
-                  <li key={`${result.kind}:${result.identity}`}>
-                    <button id={`watergeo-search-result-${index}`} className={activeIndex === index ? "active" : ""} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => void choose(result)} disabled={state === "selecting"}>
-                      <span className={`search-result-icon layer-${result.kind}`}><Icon name={KIND_ICONS[result.kind]} /></span>
-                      <span><strong>{result.label}</strong><small>{result.context} · {result.publisher}</small></span>
-                    </button>
-                  </li>
-                  );
-                })}
-              </ul>
+              {kind === "water-supply" ? Array.from(
+                items.reduce((companies, item) => {
+                  const companyItems = companies.get(item.label) ?? [];
+                  companyItems.push(item);
+                  companies.set(item.label, companyItems);
+                  return companies;
+                }, new Map<string, SearchResult[]>()),
+                ([company, areas]) => <div className="search-company-group" key={company}>
+                  <h3><span><Highlighted value={company} term={term} /></span> <small>{areas.length} area match{areas.length === 1 ? "" : "es"}</small></h3>
+                  <ul>{areas.map(resultButton)}</ul>
+                </div>,
+              ) : <ul>{items.map(resultButton)}</ul>}
             </section>
           ))}
         </div>
