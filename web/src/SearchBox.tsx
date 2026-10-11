@@ -13,7 +13,7 @@ const KIND_LABELS: Record<SearchKind, string> = {
   reservoirs: "Reservoirs",
   "thames-discharge": "Thames discharge monitors",
   "water-body": "Water Bodies",
-  "water-supply": "Water-supply areas",
+  "water-supply": "Water companies and supply areas",
 };
 const KIND_ICONS: Record<SearchKind, IconName> = {
   hydrology: "hydrology", rainfall: "hydrology", "water-quality": "water-quality",
@@ -174,8 +174,9 @@ export function SearchBox({ onSelect }: Props) {
                   return companies;
                 }, new Map<string, SearchResult[]>()),
                 ([company, areas]) => <div className="search-company-group" key={company}>
-                  <h3><span><Highlighted value={company} term={term} /></span> <small>{areas.length} area match{areas.length === 1 ? "" : "es"}</small></h3>
+                  <h3><span><Highlighted value={company} term={term} /></span> <small>{areas.length} returned area match{areas.length === 1 ? "" : "es"}</small></h3>
                   <ul>{areas.map(resultButton)}</ul>
+                  <p className="search-scope">These are returned search matches, not a complete company boundary inventory.</p>
                 </div>,
               ) : <ul>{items.map(resultButton)}</ul>}
             </section>

@@ -91,6 +91,9 @@ summary { cursor: pointer; }
 .share-button { border-color: rgb(255 255 255 / 34%); color: white; background: rgb(255 255 255 / 5%); white-space: nowrap; }
 .share-button:hover { background: rgb(255 255 255 / 13%); }
 .share-button .icon { width: 17px; height: 17px; }
+.share-control { position: relative; }
+.share-feedback { position: absolute; top: calc(100% + 8px); right: 0; display: grid; gap: 6px; width: min(360px, calc(100vw - 24px)); padding: 10px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--ink); background: white; box-shadow: var(--shadow); font-size: 12px; }
+.share-feedback input { width: 100%; padding: 6px; border: 1px solid var(--line-strong); border-radius: 5px; }
 .primary-button { border-color: var(--accent); color: white; background: var(--accent); }
 .primary-button:hover { background: var(--accent-dark); }
 .icon-button { border: 0; background: transparent; cursor: pointer; }
@@ -206,6 +209,7 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
 .result-list small { margin-top: 2px; color: var(--muted); }
 .search-company-group h3 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 8px 10px 4px; color: var(--ink); }
 .search-company-group h3 small { color: var(--muted); font-size: 10px; font-weight: 650; }
+.search-scope { margin: 4px 10px 10px; color: var(--muted); font-size: 10px; }
 .search-results mark { border-radius: 2px; padding: 0 1px; color: inherit; background: #f8dfa9; }
 
 .status-section summary::-webkit-details-marker { display: none; }
@@ -407,8 +411,8 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
   .topbar .panel-toggle span { display: none; }
   .topbar .brand-mark { display: none; }
   .topbar .brand-copy { grid-column: 2; grid-row: 1; justify-self: center; text-align: center; }
-  .topbar > .share-button:last-child { grid-column: 3; grid-row: 1; }
-  .topbar > .share-button:last-child span { display: none; }
+  .topbar > .share-control { grid-column: 3; grid-row: 1; }
+  .topbar > .share-control .share-button span { display: none; }
   .brand-copy strong { font-size: 14px; }
   .share-button { min-width: 38px; padding: 7px 9px; font-size: 11px; }
   .product-search { grid-column: 1 / -1; grid-row: 2; width: 100%; max-width: none; }

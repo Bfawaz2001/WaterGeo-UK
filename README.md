@@ -9,14 +9,32 @@ be traced back to the accepted data behind it.
 
 **Ingest once, govern once, consume anywhere — including Fabric.**
 
-## What WaterGeo does
+> **Presenting WaterGeo UK? Start with the
+> [project presentation and technical walkthrough](docs/guides/presentation-walkthrough.md).**
 
-- Retrieves public datasets into retained, checksum-verified evidence.
-- Validates and normalizes source-specific snapshots and versioned releases.
-- Supports spatial queries through PostgreSQL/PostGIS and FastAPI.
-- Publishes an independent React/MapLibre explorer as immutable static assets.
-- Exports reviewed GeoJSON, optional Parquet/GeoParquet and water-supply PMTiles.
-- Provides optional Fabric Lakehouse, Map and Power BI consumption guidance.
+| Quick route | Open |
+| --- | --- |
+| Use the product | [Public explorer](https://bfawaz2001.github.io/WaterGeo-UK/) |
+| Explain the design | [System architecture](docs/architecture/system-overview.md) |
+| Review coverage | [Data portfolio](docs/data-sources/source-portfolio.md) |
+| Explain trust | [Evidence and governance](docs/architecture/ingestion-and-evidence.md) |
+| Run the full stack | [Local demo](docs/guides/local-complete-demo.md) |
+| Discuss what comes next | [Roadmap](docs/project/roadmap.md) |
+
+## What the platform can do
+
+- **Discover public water data:** search monitoring locations, Water Bodies, bathing
+  waters and dated water-supply areas across ten governed source families.
+- **Explore maps and detail:** use React, TypeScript and MapLibre for bounded nearby
+  queries, publisher geometry, filters and feature provenance.
+- **Inspect observations and metadata:** keep measurements, units, periods and
+  publisher time separate from WaterGeo retrieval and publication time.
+- **Reproduce ingestion:** retain checksummed evidence, validate source-specific
+  contracts and accept snapshots atomically into PostgreSQL/PostGIS.
+- **Build on a geospatial API:** query read-only FastAPI routes locally with explicit
+  pagination, snapshot selection and fail-closed representation checks.
+- **Export reviewed products:** create GeoJSON and optional PMTiles,
+  Parquet/GeoParquet outputs, with optional Fabric consumption guidance.
 
 ## Current status
 
@@ -26,7 +44,7 @@ be traced back to the accepted data behind it.
 | Local API and database | Implemented; operators can retrieve, validate and accept new publisher snapshots. |
 | Hosted public API | No publicly hosted FastAPI/PostgreSQL/PostGIS service. Pages serves files only. |
 | Fabric interoperability | Compatibility/export foundations and examples; no Fabric deployment or cloud resource is required. |
-| Current development | Phase 18A explorer intelligence, data clarity and discovery; see the roadmap. |
+| Current development | Phase 18A is delivered; Phase 18A.1 demo-readiness improvements are under review on this branch. |
 
 Publisher observation/publication time, WaterGeo retrieval time and WaterGeo static
 publication time are separate. A fresh retrieval does not prove a fresh observation.
@@ -55,20 +73,37 @@ not additional national source families.
 
 ```mermaid
 flowchart LR
-  P[Public publishers] --> E[Retained evidence]
-  E --> V[Validation and normalization]
-  V --> D[Accepted PostGIS products]
-  D --> A[FastAPI and local explorer]
-  A --> S[Governed static publication]
-  S --> G[GitHub Pages explorer]
-  A --> X[Analytical exports]
-  X --> F[Optional Fabric and analytics]
+  P[Public publisher] --> E[Retained raw evidence]
+  E --> V[Source validation and normalization]
+  V --> S[Accepted snapshot or version]
+  S --> D[(PostgreSQL and PostGIS)]
+  D --> A[Read-only FastAPI]
+  A --> R[Local React and MapLibre]
+  A --> B[Reviewed static publication]
+  B --> G[GitHub Pages explorer]
+  A --> X[Snapshot-pinned exports]
+  X --> F[Optional Fabric or other analytics]
 ```
 
 Static publication replays governed evidence and consumes snapshot-pinned WaterGeo
 API representations. It does not fetch publishers from the browser. Optional PMTiles
 are a separate reviewed export, not a replacement for exact selected GeoJSON.
 See [system overview](docs/architecture/system-overview.md).
+
+## Data governance and reliability
+
+WaterGeo keeps publisher identity and licence metadata alongside retained response
+evidence. SHA-256 checks, bounded retrievals and source-specific schema rules reject
+unexpected content before it reaches an accepted snapshot. Database publication is
+transactional: a failed refresh leaves the previous accepted snapshot available and
+the rejected evidence inspectable. The application API is read-only and multi-page
+consumers pin one snapshot to prevent mixed results.
+
+An “accepted” retrieval means that evidence passed WaterGeo's reviewed contract. It
+does not certify that a publisher measurement is recent or that a safety condition is
+current. Observation time, publisher publication time, WaterGeo retrieval time and
+static publication time remain separate. Read [ingestion and evidence](docs/architecture/ingestion-and-evidence.md)
+and [data flow and time semantics](docs/architecture/data-flow.md) for the full contract.
 
 ## Local development
 
@@ -78,7 +113,7 @@ Run from the repository root:
 
 ```bash
 uv sync --locked
-cp .env.example .env
+test -f .env || cp .env.example .env
 ```
 
 **Before continuing:** edit `.env` and replace all four password placeholders with
@@ -168,6 +203,19 @@ snapshot explorer. Source-specific caveats remain attached to detail and provena
 The explorer filters bathing-water classifications within the loaded nearest results,
 not across an implied national inventory. Rainfall and Hydrology details retain each
 publisher-declared measurement period and separate observation from retrieval time.
+
+## Current limitations and next steps
+
+- Nearby point results are bounded nearest results, not national totals or complete
+  feature distributions. A reviewed national point overview is Phase 18C work.
+- Rainfall uses the previous accepted snapshot after a publisher response supplied a
+  non-scalar reading on 11 October 2026; validation correctly rejected that refresh.
+- Water-company search groups returned exact areas but does not claim a complete
+  company boundary inventory or current property-supplier result.
+- The public site is an immutable static edition. Historical rainfall and richer
+  Hydrology/Water Quality analytics are Phase 18B work.
+- The public deployment has no FastAPI/PostGIS service. API hosting, access policy,
+  monitoring and budget need a separate production review.
 
 ## Development history
 

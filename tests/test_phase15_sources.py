@@ -78,6 +78,14 @@ def test_rainfall_rejects_schema_licence_and_timestamp_drift() -> None:
         normalize_rainfall(stations, readings)  # type: ignore[arg-type]
 
 
+def test_rainfall_rejects_non_scalar_publisher_reading_value() -> None:
+    """Regression for the retained 11 October 2026 rejected rainfall evidence."""
+    stations, readings = rainfall_payloads()
+    readings["items"][0]["value"] = [0.0, 0.0]  # type: ignore[index]
+    with pytest.raises(Phase15SourceError, match="Invalid rainfall value"):
+        normalize_rainfall(stations, readings)  # type: ignore[arg-type]
+
+
 def test_rainfall_preserves_unlocated_station_and_missing_latest_value() -> None:
     stations, readings = rainfall_payloads()
     station = stations["items"][0]  # type: ignore[index]

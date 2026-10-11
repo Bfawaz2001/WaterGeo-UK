@@ -96,3 +96,12 @@ metadata in the preserved Sample/Sampling chain rather than inferred classificat
 
 See [ADR 0012](../adr/0012-bounded-water-quality-observations.md) and the
 [developer walkthrough](../guides/water-quality-walkthrough.md).
+
+## Phase 18B presentation work
+
+A future explorer history view must keep the bounded scope explicit and show sample
+date, determinand, numeric or censored result, unit, qualifier/detection bounds and
+original timestamp semantics. It must not combine unlike determinands or units, turn
+upper/lower bounds into measured values, infer UTC, or imply that every mapped sampling
+point has a recent observation. The current static explorer publishes sampling-point
+metadata only; this section is an implementation plan, not a delivered chart.

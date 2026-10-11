@@ -28,6 +28,15 @@ observation time and separate WaterGeo retrieval time. A missing latest observat
 labelled unavailable and remains distinct from numeric zero. Historical rainfall series
 and charts require a separately governed history product and are deferred to Phase 18B.
 
+Official GOV.UK station pages can carry a human-readable name for an exact gauge
+identity: for example, station `075497` is published as
+[Bradford Chellow Heights gauge](https://check-for-flooding.service.gov.uk/rainfall-station/075497).
+That page is useful verification evidence but is not part of the accepted national
+feed contract. Adding names therefore needs a separately retained official-identity
+crosswalk with licence, retrieval, conflict and missing-name rules. Until that review,
+the canonical identifier fallback remains deliberate; WaterGeo does not scrape search
+results or reverse-geocode the feed's reduced-precision coordinates.
+
 The reviewed live response contains one empty root station record and can contain a latest
 reading whose measure is absent from the station response. WaterGeo retains both in raw
 evidence, excludes them from canonical station/latest associations, and records the exact
@@ -42,3 +51,21 @@ The bounded official response produced 1,044 stations, 934 latest measure readin
 publisher coordinates. Two publisher artifacts were retained in raw evidence and
 recorded as skipped: the empty root station record and one reading without a returned
 station association.
+
+## Rejected refresh on 11 October 2026
+
+Run `8de834a2-bef3-49e0-8f97-9a2bc3956842` retained exact bounded station and reading
+responses before normalization. The response was successful JSON, within the 2 MiB
+bound, but one of 932 reading items supplied `value: [0.0, 0.0]` for measure
+`008850-rainfall-tipping_bucket_raingauge-t-15_min-mm` at
+`2026-10-08T08:00:00Z`. The reviewed contract permits a scalar number or null, not a
+list. The same anomaly is present in the other retained rejected attempts inspected
+from 10–11 October.
+
+WaterGeo therefore rejected the bundle with `Invalid rainfall value`, archived its
+evidence and left the 30 September accepted snapshot available. It did not load a
+partial snapshot or reinterpret the list as a scalar. There is no authoritative rule
+for choosing or combining those two values, so validation has not been relaxed. This
+is a safe source-contract rejection, not evidence that the entire publisher service
+was unavailable. A future compatible publisher correction can pass the unchanged
+contract; repeated live requests are not required for diagnosis.

@@ -214,6 +214,7 @@ test("water-supply lookup and API failure states remain visible", async ({ page 
   await expect(area).toBeVisible();
   await area.click();
   await expect(page.getByRole("heading", { name: "Synthetic Water" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Selected supply area" })).toBeVisible();
 
   api.failures = true;
   await page.reload();
@@ -269,6 +270,27 @@ test("Water Body browser explains loaded scope and selection hierarchy", async (
   await page.getByRole("button", { name: /Synthetic Water Body/ }).click();
   await expect(page.getByRole("heading", { name: "Synthetic Water Body" })).toBeVisible();
   await expect(page.getByText("Catchment Data Explorer classification")).toBeVisible();
+});
+
+test("searched Water Body navigation and shared filter state remain visible", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await syntheticApi(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Dismiss explorer introduction" }).click();
+  const search = page.getByRole("searchbox", { name: "Search WaterGeo" });
+  await search.fill("body");
+  await page.getByRole("button", { name: /Synthetic Water Body.*River Water Body/ }).click();
+  await expect(page.getByRole("heading", { name: "Synthetic Water Body" })).toBeVisible();
+
+  await page.getByRole("checkbox", { name: /Flood warnings/ }).check();
+  await page.getByLabel("Publisher severity").selectOption("3");
+  await page.getByRole("checkbox", { name: /Bathing waters/ }).check();
+  await page.getByLabel("Annual publisher classification").selectOption("Good");
+  await page.getByRole("button", { name: "Copy a shareable map URL" }).click();
+  await expect(page.getByText(/Link copied/)).toBeVisible();
+  await expect(page).toHaveURL(/flood=3/);
+  await expect(page).toHaveURL(/bathing=Good/);
+  await expect(page).toHaveURL(/selected=water-body/);
 });
 
 test("source health expands from a compact product summary", async ({ page }) => {

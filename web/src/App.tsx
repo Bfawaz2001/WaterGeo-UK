@@ -44,8 +44,8 @@ export function App() {
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 740);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [thamesStatus, setThamesStatus] = useState<ThamesAlertStatus | "">("");
-  const [floodSeverity, setFloodSeverity] = useState<FloodFilter>("");
-  const [bathingClassification, setBathingClassification] = useState<BathingClassification>("");
+  const [floodSeverity, setFloodSeverity] = useState<FloodFilter>(initial.floodSeverity);
+  const [bathingClassification, setBathingClassification] = useState<BathingClassification>(initial.bathingClassification);
   const [navigation, setNavigation] = useState<MapNavigation | null>(null);
   const navigationId = useRef(0);
   const navigate = (bounds: MapNavigation["bounds"] | null, maxZoom = 12) => {
@@ -87,6 +87,8 @@ export function App() {
   const [areaMatches, setAreaMatches] = useState<AreaPage | null>(null);
   const [areaError, setAreaError] = useState<string>();
   const [areaLoading, setAreaLoading] = useState(false);
+  const [mapNotice, setMapNotice] = useState<string>();
+  const [shareFeedback, setShareFeedback] = useState<{ kind: "success" | "error"; message: string; url?: string }>();
   const [waterBodiesOpen, setWaterBodiesOpen] = useState(false);
   const lookupController = useRef<AbortController | undefined>(undefined);
   const searchSelectionController = useRef<AbortController | undefined>(undefined);
@@ -130,9 +132,12 @@ export function App() {
       zoom: viewport.zoom,
       layers,
       selected: selectionKey(selected),
+      floodSeverity,
+      bathingClassification,
     });
     window.history.replaceState(null, "", `${window.location.pathname}${next}`);
-  }, [layers, selected, viewport.latitude, viewport.longitude, viewport.zoom]);
+    queueMicrotask(() => setShareFeedback(undefined));
+  }, [bathingClassification, floodSeverity, layers, selected, viewport.latitude, viewport.longitude, viewport.zoom]);
 
   useEffect(() => {
     if (initialSelectionApplied.current || initial.selected === null) return;
@@ -183,6 +188,14 @@ export function App() {
           throw new ApiError(503, "Water Body snapshot changed during shared selection");
         }
         setSelected({ kind, item, dataset, geometry });
+        setMapFocus(null);
+        const bounds = geometryBounds(geometry.features.map((feature) => feature.geometry));
+        if (bounds) {
+          setMapNotice(undefined);
+          navigate(bounds);
+        } else {
+          setMapNotice("The selected Water Body has no usable accepted geometry to show on the map.");
+        }
         setWaterBodiesOpen(true);
       }).catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -210,6 +223,7 @@ export function App() {
   };
 
   const selectPoint = (layer: LayerId, identity: string) => {
+    setMapNotice(undefined);
     if (layer === "hydrology") {
       const item = nearby.hydrology.find((candidate) => candidate.station_id === identity);
       const dataset = nearby.provenance.hydrology;
@@ -322,6 +336,7 @@ export function App() {
     lookupController.current = controller;
     setAreaLoading(true);
     setAreaError(undefined);
+    setMapNotice(undefined);
     void api
       .areaGeometry(area.source_id, controller.signal)
       .then((item) => selectSupplyArea(item, controller.signal))
@@ -336,10 +351,23 @@ export function App() {
   };
 
   const copyShareUrl = async () => {
+    const url = window.location.href;
+    setShareFeedback(undefined);
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(url);
+      const local = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+      setShareFeedback({
+        kind: "success",
+        message: local
+          ? "Link copied. This local address works only on this computer."
+          : "Link copied.",
+      });
     } catch {
-      setAreaError("Copy was blocked by the browser. Copy the address bar URL instead.");
+      setShareFeedback({
+        kind: "error",
+        message: "Copy was blocked. Select and copy this URL manually.",
+        url,
+      });
     }
   };
 
@@ -347,6 +375,9 @@ export function App() {
     searchSelectionController.current?.abort();
     const controller = new AbortController();
     searchSelectionController.current = controller;
+    setAreaMatches(null);
+    setAreaError(undefined);
+    setMapNotice(undefined);
     const enable = (layer: LayerId) => setLayers((current) => new Set(current).add(layer));
     const focusPoint = (longitude: number | null, latitude: number | null) => {
       setMapFocus({
@@ -410,7 +441,14 @@ export function App() {
       }
       setSelected({ kind: "water-body", item, dataset, geometry });
       setWaterBodiesOpen(true);
-      focusPoint(null, null);
+      setMapFocus(null);
+      const bounds = geometryBounds(geometry.features.map((feature) => feature.geometry));
+      if (bounds) {
+        setMapNotice(undefined);
+        navigate(bounds);
+      } else {
+        setMapNotice("The selected Water Body has no usable accepted geometry to show on the map.");
+      }
     } else {
       const sourceId = parseWaterSupplyId(result.identity);
       if (sourceId === null) throw new ApiError(422, "Invalid water-supply identity");
@@ -431,7 +469,13 @@ export function App() {
           <strong>Explore public UK water data</strong>
         </div>
         <SearchBox onSelect={openSearchResult} />
-        <button className="share-button" type="button" onClick={() => void copyShareUrl()} aria-label="Copy a shareable map URL"><Icon name="copy" /> <span>Copy view</span></button>
+        <div className="share-control">
+          <button className="share-button" type="button" onClick={() => void copyShareUrl()} aria-label="Copy a shareable map URL"><Icon name="copy" /> <span>Copy view</span></button>
+          {shareFeedback && <div className={`share-feedback ${shareFeedback.kind === "error" ? "state-error" : ""}`} role="status" aria-live="polite">
+            <span>{shareFeedback.message}</span>
+            {shareFeedback.url && <input aria-label="Share URL for manual copying" readOnly value={shareFeedback.url} onFocus={(event) => event.currentTarget.select()} />}
+          </div>}
+        </div>
       </header>
       {mode === "static" && (
         <div className="static-snapshot-banner" role="status">
@@ -555,7 +599,17 @@ export function App() {
         <WaterBodyBrowser
           open={waterBodiesOpen}
           onToggle={() => setWaterBodiesOpen((value) => !value)}
-          onSelect={(feature) => setSelected(feature)}
+          onSelect={(feature) => {
+            setSelected(feature);
+            setMapFocus(null);
+            const bounds = geometryBounds(feature.geometry.features.map((item) => item.geometry));
+            if (bounds) {
+              setMapNotice(undefined);
+              navigate(bounds);
+            } else {
+              setMapNotice("The selected Water Body has no usable accepted geometry to show on the map.");
+            }
+          }}
         />
         <div id="source-status"><SourceStatusPanel status={sourceStatus} error={statusError} loading={!sourceStatus && !statusError} /></div>
       </aside>
@@ -563,6 +617,7 @@ export function App() {
       <main className="map-workspace">
         <Onboarding />
         {viewport.radiusM === 0 && <p className="map-message" role="status">Preparing map viewport…</p>}
+        {mapNotice && <p className="map-message state-error" role="alert">{mapNotice}</p>}
         <Suspense fallback={<div className="map-loading" role="status">Loading map renderer…</div>}>
           <MapView
             navigation={navigation}
@@ -606,7 +661,7 @@ export function App() {
       </main>
 
       <aside className="selection-region" aria-label="Selected feature information">
-        <DetailPanel selected={selected} onClose={() => { setSelected(null); setMapFocus(null); }} />
+        <DetailPanel selected={selected} onClose={() => { setSelected(null); setMapFocus(null); setMapNotice(undefined); }} />
       </aside>
     </div>
   );

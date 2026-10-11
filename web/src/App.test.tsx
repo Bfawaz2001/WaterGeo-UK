@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   waterBodyGeometry: vi.fn(),
   search: vi.fn(),
   hydrologyDetail: vi.fn(),
+  writeText: vi.fn(),
+  browserSelection: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -69,17 +71,20 @@ vi.mock("./useNearby", () => ({
 }));
 
 vi.mock("./MapView", () => ({
-  MapView: ({ onMapClick, onSelectPoint, bathingWaters }: { onMapClick: (lon: number, lat: number) => void; onSelectPoint: (kind: string, id: string) => void; bathingWaters: Array<{ bathing_water_id: string }> }) => (
+  MapView: ({ onMapClick, onSelectPoint, bathingWaters, navigation, focus, waterBody: selectedWaterBody }: { onMapClick: (lon: number, lat: number) => void; onSelectPoint: (kind: string, id: string) => void; bathingWaters: Array<{ bathing_water_id: string }>; navigation?: unknown; focus?: unknown; waterBody?: unknown }) => (
     <div aria-label="Mock map">
       <button type="button" onClick={() => onMapClick(-1, 52)}>Click map</button>
       <button type="button" onClick={() => onSelectPoint("hydrology", "station-1")}>Select station</button>
       <span data-testid="mapped-bathing-waters">{bathingWaters.map((item) => item.bathing_water_id).join(",")}</span>
+      <span data-testid="map-navigation">{JSON.stringify(navigation)}</span>
+      <span data-testid="map-focus">{JSON.stringify(focus)}</span>
+      <span data-testid="mapped-water-body">{JSON.stringify(selectedWaterBody)}</span>
     </div>
   ),
 }));
 
 vi.mock("./WaterBodyBrowser", () => ({
-  WaterBodyBrowser: () => <section aria-label="Water Bodies" />,
+  WaterBodyBrowser: ({ onSelect }: { onSelect: (value: unknown) => void }) => <section aria-label="Water Bodies"><button type="button" onClick={() => onSelect(mocks.browserSelection())}>Select Water Body from browser</button></section>,
 }));
 
 const areaFeature: AreaFeature = {
@@ -133,7 +138,7 @@ const waterBodyGeometry: GeoJSONFeatureCollection = {
   type: "FeatureCollection",
   water_body_id: waterBody.water_body_id,
   snapshot_id: dataset.snapshot_id,
-  features: [],
+  features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [[-2, 51], [-1, 52]] } }],
 };
 
 beforeEach(() => {
@@ -164,6 +169,10 @@ beforeEach(() => {
     geometry: { type: "Point", coordinates: [-1, 52] }, distance_m: null,
     dataset, measures: [],
   });
+  mocks.browserSelection.mockReturnValue({ kind: "water-body", item: waterBody, dataset: catchmentDataset, geometry: waterBodyGeometry });
+  mocks.writeText.mockReset();
+  mocks.writeText.mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: mocks.writeText } });
 });
 
 it("restores a shared Water Body selection with matching snapshot provenance", async () => {
@@ -179,6 +188,71 @@ it("selects a point and presents its provenance outside the map", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Select station" }));
   expect(screen.getByRole("heading", { name: "River Station" })).toBeInTheDocument();
   expect(screen.getByText(dataset.attribution)).toBeInTheDocument();
+});
+
+it("supersedes point focus and navigates once to selected Water Body geometry", async () => {
+  render(<App />);
+  await userEvent.click(await screen.findByRole("button", { name: "Select station" }));
+  expect(screen.getByTestId("map-focus")).toHaveTextContent("station-1");
+  await userEvent.click(screen.getByRole("button", { name: "Select Water Body from browser" }));
+  expect(screen.getByRole("heading", { name: "Example Water Body" })).toBeInTheDocument();
+  expect(screen.getByTestId("map-focus")).toHaveTextContent("null");
+  expect(screen.getByTestId("map-navigation")).toHaveTextContent('"bounds":[[-2,51],[-1,52]]');
+  expect(screen.getByTestId("mapped-water-body")).toHaveTextContent('"LineString"');
+});
+
+it("navigates a searched Water Body and keeps its accepted snapshot geometry selected", async () => {
+  mocks.search.mockResolvedValueOnce({
+    query: "till", truncated: false, available_kinds: ["water-body"], unavailable_kinds: [], items: [{
+      kind: "water-body", identity: waterBody.water_body_id, label: waterBody.name,
+      context: "Water Body", publisher: "Environment Agency",
+      snapshot_id: dataset.snapshot_id, longitude: null, latitude: null,
+    }],
+  });
+  render(<App />);
+  await userEvent.type(screen.getByRole("searchbox"), "till");
+  await userEvent.click(await screen.findByRole("button", { name: /Example Water Body/ }));
+  await waitFor(() => expect(mocks.waterBodyGeometry).toHaveBeenCalledWith(
+    waterBody.water_body_id, expect.any(AbortSignal), dataset.snapshot_id,
+  ));
+  expect(screen.getByTestId("map-navigation")).toHaveTextContent('"bounds":[[-2,51],[-1,52]]');
+  expect(screen.getByTestId("mapped-water-body")).toHaveTextContent('"LineString"');
+});
+
+it("keeps the current view and reports an accepted Water Body without usable geometry", async () => {
+  mocks.browserSelection.mockReturnValueOnce({
+    kind: "water-body", item: waterBody, dataset: catchmentDataset,
+    geometry: { ...waterBodyGeometry, features: [] },
+  });
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Select Water Body from browser" }));
+  expect(screen.getByRole("alert")).toHaveTextContent(/no usable accepted geometry/);
+  expect(screen.getByTestId("map-navigation")).toHaveTextContent("null");
+  await userEvent.click(screen.getByRole("button", { name: "Select station" }));
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+it("shows accessible copy success and a manual fallback without using boundary errors", async () => {
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Copy a shareable map URL" }));
+  expect(await screen.findByText("Link copied. This local address works only on this computer.")).toBeInTheDocument();
+  expect(mocks.writeText).toHaveBeenCalledWith(window.location.href);
+
+  await userEvent.click(screen.getByRole("button", { name: "Select station" }));
+  await waitFor(() => expect(screen.queryByText(/Link copied/)).not.toBeInTheDocument());
+
+  mocks.writeText.mockRejectedValueOnce(new Error("blocked"));
+  await userEvent.click(screen.getByRole("button", { name: "Copy a shareable map URL" }));
+  expect(await screen.findByText(/Copy was blocked/)).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Share URL for manual copying" })).toHaveValue(window.location.href);
+  expect(screen.queryByText(/boundary lookup could not/)).not.toBeInTheDocument();
+});
+
+it("restores supported flood and bathing filters from a shared URL", () => {
+  window.history.replaceState(null, "", "/?layers=flood-warnings,bathing-waters&flood=3&bathing=Good");
+  render(<App />);
+  expect(screen.getByRole("combobox", { name: "Publisher severity" })).toHaveValue("3");
+  expect(screen.getByRole("combobox", { name: "Annual publisher classification" })).toHaveValue("Good");
 });
 
 it("searches current indexed entities and opens a snapshot-pinned map feature", async () => {

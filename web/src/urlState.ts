@@ -6,6 +6,8 @@ export interface ExplorerState {
   zoom: number;
   layers: Set<LayerId>;
   selected: string | null;
+  floodSeverity: "" | "1" | "2" | "3" | "4";
+  bathingClassification: "" | "Excellent" | "Good" | "Sufficient" | "Poor" | "unclassified";
 }
 
 export const DEFAULT_STATE: ExplorerState = {
@@ -14,6 +16,8 @@ export const DEFAULT_STATE: ExplorerState = {
   zoom: 5.2,
   layers: new Set<LayerId>(["hydrology"]),
   selected: null,
+  floodSeverity: "",
+  bathingClassification: "",
 };
 
 const LAYERS = new Set<LayerId>([
@@ -27,6 +31,8 @@ const LAYERS = new Set<LayerId>([
   "water-supply",
 ]);
 const SELECTION = /^(hydrology|rainfall|water-quality|flood-warnings|bathing-waters|reservoirs|thames-discharge|water-supply|water-body):.{1,160}$/u;
+const FLOOD_SEVERITIES = new Set(["1", "2", "3", "4"] as const);
+const BATHING_CLASSIFICATIONS = new Set(["Excellent", "Good", "Sufficient", "Poor", "unclassified"] as const);
 
 export function parseWaterSupplyId(value: string): number | null {
   if (!/^[0-9]+$/u.test(value)) return null;
@@ -56,12 +62,20 @@ export function parseExplorerState(search: string): ExplorerState {
     requestedLayers.filter((layer): layer is LayerId => LAYERS.has(layer as LayerId)),
   );
   const selectedValue = params.get("selected");
+  const floodSeverity = params.get("flood");
+  const bathingClassification = params.get("bathing");
   return {
     longitude,
     latitude,
     zoom,
     layers: layers.size > 0 ? layers : new Set(DEFAULT_STATE.layers),
     selected: validSelection(selectedValue) ? selectedValue : null,
+    floodSeverity: FLOOD_SEVERITIES.has(floodSeverity as "1")
+      ? floodSeverity as ExplorerState["floodSeverity"]
+      : "",
+    bathingClassification: BATHING_CLASSIFICATIONS.has(bathingClassification as "Excellent")
+      ? bathingClassification as ExplorerState["bathingClassification"]
+      : "",
   };
 }
 
@@ -75,5 +89,7 @@ export function explorerSearch(state: ExplorerState): string {
   if (validSelection(state.selected)) {
     params.set("selected", state.selected);
   }
+  if (state.floodSeverity) params.set("flood", state.floodSeverity);
+  if (state.bathingClassification) params.set("bathing", state.bathingClassification);
   return `?${params.toString()}`;
 }
