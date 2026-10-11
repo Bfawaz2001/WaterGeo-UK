@@ -115,8 +115,9 @@ it("groups distinct water-supply areas under their verified company label", asyn
   render(<SearchBox onSelect={vi.fn()} />);
   await userEvent.type(screen.getByRole("searchbox"), "aff");
   await act(() => vi.advanceTimersByTimeAsync(250));
-  expect(await screen.findByRole("heading", { name: /Affinity Water 2 area matches/ })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /Affinity Water 2 returned area matches/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Central area/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /East area/ })).toBeInTheDocument();
   expect(screen.getAllByText(/refine your search/)).toHaveLength(2);
+  expect(screen.getByText(/not a complete company boundary inventory/)).toBeInTheDocument();
 });

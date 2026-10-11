@@ -18,7 +18,7 @@ flood severity filtering, accessible controls and supported OpenFreeMap fonts.
 Regional rectangles and nearby clusters are not national feature distributions.
 No new source, national tile-generation service or deployment automation is included.
 
-## Phase 18A — current review scope
+## Phase 18A — delivered
 
 Explorer intelligence and data clarity using existing accepted contracts: readable
 rainfall and Hydrology measures, exact bathing-water classification filters over
@@ -27,17 +27,27 @@ hierarchy, company/area search grouping, regional discovery guidance and clearer
 observation/retrieval/publication timing. No publisher, ingestion, database or static
 publication schema is added by this work.
 
+## Phase 18A.1 — delivered
+
+Explorer reliability and project guidance: one-shot Water Body geometry
+navigation, visible Copy view feedback with supported filter state, clearer separation
+of supply-area geometry from company-wide performance, retained rainfall-incident
+diagnosis and connected project/presentation documentation. Search continues to expose
+returned area matches rather than claiming a complete company inventory. No new
+publisher feed, static product schema, forecast pipeline or hosted service is added.
+
 ## Future, separately reviewed work
 
 | Workstream | Remaining decision / deliverable |
 | --- | --- |
-| Phase 18B history and analytics | Governed rainfall history; UI for existing bounded Hydrology and Water Quality observation evidence; measure-safe charts without joining incompatible units/statistics |
+| Phase 18B history and analytics | Governed rainfall history; UI for existing bounded Hydrology and Water Quality observation evidence; assessment of official seasonal bathing-water risk forecasts; measure-safe charts without joining incompatible units/statistics |
 | Phase 18C national distribution | Lightweight accepted point overview/tiles, completeness metadata and zoom handoff; avoid treating nearest-100 clusters as nationwide coverage |
 | Public API readiness | Hosting, authentication/access policy, rate limits, monitoring and operating budget; current public hosting is static only |
 | Static publication automation | Govern refresh → retained evidence → build → protected deploy, with failure alerts and rollback review |
 | Fabric interoperability | Validate tenant-specific Lakehouse/Map/Power BI integrations against export contracts; keep vendor SDKs optional |
 | Operational observability | Deployment-specific alerts, freshness policy dashboards, durable evidence retention and tested recovery at current schema |
 | Source opportunities | Reassess documented Stream/company candidates only with stable schema, licensing and provenance contracts |
+| Rainfall station naming | Review an official exact-identity name crosswalk with retained source/licence evidence; retain gauge-ID fallback where no verified name exists |
 
 The optional water-supply overview already exists; national point tiling and dynamic
 source tiles are separate work. Water Body tiling, unit conversion and cross-source

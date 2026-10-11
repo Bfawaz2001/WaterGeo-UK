@@ -28,6 +28,11 @@ does not supply a nationwide point overview. See [geospatial model](../architect
 
 ## Filter and selection intent
 
+- Water Body selection from either global search or Rivers & Catchments clears a
+  previous point focus, preserves every returned publisher geometry component and
+  issues one bounds-navigation intent. Manual pan/zoom and later data changes do not
+  refit it. Missing/empty accepted geometry leaves the camera unchanged and produces
+  a visible message rather than an invented location.
 - Flood severity selection filters the loaded accepted warning snapshot and fits
   matching geometry only when data is available, not loading/failed. The explicit
   “Show matching warning areas” action can navigate after loading completes.
@@ -43,6 +48,17 @@ does not supply a nationwide point overview. See [geospatial model](../architect
   interaction. Detail remains separate from the scrollable control panel.
 - Bathing-water points use publisher classification colours plus written classification
   labels and accessible controls, so meaning does not depend on colour alone.
+
+## Shared view URLs
+
+“Copy view” serializes bounded camera coordinates, zoom, visible layers, supported
+selection identity, flood severity and bathing classification. It does not serialize
+API responses, credentials or browser location. Clipboard success and failure are
+announced; blocked clipboard access exposes the same URL for manual copying. A
+localhost/127.0.0.1 URL is explicitly local to that computer. WaterGeo does not
+silently substitute a public URL because Pages may contain another accepted snapshot.
+Restoration remains snapshot-aware and degrades visibly when a selected identity is
+not available in the target publication.
 
 ## Publisher flood states
 

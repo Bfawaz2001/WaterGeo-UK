@@ -142,13 +142,16 @@ export function DetailPanel({ selected, onClose }: Props) {
   } else if (selected.kind === "water-supply") {
     title = selected.item.properties.company ?? `Area ${selected.item.id}`;
     body = <>
-      <div className="metric-hero water-supply-hero"><span><strong>{selected.item.properties.area_served ?? "Area served not stated"}</strong><small>Dated analytical boundary</small></span></div>
-      <p className="caveat caveat-prominent">{selected.item.properties.disclaimer ?? "This dated analytical boundary does not establish a property's current legal supplier."}</p>
-      {selected.item.properties.licence_statement && <p>{selected.item.properties.licence_statement}</p>}
-      {selected.item.properties.source_provenance && <p className="secondary-copy">{selected.item.properties.source_provenance}</p>}
-      {selected.item.properties.premises_disclaimer && <p className="caveat">{selected.item.properties.premises_disclaimer}</p>}
-      {selected.item.properties.coastline_disclaimer && <p className="caveat">{selected.item.properties.coastline_disclaimer}</p>}
-      {selected.performance && <section aria-labelledby="company-performance-heading"><h3 id="company-performance-heading">Company performance</h3><p>{selected.performance.item.company_name} · official published measures</p><div className="table-scroll"><table className="measure-table"><thead><tr><th>Measure</th><th>Period</th><th>Value</th></tr></thead><tbody>{selected.performance.item.measures.slice(0, 6).map((measure) => <tr key={`${measure.measure_code}:${measure.reporting_period}`}><th scope="row">{measure.measure_name}</th><td>{measure.reporting_period}</td><td>{measure.value_state === "reported" ? `${measure.value ?? ""}${measure.unit ? ` ${measure.unit}` : ""}` : measure.value_state.replace("_", " ")}</td></tr>)}</tbody></table></div><p className="caveat">Only values with the same publisher definition and unit should be compared across reporting periods. Performance reporting periods do not change the dated boundary meaning.</p><Provenance dataset={selected.performance.dataset} /></section>}
+      <section aria-labelledby="selected-supply-area-heading">
+        <h3 id="selected-supply-area-heading">Selected supply area</h3>
+        <div className="metric-hero water-supply-hero"><span><strong>{selected.item.properties.area_served ?? "Area served not stated"}</strong><small>One publisher-defined dated analytical boundary</small></span></div>
+        <p className="caveat caveat-prominent">{selected.item.properties.disclaimer ?? "This dated analytical boundary does not establish a property's current legal supplier."}</p>
+        {selected.item.properties.licence_statement && <p>{selected.item.properties.licence_statement}</p>}
+        {selected.item.properties.source_provenance && <p className="secondary-copy">{selected.item.properties.source_provenance}</p>}
+        {selected.item.properties.premises_disclaimer && <p className="caveat">{selected.item.properties.premises_disclaimer}</p>}
+        {selected.item.properties.coastline_disclaimer && <p className="caveat">{selected.item.properties.coastline_disclaimer}</p>}
+      </section>
+      {selected.performance && <section aria-labelledby="company-performance-heading"><h3 id="company-performance-heading">Company performance</h3><p>{selected.performance.item.company_name} · company-wide official published measures</p><div className="table-scroll"><table className="measure-table"><thead><tr><th>Measure</th><th>Period</th><th>Value</th></tr></thead><tbody>{selected.performance.item.measures.slice(0, 6).map((measure) => <tr key={`${measure.measure_code}:${measure.reporting_period}`}><th scope="row">{measure.measure_name}</th><td>{measure.reporting_period}</td><td>{measure.value_state === "reported" ? `${measure.value ?? ""}${measure.unit ? ` ${measure.unit}` : ""}` : measure.value_state.replace("_", " ")}</td></tr>)}</tbody></table></div><p className="caveat">These measures apply to the company and reporting period, not specifically to the selected supply-area polygon. Only values with the same publisher definition and unit should be compared across reporting periods.</p><Provenance dataset={selected.performance.dataset} /></section>}
       <details className="technical-disclosure"><summary>Geometry and presentation details</summary><SummaryGrid>
         <Field label="Source ID">{selected.item.id}</Field><Field label="Presentation">{selected.item.presentation.method}</Field>
         <Field label="Policy">{selected.item.presentation.policy_version}</Field><Field label="Review">{selected.item.presentation.review_reference}</Field>

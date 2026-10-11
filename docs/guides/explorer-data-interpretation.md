@@ -41,9 +41,19 @@ therefore loaded-result counts. Company headings in search group returned supply
 matches for readability; they do not claim a complete company-area inventory, and every
 publisher area remains individually selectable.
 
+Selecting an area shows that one publisher-defined dated polygon in a **Selected
+supply area** section. Any company-performance measures are displayed separately and
+apply to the company/reporting period, not specifically to that polygon. Starting a
+global search clears earlier map-click boundary matches so two discovery paths are not
+presented as one result. A complete multi-area company overview is not implemented:
+the bounded search response cannot establish completeness, and WaterGeo does not union
+or dissolve the first returned polygons into a misleading company boundary.
+
 Use the details panel for publisher, licence, snapshot, retrieval time, attribution
 and caveats. Shared URLs contain map state and stable identifiers, not API responses
-or precise device location. The explorer does not request browser geolocation.
+or precise device location. Supported flood and bathing filters are included. The
+explorer does not request browser geolocation, and a copied local-development URL is
+not a public share link.
 For dynamic products, “current by policy” describes WaterGeo retrieval age against an
 operator-configured threshold. It does not describe publisher observation freshness.
 Static publication time, retrieval time and observation time are displayed as separate

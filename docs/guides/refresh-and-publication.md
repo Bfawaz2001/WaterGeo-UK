@@ -44,6 +44,13 @@ The legacy [local bootstrap](local-complete-demo.md) covers six core source fami
 Those are not the same six as the dynamic refresh command, and neither describes the
 ten-source static evidence package.
 
+A retained rainfall refresh from 11 October 2026 illustrates this behavior. The
+publisher returned one reading `value` as a two-element list rather than the accepted
+scalar-or-null shape. Normalization rejected and archived that evidence, the wrapper
+continued with other products, and the 30 September rainfall snapshot remained
+available. See the [rainfall incident record](../data-sources/environment-agency-rainfall.md#rejected-refresh-on-11-october-2026).
+Operators must not coerce malformed publisher values merely to make a refresh green.
+
 ## Versioned and bounded products
 
 Water-supply boundaries, catchment plans, reservoir editions and company-performance

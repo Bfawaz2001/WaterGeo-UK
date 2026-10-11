@@ -207,7 +207,9 @@ test("static production mode shows national layers, caveats and company facts", 
   const search = page.getByRole("searchbox", { name: "Search WaterGeo" });
   await search.fill("Synthetic Water");
   await page.getByRole("button", { name: /Synthetic Water.*Synthetic area/ }).click();
+  await expect(page.getByRole("heading", { name: "Selected supply area" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Company performance" })).toBeVisible();
+  await expect(page.getByText(/apply to the company and reporting period, not specifically/)).toBeVisible();
   await expect(page.getByText(/Published measure/)).toBeVisible();
   const base = new URL(page.url()).pathname.startsWith("/WaterGeo-UK/") ? "/WaterGeo-UK" : "";
   expect(requests).toContain(`${base}/watergeo-data/manifest.json`);

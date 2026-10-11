@@ -54,7 +54,7 @@ uv run --locked alembic upgrade head
 uv run --locked alembic current
 ```
 
-Expected schema revision: **0003**. An existing pre-0003 database may need the
+Expected current schema revision: **0012**. An existing pre-0003 database may need the
 ingestion role bootstrapped using the [volume instructions](local-platform-reference.md#existing-database-volumes).
 Do not delete an existing volume to solve a missing-role error.
 
@@ -133,6 +133,13 @@ different transformation libraries/grids can cause a protective 503. Read
 changing that contract. A GeoJSON provenance hash describes PostGIS's geometry
 text, not the entire HTTP response file.
 
+In the explorer, company headings group only the exact area matches returned by the
+bounded search. They are not a complete company-area listing. Selecting a result keeps
+its source area and geometry independent; company-wide performance measures appear in
+a separate section and must not be interpreted as measurements for that polygon. A
+reviewed, snapshot-complete company overview would need a distinct listing/index
+contract and is deferred rather than approximated by unioning the first matches.
+
 ## 6. Reproduce presentation evidence
 
 With the reviewed snapshot loaded:
@@ -183,5 +190,6 @@ docker compose down
 ```
 
 Avoid `down --volumes` for the development database: it deletes its named volume.
-Public hosting, live Environment Agency data, an SDK and the map interface remain
-later work. This walkthrough completes the first local source-to-API path.
+The public explorer is a governed static GitHub Pages publication and does not host
+this FastAPI/PostGIS service. The SDK and map interface are implemented; this
+walkthrough remains the focused local source-to-API path for water-supply geometry.

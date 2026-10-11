@@ -22,6 +22,22 @@ one-shot action can fit matching loaded points without creating a refit loop. Th
 panel shows assessment year and keeps annual classification separate from samples,
 short-term advice and daily swimming-safety decisions.
 
+## Daily pollution-risk forecasts are a separate candidate
+
+The Environment Agency's
+[bathing-water quality service](https://environment.data.gov.uk/bwq/profiles/)
+and [Swimfo guidance](https://environment.data.gov.uk/bwq/profiles/help-understanding-data.html)
+distinguish annual compliance classification from short-term pollution-risk forecasts.
+Forecasts are seasonal, site-specific and not available for every designated bathing
+water; their validity window, advice state and absence/out-of-season meanings require
+a separate contract. Weather, tides and other predictive inputs do not turn an annual
+classification into a daily safety result.
+
+Phase 18B may assess the official forecast endpoint, licensing, eligible-site coverage,
+issue/expiry times and failure states. No unattended forecast ingestion or live safety
+claim is implemented in Phase 18A.1. The current `latestRiskPrediction` field remains
+publisher context only and must not be presented as a WaterGeo safe-to-swim judgement.
+
 ## Local acceptance on 29 September 2026
 
 The bounded official response produced 464 bathing-water locations. It included 451
