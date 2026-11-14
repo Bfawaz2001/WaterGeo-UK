@@ -467,3 +467,25 @@ select { max-width: 100%; border: 1px solid var(--line-strong); border-radius: 7
 .control-panel select { max-width: 100%; }
 .control-panel > details > summary { font-weight: 750; }
 @media (min-width: 1101px) { .selection-region { width: 340px; } }
+
+.hydrology-history { display: grid; gap: 12px; padding-block: 12px; min-width: 0; }
+.hydrology-history label { display: grid; gap: 6px; }
+.hydrology-history select { width: 100%; min-width: 0; text-overflow: ellipsis; }
+.hydrology-history p { overflow-wrap: anywhere; }
+.hydrology-history section { min-width: 0; }
+.history-table { overflow-x: auto; max-width: 100%; }
+.history-table table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.history-table th, .history-table td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); }
+.trend-chart svg text { font-size: 10px; fill: var(--ink); }
+.trend-chart input[type="range"] { width: 100%; accent-color: var(--accent); }
+.trend-chart circle:focus { stroke: var(--focus); stroke-width: 4; outline: none; }
+@media (max-width: 600px) {
+  .trend-chart figcaption { flex-wrap: wrap; font-size: 11px; }
+  .trend-chart figcaption strong { order: 3; flex-basis: 100%; font-size: 12px; }
+}
+
+.history-disclosure { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 12px; }
+.history-disclosure > summary { color: var(--accent-dark); font-size: 14px; font-weight: 800; padding-block: 8px; }
+.hydrology-history .primary-button, .hydrology-history .secondary-button { max-width: 100%; margin: 4px 6px 4px 0; }
+.hydrology-history button:disabled { opacity: .55; cursor: default; }
+.trend-chart .chart-timezone { margin-block: 6px; font-size: 10px; color: var(--muted); }

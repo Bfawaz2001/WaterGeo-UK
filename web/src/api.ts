@@ -1,5 +1,6 @@
 import { apiBasePath, dataMode } from "./config";
 import { clearStaticCaches, StaticDataError, staticRequest } from "./staticData";
+import type { HistoryDiscovery, HistoryPage } from "./historicalObservations";
 import type {
   AreaFeature,
   AreaPage,
@@ -173,6 +174,10 @@ function pinned<T extends { dataset: { snapshot_id: string } }>(
 }
 
 export const api = {
+  hydrologyRetrievals: (measure: string, signal: AbortSignal, afterId?: string) =>
+    request<HistoryDiscovery>(withQuery("/v1/hydrology/history/retrievals", { measure_id: measure, limit: 50, after_id: afterId }), { signal }),
+  hydrologyHistory: (id: string, signal: AbortSignal, after?: string) =>
+    request<HistoryPage>(withQuery(`/v1/hydrology/history/${encodeURIComponent(id)}`, { limit: 1000, after }), { signal }),
   search: (term: string, signal: AbortSignal) =>
     request<SearchResponse>(`/v1/search?${query({ q: term, limit: 24 })}`, { signal }),
   hydrologyDetail: (id: string, signal: AbortSignal, snapshot?: string) =>

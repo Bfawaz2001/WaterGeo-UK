@@ -29,7 +29,7 @@ export function periodLabel(seconds: number | null | undefined): string {
   return `${seconds} seconds`;
 }
 
-export function hydrologyMeasureLabel(measure: HydrologyMeasure): string {
+export function hydrologyMeasureLabel(measure: HydrologyMeasure, context: "latest" | "history" = "latest"): string {
   const statistic = measure.source_fields?.valueStatistic;
   const identity = typeof statistic === "object" && statistic !== null && "@id" in statistic
     ? statistic["@id"]
@@ -40,7 +40,7 @@ export function hydrologyMeasureLabel(measure: HydrologyMeasure): string {
     const prefix = measure.period === 86_400 ? "Daily " : "";
     return `${prefix}${statisticLabel} ${measure.parameter}`;
   }
-  return `Latest ${measure.parameter.toLocaleLowerCase()} observation`;
+  return context === "history" ? `${measure.parameter} observations` : `Latest ${measure.parameter.toLocaleLowerCase()} observation`;
 }
 
 export function sourceFieldLabel(

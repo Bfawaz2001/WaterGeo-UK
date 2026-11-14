@@ -6,6 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import ValidationError
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -13,11 +14,16 @@ from watergeo.api.dependencies import get_database
 from watergeo.api.hydrology_history_models import (
     HistoricalObservation,
     HistoryRetrievalResponse,
+    RetrievalMetadata,
+    RetrievalPage,
+    RetrievalQuery,
 )
 from watergeo.api.water_supply_models import ApiError
 from watergeo.db.hydrology_history import (
+    InvalidHistoryCursor,
     get_history_retrieval,
     list_history_observations,
+    list_history_retrievals,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,6 +35,32 @@ router = APIRouter(
 )
 
 Database = Annotated[Engine, Depends(get_database)]
+
+
+@router.get("/retrievals", response_model=RetrievalPage)
+def history_retrievals(
+    response: Response, query: Annotated[RetrievalQuery, Query()], database: Database
+) -> RetrievalPage:
+    """Discover exact-measure editions, newest first; no ingestion or edition merging."""
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        rows, next_id = list_history_retrievals(
+            database, query.measure_id, limit=query.limit, after_id=query.after_id
+        )
+        return RetrievalPage(
+            measure_id=query.measure_id,
+            items=[RetrievalMetadata(**row, licence="Open Government Licence v3") for row in rows],
+            next_after_id=next_id,
+        )
+    except InvalidHistoryCursor:
+        raise HTTPException(
+            422, "Cursor does not belong to this measure", headers={"Cache-Control": "no-store"}
+        ) from None
+    except (SQLAlchemyError, ValidationError) as error:
+        logger.warning("hydrology_history_unavailable", extra={"error_type": type(error).__name__})
+        raise HTTPException(
+            503, "Hydrology history unavailable", headers={"Cache-Control": "no-store"}
+        ) from None
 
 
 @router.get(

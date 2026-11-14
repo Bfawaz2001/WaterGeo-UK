@@ -180,3 +180,17 @@ pagination and `Cache-Control: no-store`.
 
 See [ADR 0007](../adr/0007-environment-agency-hydrology.md) for snapshot ingestion
 and [ADR 0008](../adr/0008-hydrology-history.md) for bounded historical evidence.
+
+## Historical explorer contract (Phase 18B.1)
+
+Accepted bounded history can now be discovered by exact publisher measure notation
+through `GET /v1/hydrology/history/retrievals`. The API exposes independently dated
+retrieval editions with requested scope, counts, hashes and normalization identity.
+The explorer verifies station membership from snapshot-pinned accepted measure
+metadata, then reads one separate history retrieval using existing timestamp cursors.
+It does not assign old observations to a newer station snapshot or retrieve publisher
+data. Missing-quality observations, qualifiers and zero retain their accepted meaning.
+
+Historical unit/period presentation uses the exact measure's accepted metadata snapshot,
+identified separately in CSV and provenance. The public static artifact does not
+contain this historical product. See the [workflow and bounds](../guides/hydrology-walkthrough.md#phase-18b1-discover-and-inspect-accepted-history).

@@ -61,3 +61,25 @@ For dynamic products, “current by policy” describes WaterGeo retrieval age a
 operator-configured threshold. It does not describe publisher observation freshness.
 Static publication time, retrieval time and observation time are displayed as separate
 facts when the corresponding accepted fields exist.
+
+## Historical Hydrology observations
+
+API mode offers **Historical observations** in a station's details, after its latest
+measurements. Choose a measure and a stored retrieval edition. Labels are friendly;
+exact publisher IDs and content hashes remain in expandable provenance. Historical
+retrieval time and requested observation scope are separate from the station's
+metadata snapshot and from each reading's observation time. Overlapping/corrected
+retrievals are selected independently, never silently merged.
+
+Windows operate only within the selected accepted retrieval and end at its requested
+end. Unsupported presets are disabled. Complete pagination means all stored rows
+were received, not that every expected publisher measurement exists. Null is missing,
+zero is numeric, and lines break at explicit missing rows or gaps exceeding 1.5 times
+the measure's declared period. No samples are inferred from those gaps. Hover and
+keyboard reading inspection show real accepted observations; the table and CSV retain
+quality and provenance. CSV contains the selected window only and is withheld when
+loading/verification is incomplete. No safety condition or statistical trend is inferred.
+
+The public static edition contains no Hydrology history and says so explicitly.
+See the [Hydrology guide](hydrology-walkthrough.md#phase-18b1-discover-and-inspect-accepted-history)
+for operator retrieval, browser bounds, CSV text protection and curated publication follow-up.

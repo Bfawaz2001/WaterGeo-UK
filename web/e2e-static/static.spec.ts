@@ -281,3 +281,16 @@ test("Pages build serves its real static publication assets", async ({ page }) =
   expect(requests.some((path) => path.startsWith("/watergeo-data/"))).toBe(false);
   expect(requests.some((path) => path.startsWith("/v1/"))).toBe(false);
 });
+
+test("static Hydrology explicitly excludes history without runtime API calls", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", (request) => { if (new URL(request.url()).pathname.startsWith("/v1/")) requests.push(request.url()); });
+  await staticPublication(page);
+  await page.goto("./");
+  await page.getByRole("button", { name: "Start exploring" }).click();
+  await page.getByText("Browse nearby results without the map").click();
+  await page.getByRole("button", { name: /Station: Static hydrology/ }).click();
+  await expect(page.getByRole("heading", { name: "Historical observations" })).toBeVisible();
+  await expect(page.getByText(/does not include stored Hydrology history/)).toBeVisible();
+  expect(requests).toEqual([]);
+});

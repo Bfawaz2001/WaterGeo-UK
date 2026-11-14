@@ -43,7 +43,7 @@ be traced back to the accepted data behind it.
 | Local API and database | Implemented; operators can retrieve, validate and accept new publisher snapshots. |
 | Hosted public API | No publicly hosted FastAPI/PostgreSQL/PostGIS service. Pages serves files only. |
 | Fabric interoperability | Compatibility/export foundations and examples; no Fabric deployment or cloud resource is required. |
-| Latest milestone | Phase 18A.2 delivered complete snapshot-pinned water-company inventories, exact multi-area map views and independent company-performance detail. |
+| Latest implementation | Phase 18B.1 awaits review: historical Hydrology discovery, verified chart/quality/table/CSV in API mode, with explicit history absence in static mode. Phase 18A.2 company exploration remains available. |
 
 Publisher observation/publication time, WaterGeo retrieval time and WaterGeo static
 publication time are separate. A fresh retrieval does not prove a fresh observation.
@@ -212,8 +212,11 @@ publisher-declared measurement period and separate observation from retrieval ti
 - Water-company exploration verifies every publisher-associated area for the selected
   acronym and snapshot, then shows the exact features together. It does not dissolve
   them into a legal boundary or claim a current property-supplier result.
-- The public site is an immutable static edition. Historical rainfall and richer
-  Hydrology/Water Quality analytics are Phase 18B work.
+- API-mode Hydrology history is discoverable by exact station measure and independent
+  accepted retrieval edition, with bounded verified chart/quality/CSV inspection. See
+  the [Hydrology guide](docs/guides/hydrology-walkthrough.md#phase-18b1-discover-and-inspect-accepted-history).
+  The public static edition has no Hydrology history; curated publication, rainfall
+  history and Water Quality analytics remain future work.
 - The public deployment has no FastAPI/PostGIS service. API hosting, access policy,
   monitoring and budget need a separate production review.
 
