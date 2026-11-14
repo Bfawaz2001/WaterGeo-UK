@@ -20,6 +20,8 @@ for current state; dated ADRs and performance reports describe their review runt
 | Explorer reliability, Phase 18A.1 | One-shot Water Body navigation, visible shared-view feedback/filter state, clearer area-versus-company semantics, rainfall rejection diagnosis and updated project guidance | [Interpretation guide](../guides/explorer-data-interpretation.md) |
 | Company discovery, Phase 18A.2 | Complete snapshot-pinned company-area inventories, exact multi-feature map navigation, independent performance selection and stricter rainfall identity/value coverage | [Water-supply walkthrough](../guides/water-supply-walkthrough.md) |
 
+| Historical Hydrology, Phase 18B.1 (implementation awaiting review) | Exact-measure retrieval discovery, independent edition selection, accepted observation chart/quality/table/CSV, explicit static limitation and proposed Fabric table | [Hydrology walkthrough](../guides/hydrology-walkthrough.md#phase-18b1-discover-and-inspect-accepted-history) |
+
 Public hosting refers to static GitHub Pages, not a hosted FastAPI/PostGIS service.
 Fabric compatibility does not mean a Fabric deployment was provisioned. New source
 opportunities were assessed in earlier phases; assessment alone is not integration.

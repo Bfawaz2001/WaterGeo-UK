@@ -1,4 +1,23 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+
+const historyEdition = {
+  retrieval_id: "11111111-1111-4111-8111-111111111111", measure_id: "level-1",
+  requested_from: "2026-10-01T00:00:00Z", requested_to: "2026-10-02T00:00:00Z",
+  retrieval_started_at: "2026-10-03T00:00:00Z", retrieval_completed_at: "2026-10-03T00:01:00Z",
+  record_count: 3, content_sha256: "a".repeat(64), normalized_sha256: "b".repeat(64),
+  normalization_version: "ea-hydrology-history-v1", licence: "Open Government Licence v3",
+};
+function historyPage() {
+  return { ...historyEdition, next_after: null, observations: [
+    { observed_at: "2026-10-01T00:00:00Z", value: 0 },
+    { observed_at: "2026-10-01T00:15:00Z", value: null },
+    { observed_at: "2026-10-01T01:00:00Z", value: -2 },
+  ].map((row) => ({ ...row, source_fields: {
+    measure: { "@id": "http://environment.data.gov.uk/hydrology/id/measures/level-1" },
+    quality: row.value === null ? "Missing" : "Unchecked", completeness: "Complete",
+  } })) };
+}
 
 const dataset = {
   snapshot_id: "11111111-1111-4111-8111-111111111111",
@@ -15,6 +34,14 @@ async function syntheticApi(page: Page) {
     const url = new URL(route.request().url());
     if (state.failures) {
       await route.fulfill({ status: 503, contentType: "application/json", body: '{"detail":"unavailable"}' });
+      return;
+    }
+    if (url.pathname === "/v1/hydrology/history/retrievals") {
+      await route.fulfill({ json: { measure_id: "level-1", items: [historyEdition], next_after_id: null } });
+      return;
+    }
+    if (url.pathname === `/v1/hydrology/history/${historyEdition.retrieval_id}`) {
+      await route.fulfill({ json: historyPage() });
       return;
     }
     if (url.pathname === "/v1/sources/status") {
@@ -99,7 +126,7 @@ async function syntheticApi(page: Page) {
         latitude: 54.5, longitude: -2.5,
         geometry: { type: "Point", coordinates: [-2.5, 54.5] }, distance_m: null,
         dataset,
-        measures: [{ measure_id: "level-1", parameter: "level", unit_name: "m", latest_observation: {
+        measures: [{ measure_id: "level-1", parameter: "level", unit_name: "m", period: 900, source_fields: {}, latest_observation: {
           value: 0.82, observed_at: "2026-09-26T11:45:00Z",
         } }],
       } });
@@ -389,3 +416,38 @@ test("regional navigation and exact flood-state filters preserve selected proven
   await severity.selectOption("");
   await expect(warnings).toHaveCount(4);
 });
+
+for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+  test(`historical station workflow and verified CSV at ${viewport.width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await syntheticApi(page);
+    await page.goto("/");
+    await page.getByRole("searchbox", { name: "Search WaterGeo" }).fill("synthetic");
+    await page.getByRole("button", { name: /Synthetic station.*Hydrology station/ }).click();
+    await expect(page.getByRole("heading", { name: "Synthetic station" })).toBeVisible();
+    await page.getByText("Historical observations", { exact: true }).click();
+    const chart = page.getByRole("img", { name: /Synthetic station historical level/ });
+    await expect(chart).toBeVisible();
+    await chart.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath(`history-${viewport.width}.png`) });
+    await expect(page.getByText(/Complete retrieval verified/)).toContainText("3 stored records");
+    await page.getByRole("slider", { name: "Inspect reading" }).focus();
+    await page.keyboard.press("Home");
+    await expect(page.getByRole("slider")).toHaveAttribute("aria-valuetext", /^0 m,/);
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("slider")).toHaveAttribute("aria-valuetext", /^Missing m,/);
+    await page.getByText("Selected reading quality and publisher fields").click();
+    await expect(page.getByText("Missing", { exact: true }).first()).toBeVisible();
+    await page.getByText("Historical retrieval provenance").click();
+    await expect(page.getByRole("region", { name: "Verified historical series" }).locator("dd code").filter({ hasText: historyEdition.retrieval_id })).toBeVisible();
+    const downloadEvent = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download observations CSV" }).click();
+    const download = await downloadEvent;
+    expect(download.suggestedFilename()).toBe(`hydrology-${historyEdition.retrieval_id}.csv`);
+    const csv = await readFile(await download.path(), "utf8");
+    expect(csv).toContain(',0,"reported"');
+    expect(csv).toContain(',"","missing"');
+    expect(csv).toContain(historyEdition.content_sha256);
+    await expect(page.getByRole("heading", { name: "Synthetic station" })).toBeVisible();
+  });
+}

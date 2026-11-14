@@ -14,7 +14,7 @@ HTTP only and validates successful responses against those Pydantic contracts.
 | Sources | `/v1/sources/status` | None. Ages describe accepted local evidence at `checked_at`. |
 | Water supply | dataset, areas, at-point, area detail, area geometry | Area lists use `after_id`; the reviewed release is immutable. Geometry is `application/geo+json`. |
 | Hydrology | dataset, stations, nearby stations, station detail | Station lists use `after_id`; normal lists accept `snapshot_id`. Nearby search and detail select the current snapshot. |
-| Hydrology history | `/v1/hydrology/history/{retrieval_id}` | The retrieval ID pins evidence; observations use aware timestamp `after`. |
+| Hydrology history | `/v1/hydrology/history/{retrieval_id}`; Phase 18B.1 adds `/v1/hydrology/history/retrievals` | The retrieval ID pins evidence; observations use aware timestamp `after`. Discovery uses exact `measure_id`, bounded `limit` and same-measure UUID `after_id`, ordered by retrieval completion then UUID descending. |
 | Catchments | dataset; lists/details for four hierarchy levels; Water Body geometry | Lists use `after_id` and `snapshot_id`. Detail routes select the current reviewed snapshot. Geometry is `application/geo+json`. |
 | Water Quality | dataset, sampling-point list/near/detail | Routes accept `snapshot_id`; lists use opaque `after_id`. Sampling-point IDs are opaque and can contain `/`. |
 | Water Quality observations | `/v1/water-quality/observations/{retrieval_id}` | The retrieval ID pins evidence; observations use opaque `after_id`. |

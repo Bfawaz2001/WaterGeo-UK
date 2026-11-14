@@ -46,11 +46,20 @@ the same contract. Exact labels from accepted EA rainfall station records are us
 generic or missing labels retain the gauge-ID fallback. The undocumented October
 list-valued rainfall reading remains rejected under the official scalar-value contract.
 
+## Phase 18B.1 — implemented, awaiting review
+
+Exact-measure, bounded accepted Hydrology retrieval discovery; integrated station
+history selection, time-spaced interactive charts, quality inspection, missing/gap
+semantics, scoped windows and verified CSV. API mode uses stored retrieval editions;
+static mode explicitly explains history absence. No ingestion, data mutation,
+publication, migration, vendor dependency or deployment is added. The Fabric table
+proposal remains documentation rather than an implemented history file exporter.
+
 ## Future, separately reviewed work
 
 | Workstream | Remaining decision / deliverable |
 | --- | --- |
-| Phase 18B history and analytics | Governed rainfall history; UI for existing bounded Hydrology and Water Quality observation evidence; assessment of official seasonal bathing-water risk forecasts; measure-safe charts without joining incompatible units/statistics |
+| Phase 18B.2 history and analytical files | Reviewed curated Hydrology evidence/replay/manifest product for static publication; bounded retrieval-pinned Parquet export and real Fabric validation; governed rainfall history and Water Quality observation UI remain separately assessed |
 | Phase 18C national distribution | Lightweight accepted point overview/tiles, completeness metadata and zoom handoff; avoid treating nearest-100 clusters as nationwide coverage |
 | Public API readiness | Hosting, authentication/access policy, rate limits, monitoring and operating budget; current public hosting is static only |
 | Static publication automation | Govern refresh → retained evidence → build → protected deploy, with failure alerts and rollback review |

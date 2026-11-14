@@ -132,6 +132,7 @@ def test_openapi_documents_public_endpoints(client: TestClient) -> None:
         "/v1/hydrology/stations/near",
         "/v1/hydrology/stations/{station_id}",
         "/v1/hydrology/history/{retrieval_id}",
+        "/v1/hydrology/history/retrievals",
         "/v1/catchments/dataset",
         "/v1/catchments/river-basin-districts",
         "/v1/catchments/river-basin-districts/{entity_id}",

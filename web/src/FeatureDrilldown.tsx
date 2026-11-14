@@ -4,6 +4,7 @@ import { api } from "./api";
 import { dataMode } from "./config";
 import { MetadataValue } from "./MetadataValue";
 import { TrendChart } from "./TrendChart";
+import { HydrologyHistory } from "./HydrologyHistory";
 import type { HydrologyMeasure, ReservoirReading, SelectedFeature } from "./types";
 import { hydrologyMeasureLabel, periodLabel, sourceFieldLabel } from "./explorerPresentation";
 
@@ -13,10 +14,18 @@ type Drilldown =
   | { kind: "water-quality"; rows: Array<{ id: string; value: unknown }> };
 
 export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
+  const identity = selected.kind === "hydrology" ? `${selected.dataset.snapshot_id}:${selected.item.station_id}`
+    : selected.kind === "water-quality" ? `${selected.dataset.snapshot_id}:${selected.item.sampling_point_id}`
+      : selected.kind === "reservoirs" ? `${selected.dataset.snapshot_id}:${selected.item.reservoir_id}` : selected.kind;
+  return <ScopedDrilldown key={`${selected.kind}:${identity}`} selected={selected} />;
+}
+
+function ScopedDrilldown({ selected }: { selected: SelectedFeature }) {
   const staticMode = dataMode() === "static";
   const [detail, setDetail] = useState<Drilldown | null>(null);
   const [error, setError] = useState(false);
   const [parameter, setParameter] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   useEffect(() => {
     if (staticMode) return;
     const controller = new AbortController();
@@ -25,7 +34,7 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
         let result: Drilldown;
         if (selected.kind === "hydrology") {
           const response = await api.hydrologyDetail(selected.item.station_id, controller.signal, selected.dataset.snapshot_id);
-          if (response.dataset.snapshot_id !== selected.dataset.snapshot_id) throw new Error("Snapshot changed");
+          if (response.dataset.snapshot_id !== selected.dataset.snapshot_id || response.station_id !== selected.item.station_id) throw new Error("Snapshot or station identity changed");
           result = { kind: "hydrology", measures: response.measures };
         } else if (selected.kind === "water-quality") {
           const response = await api.samplingPointDetail(selected.item.sampling_point_id, selected.dataset.snapshot_id, controller.signal);
@@ -50,7 +59,7 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
     return () => controller.abort();
   }, [selected, staticMode]);
   if (selected.kind === "water-supply" || selected.kind === "water-body" || selected.kind === "thames-discharge") return null;
-  if (staticMode) return <p className="caveat" role="note">{selected.kind === "water-quality" ? "This public static publication contains sampling locations and metadata, not a Water Quality observation series." : "Detailed observations are available in API mode; this static publication contains the mapped snapshot summary."}</p>;
+  if (staticMode) return <><p className="caveat" role="note">{selected.kind === "water-quality" ? "This public static publication contains sampling locations and metadata, not a Water Quality observation series." : "Detailed observations are available in API mode; this static publication contains the mapped snapshot summary."}</p>{selected.kind === "hydrology" && <section aria-label="Historical observations"><h3>Historical observations</h3><p>This public static edition does not include stored Hydrology history. Use a local or self-hosted API with accepted historical retrievals. No publisher readings are fetched by the browser.</p></section>}</>;
   if (error) return <p className="state-error" role="alert">Details unavailable or snapshot changed. Reselect a current result to retry.</p>;
   if (!detail) return <p role="status">Loading source details…</p>;
 
@@ -73,6 +82,10 @@ export function FeatureDrilldown({ selected }: { selected: SelectedFeature }) {
       </article>;
       })}</div>
       <p className="caveat">Latest values are publisher observations. WaterGeo retrieval time is shown separately under provenance.</p>
+      <details className="history-disclosure" onToggle={(event) => setHistoryOpen(event.currentTarget.open)}>
+        <summary>Historical observations</summary>
+        {historyOpen && selected.kind === "hydrology" && <HydrologyHistory measures={detail.measures} station={selected.item.labels[0] ?? selected.item.station_id} metadataSnapshot={selected.dataset.snapshot_id} />}
+      </details>
     </section>;
   }
 

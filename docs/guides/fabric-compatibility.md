@@ -98,3 +98,44 @@ an explicit `errorifexists` Delta write. Join only on the publisher's stable `si
 within an explicit snapshot. Do not spatially infer a link to Water Bodies or EA data.
 Power BI can consume the small snapshot GeoJSON as an Azure Maps reference layer;
 status and retrieval time must remain visible. No Fabric SDK is added to WaterGeo.
+
+## Proposed historical Hydrology analytical contract (Phase 18B.1)
+
+The new discovery/observation contracts support a future accepted retrieval → Parquet
+bundle → OneLake Files → Delta table → Power BI exercise. This is a proposed table
+shape, not an implemented historical Parquet exporter or validated Fabric deployment.
+Core models, explorer and ingestion have no Fabric SDK, credentials or paid dependency.
+Existing water-supply/company-performance exports and examples are unchanged.
+
+| Proposed column | Arrow / Delta representation | Meaning |
+| --- | --- | --- |
+| `retrieval_id`, `measure_id` | string | Retrieval edition and exact publisher identity; never coerce IDs to numbers |
+| `observed_at` | timestamp(us, UTC) / UTC timestamp | Observation instant; retain UTC semantics explicitly |
+| `value` | nullable float64 / double | Finite accepted number; null remains missing, zero remains reported |
+| `value_state` | string | `reported` or `missing`, derived only from accepted nullable value |
+| `unit`, `period_seconds`, `metadata_snapshot_id` | string, int64, string | Exact measure's accepted metadata, separately scoped from history |
+| `quality`, `completeness`, `source_fields_json` | string / JSON text | Publisher quality, optional completeness and all original qualifiers/fields |
+| `requested_from`, `requested_to` | UTC timestamps | Inclusive bounded retrieval scope, at most 31 days |
+| `retrieval_started_at`, `retrieval_completed_at` | UTC timestamps | WaterGeo retrieval times, independent of observation time |
+| `content_sha256`, `normalized_sha256`, `normalization_version` | string | Raw evidence product identity and normalization compatibility |
+| `publisher`, `licence`, `licence_url`, `attribution` | string | EA and reviewed OGL v3 attribution |
+
+Row identity is `(retrieval_id, observed_at)`; do not upsert on measure/timestamp across
+retrieval editions. An operator must select an edition explicitly for reporting;
+corrections and overlapping windows retain separate identities. There is no foreign
+key or historical membership assertion to a current metadata snapshot. Record the
+metadata snapshot supplying units separately. Numeric summaries filter reported
+values and expose missing/quality counts; no implicit fill, unit conversion or risk score.
+
+The next exercise should implement a bounded retrieval-pinned exporter using the
+existing client iterator and optional PyArrow conventions: verify final count, pin
+measure/provenance, preserve source-fields JSON, create an explicit Arrow schema even
+for zero rows, and write an immutable directory with SHA-256/byte counts and a manifest.
+Retain accepted publisher evidence separately; a CSV download is not that bundle.
+Upload an unchanged selected bundle to `Files/watergeo/hydrology-history/<retrieval>/`
+in a consumer-owned Lakehouse. Verify hashes/counts/schema, then create a Delta table
+with `errorifexists`. Preserve provenance columns and the original manifest when
+Arrow metadata is not carried through. In Power BI, test UTC handling, numeric zero,
+null quality, corrected editions and tooltips with measure/retrieval/scope/attribution.
+Document actual tenant/runtime, capacity, row-count/checksum checks and results before
+claiming execution. No tenant access or Fabric execution occurred in Phase 18B.1.

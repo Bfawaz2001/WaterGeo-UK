@@ -742,3 +742,109 @@ def test_history_http_explicit_retrieval_pagination(
                 """),
                 params,
             )
+
+
+def test_history_discovery_exact_editions_and_keyset_pagination(
+    engines: tuple[Engine, Engine, Engine], tmp_path: Path, loaded: dict[str, Any]
+) -> None:
+    """Synthetic corrected editions remain separate; discovery is SELECT-only."""
+    from datetime import UTC, datetime
+
+    from watergeo.db.hydrology_history_ingestion import load_history
+    from watergeo.ingestion.hydrology_history_client import fetch_history
+
+    with engines[1].connect() as connection:
+        measures = (
+            connection.execute(
+                text(
+                    "SELECT measure_id FROM watergeo.hydrology_measure "
+                    "WHERE snapshot_id=:id ORDER BY measure_id"
+                ),
+                {"id": loaded["snapshot_id"]},
+            )
+            .scalars()
+            .all()
+        )
+    retrievals = []
+    try:
+        for index, measure in enumerate([measures[0], measures[0], measures[0], measures[1]]):
+            records = [
+                {
+                    "measure": {
+                        "@id": "http://environment.data.gov.uk/hydrology/id/measures/" + measure
+                    },
+                    "date": "2026-09-19",
+                    "dateTime": "2026-09-19T00:00:00",
+                    "value": index,
+                    "quality": "Unchecked",
+                }
+            ]
+
+            def respond(
+                request: httpx.Request, records: list[dict[str, Any]] = records
+            ) -> httpx.Response:
+                return httpx.Response(
+                    200,
+                    json={
+                        "meta": {
+                            "publisher": "Environment Agency",
+                            "license": LICENCE,
+                            "licenseName": "OGL 3",
+                            "version": "2.1.1",
+                            "limit": 5000,
+                        },
+                        "items": records,
+                    },
+                )
+
+            bundle = fetch_history(
+                measure,
+                datetime(2026, 9, 19, tzinfo=UTC),
+                datetime(2026, 9, 19, 1, tzinfo=UTC),
+                root=tmp_path,
+                transport=httpx.MockTransport(respond),
+            )
+            retrievals.append(load_history(engines[0], bundle)["retrieval_id"])
+        with TestClient(create_app()) as client:
+            path = "/v1/hydrology/history/retrievals"
+            first = client.get(path, params={"measure_id": measures[0], "limit": 2})
+            assert first.status_code == 200
+            data = first.json()
+            assert [row["retrieval_id"] for row in data["items"]] == [
+                str(retrievals[2]),
+                str(retrievals[1]),
+            ]
+            assert all(row["record_count"] == 1 for row in data["items"])
+            assert data["next_after_id"] == str(retrievals[1])
+            second = client.get(
+                path,
+                params={"measure_id": measures[0], "limit": 2, "after_id": data["next_after_id"]},
+            ).json()
+            assert [row["retrieval_id"] for row in second["items"]] == [str(retrievals[0])]
+            assert second["next_after_id"] is None
+            foreign = client.get(
+                path, params={"measure_id": measures[0], "after_id": str(retrievals[3])}
+            )
+            assert foreign.status_code == 422
+            empty = client.get(path, params={"measure_id": "not-present"})
+            assert empty.status_code == 200 and empty.json()["items"] == []
+            for row in data["items"]:
+                detail = client.get(f"/v1/hydrology/history/{row['retrieval_id']}").json()
+                assert detail["measure_id"] == row["measure_id"]
+                assert detail["content_sha256"] == row["content_sha256"]
+                assert detail["requested_from"] == row["requested_from"]
+                assert detail["record_count"] == row["record_count"]
+    finally:
+        for retrieval in retrievals:
+            with engines[2].begin() as connection:
+                connection.execute(
+                    text(
+                        "DELETE FROM watergeo.hydrology_historical_observation "
+                        "WHERE retrieval_id=:id"
+                    ),
+                    {"id": retrieval},
+                )
+                connection.execute(
+                    text("DELETE FROM watergeo.hydrology_history_retrieval WHERE id=:id"),
+                    {"id": retrieval},
+                )

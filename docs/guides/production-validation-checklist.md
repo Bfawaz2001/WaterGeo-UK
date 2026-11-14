@@ -58,3 +58,14 @@ and [scheduled jobs](https://docs.digitalocean.com/products/app-platform/how-to/
 Microsoft documents [OneLake upload and Delta](https://learn.microsoft.com/en-us/fabric/onelake/create-lakehouse-onelake),
 [notebook loading](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-notebook-load-data)
 and [Lakehouse Map layers](https://learn.microsoft.com/en-us/fabric/real-time-intelligence/map/about-lakehouse-layers).
+
+## Next bounded Hydrology / Fabric exercise
+
+Phase 18B.1 supplies history discovery, accepted paginated observations and client-side
+CSV, not a historical Parquet exporter. Before tenant validation, implement and review
+the [proposed historical table and bundle](fabric-compatibility.md#proposed-historical-hydrology-analytical-contract-phase-18b1).
+Use synthetic and selected accepted retrievals, verify counts/hashes/UTC/quality and
+metadata-snapshot attribution locally, then preserve the whole bundle in OneLake Files.
+Create an independent Delta edition with overwrite refusal; test zero, missing values,
+quality, overlapping corrections and provenance in Power BI. Record real tenant results
+separately. Fabric remains optional for the public explorer.
