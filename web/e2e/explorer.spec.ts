@@ -418,7 +418,7 @@ test("regional navigation and exact flood-state filters preserve selected proven
 });
 
 for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
-  test(`historical station workflow and verified CSV at ${viewport.width}px`, async ({ page }) => {
+  test(`historical station workflow and verified CSV at ${viewport.width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await syntheticApi(page);
     await page.goto("/");
@@ -429,7 +429,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
     const chart = page.getByRole("img", { name: /Synthetic station historical level/ });
     await expect(chart).toBeVisible();
     await chart.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: `/private/tmp/watergeo-phase18b1-history-${viewport.width}.png` });
+    await page.screenshot({ path: testInfo.outputPath(`history-${viewport.width}.png`) });
     await expect(page.getByText(/Complete retrieval verified/)).toContainText("3 stored records");
     await page.getByRole("slider", { name: "Inspect reading" }).focus();
     await page.keyboard.press("Home");
