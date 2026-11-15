@@ -61,6 +61,22 @@ OFWAT_WATER_SUPPLY_V1_5 = BoundarySource(
     licence_version=None,
 )
 
+OFWAT_SEWERAGE_V1_5 = BoundarySource(
+    dataset="ofwat-sewerage-areas",
+    release="v1_5a",
+    release_date="2024-04",
+    publisher=OFWAT_WATER_SUPPLY_V1_5.publisher,
+    distributor=OFWAT_WATER_SUPPLY_V1_5.distributor,
+    source_url=(
+        "https://data.parliament.uk/resources/constituencystatistics/water/"
+        "SewerageServicesAreas_incNAVsv1_5a.zip"
+    ),
+    expected_sha256="48129b880cad01729215a9a6db38d0328302df0e7fdb5a2257cc23d75bdfdd74",
+    expected_bytes=8_092_181,
+    expected_basename="SewerageServicesAreas_incNAVs v1_5a",
+    licence_name="Open Government Licence",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class RetrievalResult:

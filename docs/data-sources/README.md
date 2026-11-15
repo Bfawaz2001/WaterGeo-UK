@@ -38,13 +38,12 @@ synthetic or verify and record their redistribution rights.
   observation retrieval verified through publication, retry and HTTP. ADRs 0011/0012
   define the accepted metadata and observation contracts and limitations.
 
-- [Ofwat water-company boundaries](ofwat-company-boundaries.md), reviewed
-  17 September 2026: publisher OGL declaration confirmed; exact edition remains
-  unverified. Empty schema and synthetic geometry tests implemented, with real-data
-  integration pending the edition/final attribution check and resolution of invalid
-  geometries. Includes measured schema,
-  quality findings, and comparisons with OpenPostcodes and MOSL; no integration
-  implemented. Missing bespoke attribution alone does not require publisher contact.
+- [Ofwat water-company boundaries](ofwat-company-boundaries.md): water supply is
+  canonically integrated under ADR 0004. The
+  [unified service product](../architecture/unified-ofwat-services.md), reviewed
+  14 November 2026, independently validates both April 2024 archives and exports
+  source geometry with invalid-feature quarantine flags. Sewerage ID 11 has no
+  approved repair. OGL edition remains unspecified; publisher notices are preserved.
 
 - [Environment Agency Catchment Data Explorer Cycle 3](environment-agency-catchment-data-explorer-verification.json),
   reviewed 20 September 2026: authoritative Cycle 3 hierarchy verified as

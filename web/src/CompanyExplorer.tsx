@@ -126,21 +126,41 @@ export function CompanyExplorer({
     setCollection(undefined);
     setBoundaryError(undefined);
     setBoundaryLoading(true);
-    void Promise.all([
-      completeInventory(company, acceptedSnapshotId, controller.signal),
-      api.waterSupplyCompanyGeometry(
-        company.company_acronym,
-        acceptedSnapshotId,
-        controller.signal,
-      ),
-    ]).then(([areas, geometry]) => {
+    void completeInventory(company, acceptedSnapshotId, controller.signal).then(async (areas) => {
+      let geometry: WaterCompanyFeatureCollection;
+      try {
+        geometry = await api.waterSupplyCompanyGeometry(
+          company.company_acronym, acceptedSnapshotId, controller.signal,
+        );
+      } catch (reason) {
+        if (!(reason instanceof ApiError) ||
+          (reason.status !== 413 && !reason.message.includes("size limit"))) throw reason;
+        // Keep the transport bounds. Each feature still passes the existing
+        // server presentation contract and the pinned inventory checks below.
+        const features: AreaFeature[] = [];
+        for (let start = 0; start < areas.length; start += 4) {
+          const batch = await Promise.all(areas.slice(start, start + 4).map((area) =>
+            api.areaGeometry(area.source_id, controller.signal, acceptedSnapshotId),
+          ));
+          features.push(...batch);
+        }
+        geometry = {
+          type: "FeatureCollection", snapshot_id: acceptedSnapshotId,
+          company, features,
+        };
+      }
       const areaIds = areas.map((area) => area.source_id);
       const geometryIds = geometry.features.map((feature) => feature.id);
       if (
         geometry.snapshot_id !== acceptedSnapshotId ||
         geometry.company.company_acronym !== company.company_acronym ||
         geometry.company.area_count !== areas.length ||
-        areaIds.some((identifier, index) => identifier !== geometryIds[index])
+        geometry.features.length !== areas.length ||
+        areaIds.some((identifier, index) => identifier !== geometryIds[index]) ||
+        geometry.features.some((feature) =>
+          feature.properties.snapshot_id !== acceptedSnapshotId ||
+          feature.properties.company_acronym !== company.company_acronym,
+        )
       ) {
         throw new ApiError(503, "Water-supply company geometry is incomplete");
       }

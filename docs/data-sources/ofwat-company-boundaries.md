@@ -5,7 +5,19 @@ files; no ingestion or new application dependencies. A subsequent
 [schema milestone](../adr/0002-water-supply-snapshots.md) adds empty tables and
 synthetic geometry tests, without loading these files.
 
-## Recommendation
+## November 2026 service-product update
+
+The historical assessment below is preserved. Water supply subsequently entered
+canonical storage under ADR 0004. The new
+[unified service product](../architecture/unified-ofwat-services.md) independently
+verifies both exact archives and exports original publisher geometry with explicit
+validity/quarantine flags. Sewerage ID 11 remains unapproved for canonical repair;
+its [diagnostic assessment](ofwat-sewerage-geometry-assessment.json) is reproducible.
+OGL edition remains unspecified, as recorded in ADR 0004. This source-preserving
+export does not broaden the existing canonical or presentation repair approvals.
+See the [export/Fabric walkthrough](../guides/ofwat-services-fabric.md).
+
+## Recommendation (original September assessment)
 
 **Preferred first source; the publisher's OGL declaration is confirmed.** Proceed
 with water-supply schema design and geometry tests using synthetic fixtures. Keep

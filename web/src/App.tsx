@@ -18,6 +18,7 @@ import { geometryBounds, REGIONS, type MapNavigation } from "./mapNavigation";
 import { filterFloods, FLOOD_STATES, type FloodFilter } from "./floodFilters";
 import { Onboarding } from "./Onboarding";
 import { BATHING_CLASSIFICATIONS, filterBathingWaters, type BathingClassification } from "./explorerPresentation";
+import { ServiceBoundaryExplorer } from "./ServiceBoundaryExplorer";
 import { CompanyExplorer } from "./CompanyExplorer";
 
 const MapView = lazy(async () => {
@@ -506,6 +507,7 @@ export function App() {
           errors={nearby.errors}
           onToggle={toggleLayer}
         />
+        {import.meta.env.VITE_WATERGEO_SERVICE_BUNDLE_PATH && <ServiceBoundaryExplorer base={import.meta.env.VITE_WATERGEO_SERVICE_BUNDLE_PATH} manifestHash={import.meta.env.VITE_WATERGEO_SERVICE_MANIFEST_SHA256 ?? ""} />}
         <CompanyExplorer
           initialCompany={initial.company}
           boundariesEnabled={layers.has("water-supply")}
