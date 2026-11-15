@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { api } from "./api";
+import { ApiError, api } from "./api";
 import { CompanyExplorer } from "./CompanyExplorer";
 import type { AreaFeature, AreaSummary, WaterCompany } from "./types";
 
@@ -174,3 +174,30 @@ it("clears the loading state when an in-flight company selection is cleared", as
   await userEvent.selectOptions(selector, "");
   expect(screen.queryByText(/Loading and verifying/u)).not.toBeInTheDocument();
 });
+
+for (const corrupt of [false, true]) {
+  it(`loads oversized companies by pinned individual features; corruption=${corrupt}`, async () => {
+    vi.spyOn(api, "waterSupplyCompanies").mockResolvedValue({ snapshot_id: snapshot, items: [company] });
+    vi.spyOn(api, "waterSupplyCompanyAreas").mockResolvedValue({
+      snapshot_id: snapshot, company, items: areas, next_after_id: null,
+    });
+    vi.spyOn(api, "waterSupplyCompanyGeometry").mockRejectedValue(new ApiError(413, "Too large"));
+    vi.spyOn(api, "areaGeometry").mockImplementation((id) => Promise.resolve({
+      ...features[id - 1]!, properties: { ...features[id - 1]!.properties,
+        snapshot_id: corrupt ? "changed" : snapshot },
+    }));
+    mockPerformance();
+    const show = vi.fn();
+    render(<CompanyExplorer boundariesEnabled onCompanyChange={vi.fn()} onShowCompany={show}
+      onSelectArea={vi.fn()} onSelectPerformance={vi.fn()} />);
+    await userEvent.selectOptions(await screen.findByLabelText("Water company"), "ANH");
+    if (corrupt) {
+      expect(await screen.findByRole("alert")).toHaveTextContent("could not be verified");
+      expect(show).not.toHaveBeenCalled();
+    } else {
+      await waitFor(() => expect(show).toHaveBeenCalledWith(expect.objectContaining({ features })));
+      expect(api.areaGeometry).toHaveBeenCalledWith(1, expect.any(AbortSignal), snapshot);
+      expect(api.areaGeometry).toHaveBeenCalledWith(2, expect.any(AbortSignal), snapshot);
+    }
+  });
+}

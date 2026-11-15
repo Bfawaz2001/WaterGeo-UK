@@ -1,0 +1,253 @@
+{
+  "status": "diagnostic_only_not_approved",
+  "validation": {
+    "validation_version": 1,
+    "dataset": "ofwat-sewerage-areas",
+    "release": "v1_5a",
+    "source_sha256": "48129b880cad01729215a9a6db38d0328302df0e7fdb5a2257cc23d75bdfdd74",
+    "record_count": 748,
+    "epsg": 27700,
+    "shape_type": 5,
+    "fields": [
+      [
+        "AreaServed",
+        "C",
+        80,
+        0
+      ],
+      [
+        "ID",
+        "N",
+        10,
+        0
+      ],
+      [
+        "COMPANY",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Acronym",
+        "C",
+        254,
+        0
+      ],
+      [
+        "CoType",
+        "C",
+        254,
+        0
+      ],
+      [
+        "AreaType",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Date Grant",
+        "D",
+        8,
+        0
+      ],
+      [
+        "Disclaimer",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Disclaim2",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Disclaim3",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Provenance",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Licence",
+        "C",
+        254,
+        0
+      ],
+      [
+        "WARNINGS",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Created",
+        "D",
+        8,
+        0
+      ],
+      [
+        "LastUpdate",
+        "D",
+        8,
+        0
+      ],
+      [
+        "Version",
+        "C",
+        254,
+        0
+      ],
+      [
+        "Revisions",
+        "C",
+        254,
+        0
+      ]
+    ],
+    "geometry_types": {
+      "MultiPolygon": 37,
+      "Polygon": 711
+    },
+    "empty_geometry_ids": [],
+    "invalid_geometries": [
+      {
+        "source_id": 11,
+        "reason": "Holes are nested[367946.217472054 177082.637024304]"
+      }
+    ],
+    "canonical_load_eligible": false
+  },
+  "shapely": "2.1.2",
+  "geos": "3.13.1",
+  "pyproj": "3.8.0",
+  "feature": {
+    "source_id": 11,
+    "original": {
+      "geometry_type": "MultiPolygon",
+      "valid": false,
+      "invalid_reason": "Holes are nested[367946.217472054 177082.637024304]",
+      "empty": false,
+      "area_untrusted_m2": 10017371216.74569,
+      "bounds": [
+        274881.3352316115,
+        68246.82000000402,
+        428409.1928655687,
+        206862.7170054012
+      ],
+      "wkb_sha256": "f02daf570061ba3067bf46bf4b405d2ee540d4ce2e1530f6cd12d6792c22552e"
+    },
+    "candidates": [
+      {
+        "candidate_id": "linework",
+        "method": "linework",
+        "keep_collapsed": true,
+        "geometry_type": "MultiPolygon",
+        "valid": true,
+        "empty": false,
+        "polygonal": true,
+        "area_m2": 10017371216.745596,
+        "part_count": 74,
+        "has_lower_dimension_parts": false,
+        "bounds": [
+          274881.3352316115,
+          68246.82000000402,
+          428409.1928655687,
+          206862.7170054012
+        ],
+        "wkb_sha256": "a1c096c9feb4f0e831bfdd4de3867115cab6929c694bdaa6a500b403d46a3f90",
+        "meets_geometry_checks": true
+      },
+      {
+        "candidate_id": "structure_keep",
+        "method": "structure",
+        "keep_collapsed": true,
+        "geometry_type": "MultiPolygon",
+        "valid": true,
+        "empty": false,
+        "polygonal": true,
+        "area_m2": 10017371216.745596,
+        "part_count": 73,
+        "has_lower_dimension_parts": false,
+        "bounds": [
+          274881.3352316115,
+          68246.82000000402,
+          428409.1928655687,
+          206862.7170054012
+        ],
+        "wkb_sha256": "67e2fca89edefe0294ee9befb989bfac6469eb6a52bfc66010aaf3425fa4a71b",
+        "meets_geometry_checks": true
+      },
+      {
+        "candidate_id": "structure_drop",
+        "method": "structure",
+        "keep_collapsed": false,
+        "geometry_type": "MultiPolygon",
+        "valid": true,
+        "empty": false,
+        "polygonal": true,
+        "area_m2": 10017371216.745596,
+        "part_count": 73,
+        "has_lower_dimension_parts": false,
+        "bounds": [
+          274881.3352316115,
+          68246.82000000402,
+          428409.1928655687,
+          206862.7170054012
+        ],
+        "wkb_sha256": "67e2fca89edefe0294ee9befb989bfac6469eb6a52bfc66010aaf3425fa4a71b",
+        "meets_geometry_checks": true
+      }
+    ],
+    "comparisons": [
+      {
+        "left_candidate": "linework",
+        "right_candidate": "structure_keep",
+        "topologically_equal": false,
+        "coordinates_identical": false,
+        "symmetric_difference_area_m2": 8.713435646060983e-11,
+        "hausdorff_distance_m": 58.33575911856564,
+        "difference_probe_points": [
+          {
+            "x": 367946.2174720535,
+            "y": 177081.14006744963,
+            "left_covers": false,
+            "right_covers": false
+          }
+        ]
+      },
+      {
+        "left_candidate": "linework",
+        "right_candidate": "structure_drop",
+        "topologically_equal": false,
+        "coordinates_identical": false,
+        "symmetric_difference_area_m2": 8.713435646060983e-11,
+        "hausdorff_distance_m": 58.33575911856564,
+        "difference_probe_points": [
+          {
+            "x": 367946.2174720535,
+            "y": 177081.14006744963,
+            "left_covers": false,
+            "right_covers": false
+          }
+        ]
+      },
+      {
+        "left_candidate": "structure_keep",
+        "right_candidate": "structure_drop",
+        "topologically_equal": true,
+        "coordinates_identical": true,
+        "symmetric_difference_area_m2": 0.0,
+        "hausdorff_distance_m": 0.0,
+        "difference_probe_points": []
+      }
+    ]
+  }
+}

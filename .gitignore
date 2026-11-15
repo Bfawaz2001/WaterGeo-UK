@@ -228,3 +228,6 @@ data/
 web/public/exports/
 web/playwright-report/
 web/test-results/
+
+# Local optional service-bundle preview (never bulk data in Git).
+web/public/service-boundaries/

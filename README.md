@@ -225,3 +225,11 @@ publisher-declared measurement period and separate observation from retrieval ti
 Delivered capabilities and phase references are recorded in the
 [development history](docs/project/development-history.md). Planned hosting security,
 publication automation and analytics work are separated in the [roadmap](docs/project/roadmap.md).
+
+### Ofwat water-supply and sewerage analytical bundle
+
+The optional [unified service export](docs/guides/ofwat-services-fabric.md) preserves
+all 1,889 April 2024 publisher features in BNG GeoParquet, separate GeoJSON layers,
+typed dimensions and a reviewed company-to-area bridge. Invalid publisher geometry
+is retained and quarantined from coverage analysis. Includes an optional service
+browser and a consumer-owned Fabric import example; no tenant access is required.

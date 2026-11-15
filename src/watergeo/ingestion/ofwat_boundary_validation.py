@@ -18,7 +18,7 @@ from pyproj import CRS
 from shapely.geometry import shape as shapely_shape
 from shapely.validation import explain_validity
 
-from watergeo.ingestion.ofwat_boundaries import OFWAT_WATER_SUPPLY_V1_5
+from watergeo.ingestion.ofwat_boundaries import OFWAT_SEWERAGE_V1_5, OFWAT_WATER_SUPPLY_V1_5
 
 VALIDATION_VERSION = 1
 EXPECTED_EPSG = 27700
@@ -67,6 +67,8 @@ class BoundaryValidationContract:
     expected_geometry_types: dict[str, int]
     expected_invalid_ids: frozenset[int]
     expected_version: str
+    dataset: str = OFWAT_WATER_SUPPLY_V1_5.dataset
+    release: str = OFWAT_WATER_SUPPLY_V1_5.release
 
 
 OFWAT_WATER_SUPPLY_V1_5_CONTRACT = BoundaryValidationContract(
@@ -80,6 +82,22 @@ OFWAT_WATER_SUPPLY_V1_5_CONTRACT = BoundaryValidationContract(
     expected_geometry_types=EXPECTED_GEOMETRY_TYPES,
     expected_invalid_ids=EXPECTED_INVALID_IDS,
     expected_version="1_5",
+)
+
+# The sewerage DBF places Licence before WARNINGS and uses a different width.
+OFWAT_SEWERAGE_V1_5_CONTRACT = BoundaryValidationContract(
+    expected_sha256=OFWAT_SEWERAGE_V1_5.expected_sha256,
+    expected_basename=OFWAT_SEWERAGE_V1_5.expected_basename,
+    expected_fields=(*EXPECTED_FIELDS[:11], ("Licence", "C", 254, 0), *EXPECTED_FIELDS[11:16]),
+    expected_epsg=27700,
+    expected_record_count=748,
+    expected_shape_type=5,
+    expected_ids=frozenset(range(1, 749)),
+    expected_geometry_types={"Polygon": 711, "MultiPolygon": 37},
+    expected_invalid_ids=frozenset({11}),
+    expected_version="1_5",
+    dataset=OFWAT_SEWERAGE_V1_5.dataset,
+    release=OFWAT_SEWERAGE_V1_5.release,
 )
 
 
@@ -303,8 +321,8 @@ def validate_boundary_archive(
 
     return BoundaryValidationReport(
         validation_version=VALIDATION_VERSION,
-        dataset=OFWAT_WATER_SUPPLY_V1_5.dataset,
-        release=OFWAT_WATER_SUPPLY_V1_5.release,
+        dataset=contract.dataset,
+        release=contract.release,
         source_sha256=digest,
         record_count=len(ids),
         epsg=contract.expected_epsg,

@@ -139,3 +139,10 @@ Arrow metadata is not carried through. In Power BI, test UTC handling, numeric z
 null quality, corrected editions and tooltips with measure/retrieval/scope/attribution.
 Document actual tenant/runtime, capacity, row-count/checksum checks and results before
 claiming execution. No tenant access or Fabric execution occurred in Phase 18B.1.
+
+## Unified Ofwat service boundaries
+
+For both services, original BNG GeoParquet, reviewed dimensions and optional Delta
+tables, follow the [service-boundary import walkthrough](ofwat-services-fabric.md).
+This source-preserving product retains invalid publisher features with quarantine
+flags; it is distinct from the accepted canonical water-supply presentation export.

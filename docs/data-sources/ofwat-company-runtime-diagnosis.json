@@ -1,0 +1,246 @@
+{
+  "review_date": "2026-11-15",
+  "context": "Read-only baseline local API diagnosis; no changes to source, database or verification gates",
+  "snapshot_id": "d64e49b7-2370-4380-ac79-9f8818b5595c",
+  "source_sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
+  "presentation_version": "ofwat-water-supply-v1_5-wgs84-structure-v3",
+  "runtime": {
+    "postgis": "3.7.0",
+    "geos": "3.15.0",
+    "proj": "9.9.0",
+    "extension_core_procedures": "3.6.4; runtime reports need upgrade"
+  },
+  "company_responses": [
+    {
+      "company_acronym": "AFW",
+      "area_count": 4,
+      "status": 503,
+      "bytes": 45,
+      "error": "Water-supply dataset unavailable"
+    },
+    {
+      "company_acronym": "ALB",
+      "area_count": 3,
+      "status": 200,
+      "bytes": 10825,
+      "error": null
+    },
+    {
+      "company_acronym": "ALBE",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 2962,
+      "error": null
+    },
+    {
+      "company_acronym": "ANH",
+      "area_count": 5,
+      "status": 503,
+      "bytes": 45,
+      "error": "Water-supply dataset unavailable"
+    },
+    {
+      "company_acronym": "ESP",
+      "area_count": 33,
+      "status": 200,
+      "bytes": 110792,
+      "error": null
+    },
+    {
+      "company_acronym": "HDD",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 953238,
+      "error": null
+    },
+    {
+      "company_acronym": "ICW",
+      "area_count": 100,
+      "status": 200,
+      "bytes": 460044,
+      "error": null
+    },
+    {
+      "company_acronym": "IWN",
+      "area_count": 849,
+      "status": 200,
+      "bytes": 2703958,
+      "error": null
+    },
+    {
+      "company_acronym": "LWS",
+      "area_count": 107,
+      "status": 200,
+      "bytes": 465688,
+      "error": null
+    },
+    {
+      "company_acronym": "NES",
+      "area_count": 4,
+      "status": 200,
+      "bytes": 4175803,
+      "error": null
+    },
+    {
+      "company_acronym": "PRT",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 919283,
+      "error": null
+    },
+    {
+      "company_acronym": "SBB",
+      "area_count": 6,
+      "status": 503,
+      "bytes": 45,
+      "error": "Water-supply dataset unavailable"
+    },
+    {
+      "company_acronym": "SES",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 184721,
+      "error": null
+    },
+    {
+      "company_acronym": "SEW",
+      "area_count": 2,
+      "status": 503,
+      "bytes": 45,
+      "error": "Water-supply dataset unavailable"
+    },
+    {
+      "company_acronym": "SRN",
+      "area_count": 6,
+      "status": 200,
+      "bytes": 3320322,
+      "error": null
+    },
+    {
+      "company_acronym": "SSC",
+      "area_count": 4,
+      "status": 200,
+      "bytes": 1455888,
+      "error": null
+    },
+    {
+      "company_acronym": "SSE",
+      "area_count": 2,
+      "status": 200,
+      "bytes": 5823,
+      "error": null
+    },
+    {
+      "company_acronym": "SVE",
+      "area_count": 3,
+      "status": 200,
+      "bytes": 4465970,
+      "error": null
+    },
+    {
+      "company_acronym": "TMS",
+      "area_count": 3,
+      "status": 200,
+      "bytes": 1390713,
+      "error": null
+    },
+    {
+      "company_acronym": "UUW",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 4447281,
+      "error": null
+    },
+    {
+      "company_acronym": "VWS",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 10995,
+      "error": null
+    },
+    {
+      "company_acronym": "WSH",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 7128978,
+      "error": null
+    },
+    {
+      "company_acronym": "WSX",
+      "area_count": 2,
+      "status": 200,
+      "bytes": 1366159,
+      "error": null
+    },
+    {
+      "company_acronym": "YKY",
+      "area_count": 1,
+      "status": 200,
+      "bytes": 992195,
+      "error": null
+    }
+  ],
+  "presentation_checks": [
+    {
+      "source_id": 3,
+      "byte_count": 525858,
+      "presentation_expected": true,
+      "presentation_contract_matches": true,
+      "presentation_applied": true,
+      "canonical_sha256": "7b9b04ff78a4c228f73154436dac4926d425607d4ced08dc9a73c66225d9850f",
+      "geojson_sha256": "32225a29180e9d5a60e9ea749cce9bae6bebbd35d6a69c4f0cdc603d5464285a",
+      "valid": false,
+      "approved_output_sha256s": [
+        "859c9536bed336a2c4c7387ed64fb1b12bbfa2f11f09c866fb0a22441cc93fbc",
+        "f6b3ef2eeef030d1a609e581dabfc9b140f95d60861333e988604d8ff2c6aa32",
+        "ee0b5a867b9605bed91caf3269a0288024394db551d1c3e2aa6fd5eadbe578dd"
+      ]
+    },
+    {
+      "source_id": 4,
+      "byte_count": 6303563,
+      "presentation_expected": true,
+      "presentation_contract_matches": true,
+      "presentation_applied": true,
+      "canonical_sha256": "829928770402be6b318f86cf9e9e28212c8d8f6314071db89c3de39e6d01a4a3",
+      "geojson_sha256": "466fac2806559ce52fab2ef2a79c72d2760479e062c4a46879eca96ece434d93",
+      "valid": false,
+      "approved_output_sha256s": [
+        "5afb38893fa0b05726acc41d09ef03ab1ac09709be41502db7797e0606ca82bd",
+        "3a7b084ee8b0e970ac5dfbbc651ce863572e013e201f76f8dd65ab2f4ef7e897",
+        "c0939e3448c4a1f97ed70f6860b744209f478a6e7b6d623fb3665da51a903bae"
+      ]
+    },
+    {
+      "source_id": 16,
+      "byte_count": 572421,
+      "presentation_expected": true,
+      "presentation_contract_matches": true,
+      "presentation_applied": true,
+      "canonical_sha256": "a39c9121ad32cf638c2fbcb7ecb23c2d0aceb149ba2385399edb86d2355987d2",
+      "geojson_sha256": "1eb98f18f106f8e4cfde2e7985ebf3abeba37cc9704f5bdca6119d714e208039",
+      "valid": false,
+      "approved_output_sha256s": [
+        "7ec160dc7ab45af63ab953152af862819b5747e22346a4d14ae63bf47415fa6f",
+        "145affc3afbc72d56135f85c72409e6574ffbed0aca59efbdc5bfb4962463583",
+        "0ec4d9bce4ac398d2a3cabd35c493bdf16100b7a37cdcf5011382256823770c1"
+      ]
+    },
+    {
+      "source_id": 21,
+      "byte_count": 314076,
+      "presentation_expected": true,
+      "presentation_contract_matches": true,
+      "presentation_applied": true,
+      "canonical_sha256": "76687d1f4b3482351ec3cb7db307e2638bf4c1643e860866a787b84d15459cb4",
+      "geojson_sha256": "e2bb9a5eb1b0d4c525fda4e5bc693c6e0ee443175c089b70c7cfddf6cd33229b",
+      "valid": false,
+      "approved_output_sha256s": [
+        "36103aa15aa03246d1d085f1bb9de65cdf00d7c690179ae8f5f6164310c4a1cb",
+        "022a9e01dcf14fe3ab0b63302da6082551e0d7f5557171f3972e9003982380bc",
+        "75a77772340be46bac6b7a123f8709388244cb46339c3b83a0f1f7cb738ba7f3"
+      ]
+    }
+  ],
+  "conclusion": "AFW, ANH, SBB and SEW fail closed on unapproved WGS84 output hashes for IDs 3, 4, 16 and 21. Canonical input contracts match. No output exceeds 8 MiB in these four checks. No hashes, source rows or runtime state were changed. Restore a previously reviewed consistent runtime or commission a new presentation assessment; do not whitelist observed hashes just to pass requests."
+}

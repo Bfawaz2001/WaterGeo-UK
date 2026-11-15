@@ -284,16 +284,30 @@ def build_export(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--base-url", required=True, help="WaterGeo HTTP API URL")
+    parser.add_argument("--base-url", help="WaterGeo HTTP API URL (API exports only)")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--parquet", action="store_true", help="Requires the exports extra")
     parser.add_argument("--tippecanoe", help="Optional executable path to build overview PMTiles")
     parser.add_argument(
         "--entity",
-        choices=("water-supply", "thames-discharge-status"),
+        choices=("water-supply", "thames-discharge-status", "ofwat-services"),
         default="water-supply",
     )
+    parser.add_argument("--raw-root", type=Path, default=Path("data/raw/ofwat"))
+    parser.add_argument("--crosswalk", type=Path)
     args = parser.parse_args()
+    if args.entity == "ofwat-services":
+        from watergeo.service_boundaries import REVIEW, build_service_bundle
+
+        build_service_bundle(
+            args.raw_root,
+            args.output,
+            args.crosswalk or Path(REVIEW),
+            tippecanoe=args.tippecanoe,
+        )
+        return
+    if not args.base_url:
+        parser.error("--base-url is required for API exports")
     with WaterGeoClient(args.base_url) as client:
         if args.entity == "thames-discharge-status":
             if args.tippecanoe:

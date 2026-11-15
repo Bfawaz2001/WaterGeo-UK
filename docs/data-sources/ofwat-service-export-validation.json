@@ -1,0 +1,151 @@
+{
+  "product_version": "watergeo-ofwat-services-v1",
+  "manifest_sha256": "a14582d120eba029d6c3147c0a1a6e031d179a14165799eb737aaa13aca51458",
+  "crosswalk_sha256": "70f308def856274624d874fc88a5cfcb6857eb40ff8c081ab68d24aac8e21856",
+  "runtime": {
+    "geos": "3.13.1",
+    "proj": "9.8.1",
+    "shapely": "2.1.2"
+  },
+  "feature_count": 1889,
+  "company_count": 25,
+  "bridge_count": 1889,
+  "file_count": 1901,
+  "services": {
+    "water-supply": {
+      "source_sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
+      "record_count": 1141,
+      "source_invalid_ids": [
+        6,
+        1,
+        28,
+        4,
+        30
+      ],
+      "presentation_invalid_ids": [
+        16,
+        3,
+        21,
+        28,
+        4,
+        30
+      ],
+      "inset_count": 1104,
+      "company_count": 23,
+      "largest_company_payloads": [
+        {
+          "company_id": "dwr-cymru",
+          "features": 1,
+          "individual_geojson_total_bytes": 7177803,
+          "exceeds_existing_8_mib_collection_limit": false
+        },
+        {
+          "company_id": "south-west",
+          "features": 6,
+          "individual_geojson_total_bytes": 6924298,
+          "exceeds_existing_8_mib_collection_limit": false
+        },
+        {
+          "company_id": "anglian",
+          "features": 5,
+          "individual_geojson_total_bytes": 6607196,
+          "exceeds_existing_8_mib_collection_limit": false
+        },
+        {
+          "company_id": "severn-trent",
+          "features": 3,
+          "individual_geojson_total_bytes": 4553552,
+          "exceeds_existing_8_mib_collection_limit": false
+        },
+        {
+          "company_id": "united-utilities",
+          "features": 1,
+          "individual_geojson_total_bytes": 4519829,
+          "exceeds_existing_8_mib_collection_limit": false
+        }
+      ],
+      "geojson": {
+        "bytes": 52588066,
+        "sha256": "1244be32f99019c65927d90654f323ec244a29725236003b64771779a59eed46"
+      },
+      "geoparquet": {
+        "bytes": 18186732,
+        "sha256": "9213773a66f777e25a9532855e77ab67564ec580347fceff25ffa62a054d439f"
+      }
+    },
+    "sewerage": {
+      "source_sha256": "48129b880cad01729215a9a6db38d0328302df0e7fdb5a2257cc23d75bdfdd74",
+      "record_count": 748,
+      "source_invalid_ids": [
+        11
+      ],
+      "presentation_invalid_ids": [
+        4,
+        9,
+        11,
+        8
+      ],
+      "inset_count": 735,
+      "company_count": 19,
+      "largest_company_payloads": [
+        {
+          "company_id": "anglian",
+          "features": 2,
+          "individual_geojson_total_bytes": 9701968,
+          "exceeds_existing_8_mib_collection_limit": true
+        },
+        {
+          "company_id": "dwr-cymru",
+          "features": 1,
+          "individual_geojson_total_bytes": 6882988,
+          "exceeds_existing_8_mib_collection_limit": false
+        },
+        {
+          "company_id": "south-west",
+          "features": 2,
+          "individual_geojson_total_bytes": 5412653,
+          "exceeds_existing_8_mib_collection_limit": false
+        },
+        {
+          "company_id": "southern",
+          "features": 1,
+          "individual_geojson_total_bytes": 5112455,
+          "exceeds_existing_8_mib_collection_limit": false
+        },
+        {
+          "company_id": "united-utilities",
+          "features": 1,
+          "individual_geojson_total_bytes": 3701536,
+          "exceeds_existing_8_mib_collection_limit": false
+        }
+      ],
+      "geojson": {
+        "bytes": 39288628,
+        "sha256": "0b8613356afd1e54ca03e143ceebbd33ab6097dddf71fe463daf180143a59e08"
+      },
+      "geoparquet": {
+        "bytes": 11180561,
+        "sha256": "06226ebd78e8d2a2fea6a4500ec67a4c4011c9c7346a3ac0edf685c10345ef23"
+      }
+    }
+  },
+  "checks": [
+    "all payload bytes/checksums",
+    "independent source fingerprints",
+    "complete source IDs/counts",
+    "explicit source CRS",
+    "exact WKB hash round trips",
+    "exact reprojected GeoJSON round trips",
+    "individual feature equality",
+    "invalid publisher features quarantined",
+    "reviewed bridge completeness",
+    "publisher licence statements and unknown edition preserved"
+  ],
+  "limits": [
+    "No canonical sewerage repair approved",
+    "No overlap/gap or legal review",
+    "PMTiles optional and not generated in this evidence run",
+    "No Fabric tenant accessed",
+    "No PCD input"
+  ]
+}

@@ -28,6 +28,7 @@ dependencies = [
 [project.scripts]
 watergeo = "watergeo.cli:main"
 watergeo-export = "watergeo.exports:main"
+watergeo-export-services = "watergeo.service_boundaries:main"
 watergeo-demo-bootstrap = "watergeo.operations.demo_bootstrap:main"
 watergeo-demo-refresh-dynamic = "watergeo.operations.demo_refresh_dynamic:main"
 watergeo-demo-smoke = "watergeo.operations.demo_smoke:main"

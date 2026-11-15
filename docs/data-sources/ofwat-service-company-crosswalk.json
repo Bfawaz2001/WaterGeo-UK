@@ -1,0 +1,391 @@
+{
+  "review_status": "reviewed_publisher_label_grouping",
+  "review_date": "2026-11-14",
+  "scope": "Exact publisher label/acronym pairs in the two pinned archives. Historical analytical grouping only, not a current legal-entity crosswalk. Leep former names are explicitly grouped; STS remains separate from SVE.",
+  "mappings": [
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Affinity Water",
+      "Acronym": "AFW",
+      "company_id": "affinity",
+      "company_name": "Affinity Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Albion Eco Ltd",
+      "Acronym": "ALBE",
+      "company_id": "albion-eco",
+      "company_name": "Albion Eco Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Albion Water Ltd",
+      "Acronym": "ALB",
+      "company_id": "albion",
+      "company_name": "Albion Water Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Anglian Water",
+      "Acronym": "ANH",
+      "company_id": "anglian",
+      "company_name": "Anglian Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Dŵr Cymru",
+      "Acronym": "WSH",
+      "company_id": "dwr-cymru",
+      "company_name": "Dŵr Cymru",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "ESP Water Ltd",
+      "Acronym": "ESP",
+      "company_id": "esp",
+      "company_name": "ESP Water Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Hafren Dyfrdwy",
+      "Acronym": "HDD",
+      "company_id": "hafren",
+      "company_name": "Hafren Dyfrdwy",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Icosa Water Services Ltd",
+      "Acronym": "ICW",
+      "company_id": "icosa",
+      "company_name": "Icosa Water Services Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Independent Water Networks Ltd",
+      "Acronym": "IWN",
+      "company_id": "iwn",
+      "company_name": "Independent Water Networks Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Leep Networks (Water) Ltd",
+      "Acronym": "LWS",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Leep Networks (Water) Ltd (formerly Peel Water Networks Ltd)",
+      "Acronym": "LWS",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Leep Networks (Water) Ltd (formerly SSE Water Ltd)",
+      "Acronym": "LWS",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Leep Networks (Water) Ltd (formerly SSE Water Ltd)",
+      "Acronym": "SSE",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Northumbrian Water",
+      "Acronym": "NES",
+      "company_id": "northumbrian",
+      "company_name": "Northumbrian Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Portsmouth Water",
+      "Acronym": "PRT",
+      "company_id": "portsmouth",
+      "company_name": "Portsmouth Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Severn Trent Water",
+      "Acronym": "SVE",
+      "company_id": "severn-trent",
+      "company_name": "Severn Trent Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "South East Water",
+      "Acronym": "SEW",
+      "company_id": "south-east",
+      "company_name": "South East Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "South Staffordshire Water",
+      "Acronym": "SSC",
+      "company_id": "south-staffordshire",
+      "company_name": "South Staffordshire Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "South West Water",
+      "Acronym": "SBB",
+      "company_id": "south-west",
+      "company_name": "South West Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Southern Water",
+      "Acronym": "SRN",
+      "company_id": "southern",
+      "company_name": "Southern Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Sutton & East Surrey Water",
+      "Acronym": "SES",
+      "company_id": "sutton-east-surrey",
+      "company_name": "Sutton & East Surrey Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Thames Water",
+      "Acronym": "TMS",
+      "company_id": "thames",
+      "company_name": "Thames Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "United Utilities",
+      "Acronym": "UUW",
+      "company_id": "united-utilities",
+      "company_name": "United Utilities",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Veolia Water Projects Ltd",
+      "Acronym": "VWS",
+      "company_id": "veolia",
+      "company_name": "Veolia Water Projects Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Wessex Water",
+      "Acronym": "WSX",
+      "company_id": "wessex",
+      "company_name": "Wessex Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-water-supply-areas",
+      "COMPANY": "Yorkshire Water",
+      "Acronym": "YKY",
+      "company_id": "yorkshire",
+      "company_name": "Yorkshire Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Albion Water Ltd",
+      "Acronym": "ALB",
+      "company_id": "albion",
+      "company_name": "Albion Water Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Anglian Water",
+      "Acronym": "ANH",
+      "company_id": "anglian",
+      "company_name": "Anglian Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "County Water Ltd",
+      "Acronym": "CoW",
+      "company_id": "county",
+      "company_name": "County Water Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Dŵr Cymru",
+      "Acronym": "WSH",
+      "company_id": "dwr-cymru",
+      "company_name": "Dŵr Cymru",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "ESP Water Ltd",
+      "Acronym": "ESP",
+      "company_id": "esp",
+      "company_name": "ESP Water Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Hafren Dyfrdwy",
+      "Acronym": "HDD",
+      "company_id": "hafren",
+      "company_name": "Hafren Dyfrdwy",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Icosa Water Services Ltd",
+      "Acronym": "ICW",
+      "company_id": "icosa",
+      "company_name": "Icosa Water Services Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Independent Water Networks Ltd",
+      "Acronym": "IWN",
+      "company_id": "iwn",
+      "company_name": "Independent Water Networks Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Leep Networks (Water) Ltd",
+      "Acronym": "LWS",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Leep Networks (Water) Ltd (formerly Peel Water Networks Ltd)",
+      "Acronym": "PWN",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Leep Networks (Water) Ltd (formerly SSE Water Ltd)",
+      "Acronym": "LWS",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Leep Networks (Water) Ltd (formerly SSE Water Ltd)",
+      "Acronym": "SSE",
+      "company_id": "leep",
+      "company_name": "Leep Networks (Water) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Northumbrian Water",
+      "Acronym": "NES",
+      "company_id": "northumbrian",
+      "company_name": "Northumbrian Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Severn Trent Services (Water and Sewerage) Ltd",
+      "Acronym": "STS",
+      "company_id": "severn-trent-services",
+      "company_name": "Severn Trent Services (Water and Sewerage) Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Severn Trent Water",
+      "Acronym": "SVE",
+      "company_id": "severn-trent",
+      "company_name": "Severn Trent Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "South West Water",
+      "Acronym": "SBB",
+      "company_id": "south-west",
+      "company_name": "South West Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Southern Water",
+      "Acronym": "SRN",
+      "company_id": "southern",
+      "company_name": "Southern Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Thames Water",
+      "Acronym": "TMS",
+      "company_id": "thames",
+      "company_name": "Thames Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "United Utilities",
+      "Acronym": "UUW",
+      "company_id": "united-utilities",
+      "company_name": "United Utilities",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Veolia Water Projects Ltd",
+      "Acronym": "VWS",
+      "company_id": "veolia",
+      "company_name": "Veolia Water Projects Ltd",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Wessex Water",
+      "Acronym": "WSX",
+      "company_id": "wessex",
+      "company_name": "Wessex Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    },
+    {
+      "dataset": "ofwat-sewerage-areas",
+      "COMPANY": "Yorkshire Water",
+      "Acronym": "YKY",
+      "company_id": "yorkshire",
+      "company_name": "Yorkshire Water",
+      "review_reference": "docs/architecture/unified-ofwat-services.md#company-mapping"
+    }
+  ]
+}
