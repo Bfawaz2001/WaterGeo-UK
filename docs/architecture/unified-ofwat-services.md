@@ -106,6 +106,7 @@ not a substitute for reviewing any future inputs.
 | `companies.parquet`, `services.parquet`, `areas.parquet` | Explicit Arrow string/int64/bool dimension columns; nested publisher fields as JSON |
 | `company-area-bridge.parquet` | Reviewed complete company-to-area relation |
 | `index.json`, `company-crosswalk.json` | Browser inventory and exact mapping review |
+| `validation-report.json` | Standalone source-validation reports and geometry/quarantine counts |
 | `manifest.json`, `manifest.sha256` | Sources, counts, CRS, runtime, validation, attribution, file hashes/bytes and manifest digest |
 
 GeoJSON uses PyProj `always_xy=True`, `allow_ballpark=False`; the runtime and
@@ -188,7 +189,7 @@ an installed Tippecanoe executable and an explicit flag.
 
 ```sh
 uv run --locked python scripts/validate_ofwat_service_example.py \
-  --bundle data/exports/ofwat-services-final-v1 \
+  --bundle data/exports/ofwat-services-final-v2 \
   --output /tmp/ofwat-service-export-validation.json
 uv run --locked python scripts/diagnose_ofwat_companies.py \
   --base-url http://127.0.0.1:8000 --output /tmp/ofwat-company-responses.json
@@ -201,3 +202,13 @@ projection in the consumer's potentially different PROJ environment. The exporte
 creates those presentation hashes directly from its actual projected geometries.
 A pinned manifest therefore preserves the reviewed coordinates across transfers
 without requiring consumers to reproduce a platform-specific datum transformation.
+
+## Pre-PR review
+
+The standalone report is a manifest-checksummed payload. Semantic validation also
+checks typed dimension schemas, exact area properties/quarantine flags, service
+snapshot keys, full bridge mappings/review references and browser inventory
+consistency. An empty external manifest pin is rejected. Synthetic negative tests
+re-sign deliberately inconsistent artifacts to prove these checks are independent
+of transfer checksums. Known runtime drift remains an operational follow-up in the
+[separate remediation guide](../guides/ofwat-company-runtime-remediation.md).

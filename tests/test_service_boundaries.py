@@ -308,3 +308,145 @@ def test_unlisted_bundle_files_are_rejected(tmp_path, source_pair):
     (output / "unexpected.txt").write_text("synthetic unlisted content")
     with pytest.raises(ValueError, match="unlisted files"):
         product.validate_service_bundle(output)
+
+
+def _resign_bundle(output):
+    manifest = json.loads((output / "manifest.json").read_bytes())
+    for name, evidence in manifest["files"].items():
+        evidence.update(
+            bytes=(output / name).stat().st_size, sha256=product.digest_file(output / name)
+        )
+    (output / "manifest.json").write_bytes(product.encode(manifest))
+    (output / "manifest.sha256").write_text(product.digest_file(output / "manifest.json") + "\n")
+
+
+def _change_table(output, name, field, value):
+    path = output / name
+    table = pq.read_table(path)
+    rows = table.to_pylist()
+    rows[0][field] = value
+    pq.write_table(pa.Table.from_pylist(rows, schema=table.schema), path)
+    _resign_bundle(output)
+
+
+@pytest.mark.parametrize(
+    "table,field,value",
+    [
+        ("company-area-bridge.parquet", "service", "sewerage"),
+        ("company-area-bridge.parquet", "snapshot_sha256", "wrong-snapshot"),
+        ("company-area-bridge.parquet", "boundary_id", "7"),
+        ("company-area-bridge.parquet", "review_reference", "unreviewed"),
+        ("services.parquet", "snapshot_sha256", "wrong-snapshot"),
+        ("areas.parquet", "coverage_eligible", False),
+        ("areas.parquet", "service", "sewerage"),
+    ],
+)
+def test_semantically_invalid_join_tables_are_rejected_even_when_resigned(
+    tmp_path, source_pair, table, field, value
+):
+    output, _ = build(tmp_path, source_pair)
+    _change_table(output, table, field, value)
+    with pytest.raises(ValueError, match="identity|dimensions"):
+        product.validate_service_bundle(output)
+
+
+def test_unapproved_geometry_policy_is_rejected_before_fabric_reads(tmp_path, source_pair):
+    import runpy
+    from unittest.mock import Mock
+
+    output, _ = build(tmp_path, source_pair)
+    _change_table(output, "sewerage.parquet", "source_geometry_policy", "unapproved-repair")
+    read = runpy.run_path("examples/fabric/ofwat_services_notebook.py")["read_services"]
+    # Use the actual validator while mapping the simulated mount to the local fixture.
+    read.__globals__["validate_service_bundle"] = lambda _path, expected: (
+        product.validate_service_bundle(output, expected)
+    )
+    spark = Mock()
+    with pytest.raises(ValueError, match="Unapproved geometry"):
+        read(spark, "synthetic", product.digest_file(output / "manifest.json"))
+    spark.read.parquet.assert_not_called()
+
+
+def test_fabric_rejects_empty_external_pin(tmp_path, source_pair):
+    import runpy
+    from unittest.mock import Mock
+
+    output, _ = build(tmp_path, source_pair)
+    read = runpy.run_path("examples/fabric/ofwat_services_notebook.py")["read_services"]
+    read.__globals__["validate_service_bundle"] = lambda _path, expected: (
+        product.validate_service_bundle(output, expected)
+    )
+    spark = Mock()
+    with pytest.raises(ValueError, match="externally pinned"):
+        read(spark, "synthetic", "")
+    spark.read.parquet.assert_not_called()
+
+
+def test_standalone_validation_report_is_checksummed(tmp_path, source_pair):
+    output, manifest = build(tmp_path, source_pair)
+    report = json.loads((output / "validation-report.json").read_bytes())
+    assert report["results"]["feature_count"] == 4
+    assert report["datasets"]["sewerage"]["canonical_load_eligible"] is False
+    assert "validation-report.json" in manifest["files"]
+    report["results"]["source_invalid_count"] = 0
+    (output / "validation-report.json").write_bytes(product.encode(report))
+    _resign_bundle(output)
+    with pytest.raises(ValueError, match="Validation report"):
+        product.validate_service_bundle(output)
+
+
+def test_silently_repaired_quarantined_geometry_is_rejected(tmp_path, source_pair):
+    import runpy
+    from unittest.mock import Mock
+
+    import shapely
+    from shapely.geometry import box
+
+    output, _ = build(tmp_path, source_pair)
+    path = output / "sewerage.parquet"
+    table = pq.read_table(path)
+    rows = table.to_pylist()
+    row = rows[1]  # Synthetic quarantined source ID 2.
+    row["geometry"] = shapely.to_wkb(box(400200, 200000, 400300, 200100), byte_order=1)
+    row.update(
+        source_wkb_sha256=hashlib.sha256(row["geometry"]).hexdigest(),
+        source_valid=True,
+        source_validity="Valid Geometry",
+        coverage_eligible=True,
+    )
+    pq.write_table(pa.Table.from_pylist(rows, schema=table.schema), path)
+    layer_path = output / "sewerage.geojson"
+    layer = json.loads(layer_path.read_bytes())
+    layer["features"][1]["properties"] = {k: v for k, v in row.items() if k != "geometry"}
+    layer_path.write_bytes(product.encode(layer))
+    (output / "areas/sewerage/2.geojson").write_bytes(product.encode(layer["features"][1]))
+    _resign_bundle(output)
+    read = runpy.run_path("examples/fabric/ofwat_services_notebook.py")["read_services"]
+    read.__globals__["validate_service_bundle"] = lambda _path, expected: (
+        product.validate_service_bundle(output, expected)
+    )
+    spark = Mock()
+    with pytest.raises(ValueError, match="Invalid geometry set changed"):
+        read(spark, "synthetic", product.digest_file(output / "manifest.json"))
+    spark.read.parquet.assert_not_called()
+
+
+@pytest.mark.parametrize("fault", ["corrupted-file", "invalid-join"])
+def test_fabric_blocks_corruption_and_join_failures_before_spark(tmp_path, source_pair, fault):
+    import runpy
+    from unittest.mock import Mock
+
+    output, _ = build(tmp_path, source_pair)
+    if fault == "corrupted-file":
+        with (output / "sewerage.parquet").open("ab") as handle:
+            handle.write(b"synthetic corruption")
+    else:
+        _change_table(output, "company-area-bridge.parquet", "snapshot_sha256", "wrong-snapshot")
+    read = runpy.run_path("examples/fabric/ofwat_services_notebook.py")["read_services"]
+    read.__globals__["validate_service_bundle"] = lambda _path, expected: (
+        product.validate_service_bundle(output, expected)
+    )
+    spark = Mock()
+    with pytest.raises(ValueError, match="checksum mismatch|join identity"):
+        read(spark, "synthetic", product.digest_file(output / "manifest.json"))
+    spark.read.parquet.assert_not_called()

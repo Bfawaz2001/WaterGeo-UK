@@ -1,0 +1,57 @@
+{
+  "review_date": "2026-11-15",
+  "zip_bytes": 101509125,
+  "zip_sha256": "1cec590d2298cc220192922f2b1d572dbfb852d74bb41601c2a281a5d80fc13a",
+  "manifest_sha256": "33ae9e8fc5748cedf4b853ca7c6b3d3e5d040cd0d76c4d2d327b3a01eff213a5",
+  "zip_member_count": 1904,
+  "checksummed_payload_count": 1902,
+  "services": {
+    "water-supply": {
+      "source_sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
+      "count": 1141,
+      "quarantined_ids": [
+        1,
+        4,
+        6,
+        28,
+        30
+      ],
+      "original_wkb_and_attributes": "exact match to verified public archive decode"
+    },
+    "sewerage": {
+      "source_sha256": "48129b880cad01729215a9a6db38d0328302df0e7fdb5a2257cc23d75bdfdd74",
+      "count": 748,
+      "quarantined_ids": [
+        11
+      ],
+      "original_wkb_and_attributes": "exact match to verified public archive decode"
+    }
+  },
+  "validation_results": {
+    "bridge_count": 1889,
+    "coverage": "invalid source features quarantined; no overlap/gap or legal review",
+    "feature_count": 1889,
+    "round_trip": "exact source WKB and presentation WKB hashes after GeoJSON round trip",
+    "source_invalid_count": 6
+  },
+  "dimension_counts": {
+    "companies": 25,
+    "services": 2,
+    "areas": 1889,
+    "company-area-bridge": 1889
+  },
+  "governance": {
+    "input_scope": "two exact fingerprint-pinned public Parliament archives and reviewed company labels",
+    "unlisted_zip_files": false,
+    "pcd_input": false,
+    "fabric_tenant_access": false,
+    "original_source_field_count": 17,
+    "source_geometry_policy": "original publisher features; invalid features quarantined"
+  },
+  "limitations": [
+    "No canonical sewerage repair approved",
+    "No real Fabric execution",
+    "Optional PMTiles not generated",
+    "Dataset remains local and ignored by Git"
+  ]
+}

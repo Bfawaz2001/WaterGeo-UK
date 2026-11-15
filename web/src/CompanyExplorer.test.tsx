@@ -201,3 +201,17 @@ for (const corrupt of [false, true]) {
     }
   });
 }
+
+it("rejects extra geometry features even when the expected inventory is a matching prefix", async () => {
+  vi.spyOn(api, "waterSupplyCompanies").mockResolvedValue({ snapshot_id: snapshot, items: [company] });
+  vi.spyOn(api, "waterSupplyCompanyAreas").mockResolvedValue({ snapshot_id: snapshot, company, items: areas, next_after_id: null });
+  vi.spyOn(api, "waterSupplyCompanyGeometry").mockResolvedValue({
+    type: "FeatureCollection", snapshot_id: snapshot, company, features: [...features, features[0]!],
+  });
+  mockPerformance();
+  const show = vi.fn();
+  render(<CompanyExplorer boundariesEnabled onCompanyChange={vi.fn()} onShowCompany={show} onSelectArea={vi.fn()} onSelectPerformance={vi.fn()} />);
+  await userEvent.selectOptions(await screen.findByLabelText("Water company"), "ANH");
+  expect(await screen.findByRole("alert")).toHaveTextContent("could not be verified");
+  expect(show).not.toHaveBeenCalled();
+});

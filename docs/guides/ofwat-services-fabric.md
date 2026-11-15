@@ -131,7 +131,7 @@ validation. No internal Ofwat/PCD data is present or accessed.
 
 The complete [example evidence](../data-sources/ofwat-service-export-validation.json)
 records 1,889 rows, 25 reviewed company groups, 1,889 bridge rows and every layer's
-checksums. The ignored local example is `data/exports/ofwat-services-final-v1/`.
+checksums. The ignored local example is `data/exports/ofwat-services-final-v2/`.
 Its externally pinnable manifest digest appears in that evidence report.
 
 Verification completed on 15 November 2026:
@@ -140,9 +140,9 @@ Verification completed on 15 November 2026:
 | --- | --- |
 | `ruff check .` / `ruff format --check .` | Pass |
 | `mypy src` | Pass, 105 source files |
-| `pytest -m 'not integration'` | 757 passed; 150 integration tests deselected |
+| `pytest -m 'not integration'` | 770 passed; 150 integration tests deselected |
 | Frontend lint / typecheck | Pass |
-| `npm test -- --run` | 164 passed |
+| `npm test -- --run` | 165 passed |
 | `npm run test:e2e` | 12 passed, including historical Hydrology |
 | `npm run test:e2e:static` | 3 passed |
 | `uv build` | Wheel and source distribution built |
@@ -153,5 +153,32 @@ Verification completed on 15 November 2026:
 Database integration tests were not run: this phase has no migrations or database
 writes. The existing local database was queried read-only to diagnose runtime drift.
 Optional PMTiles and real Fabric execution were not run. The full local ZIP is
-`data/exports/ofwat-services-final-v1.zip`; its sibling `.zip.sha256` records the
+`data/exports/ofwat-services-final-v2.zip`; its sibling `.zip.sha256` records the
 outer archive checksum. The ZIP contains the manifest and every bundle payload.
+
+## Pre-PR review hardening
+
+The original `72814b1` local ZIP is retained unchanged. The reviewed `final-v2`
+edition supersedes it and adds a standalone, checksummed `validation-report.json`.
+The validator cross-checks every area dimension and quarantine flag against the
+source layer, every service/snapshot key, all bridge review references, typed
+schemas and browser-index relations. The Fabric example requires a nonempty
+externally pinned SHA-256 before any Spark read. Negative tests reject corrupted
+files, inconsistent joins and a silently repaired quarantined geometry, even when
+payload hashes and the manifest are recomputed for the test.
+
+Reproduce the ZIP audit (the digest is recorded in the evidence JSON):
+
+```sh
+uv run --locked python scripts/review_ofwat_service_zip.py \
+  --zip data/exports/ofwat-services-final-v2.zip \
+  --manifest-sha256 <reviewed-manifest-sha256> \
+  --output /tmp/ofwat-service-zip-review.json
+```
+
+The [ZIP review evidence](../data-sources/ofwat-service-zip-review.json) compares
+all source WKB and publisher attributes to fresh decodes of the two exact public
+archives. Known company presentation failures have a
+[separate remediation guide](ofwat-company-runtime-remediation.md); the verification
+gate stays in place. No bundle ZIP, downloaded geometry, credential file or
+workspace-specific configuration is committed or attached to the PR.

@@ -155,6 +155,7 @@ export function CompanyExplorer({
         geometry.snapshot_id !== acceptedSnapshotId ||
         geometry.company.company_acronym !== company.company_acronym ||
         geometry.company.area_count !== areas.length ||
+        geometry.features.length !== areas.length ||
         areaIds.some((identifier, index) => identifier !== geometryIds[index]) ||
         geometry.features.some((feature) =>
           feature.properties.snapshot_id !== acceptedSnapshotId ||

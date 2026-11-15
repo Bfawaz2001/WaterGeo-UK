@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,9 @@ SERVICES = {
     "sewerage": (OFWAT_SEWERAGE_V1_5, OFWAT_SEWERAGE_V1_5_CONTRACT),
 }
 REVIEW = "docs/data-sources/ofwat-service-company-crosswalk.json"
+SOURCE_GEOMETRY_POLICY = "publisher-decoded-v1-no-repair"
+PRESENTATION_POLICY = "reprojected-source-v1-no-repair"
+COMPANY_IDENTITY_SCOPE = "reviewed historical publisher grouping; not legal identity"
 
 
 def digest_file(path: Path) -> str:
@@ -163,8 +167,8 @@ def decode_service(
                 "presentation_wkb_sha256": hashlib.sha256(
                     shapely.to_wkb(projected, byte_order=1, include_srid=False)
                 ).hexdigest(),
-                "source_geometry_policy": "publisher-decoded-v1-no-repair",
-                "presentation_policy": "reprojected-source-v1-no-repair",
+                "source_geometry_policy": SOURCE_GEOMETRY_POLICY,
+                "presentation_policy": PRESENTATION_POLICY,
                 "source_wkb_sha256": hashlib.sha256(wkb).hexdigest(),
                 "licence_name": source.licence_name,
                 "licence_version": None,
@@ -209,27 +213,46 @@ def decode_service(
     return metadata, rows, features
 
 
+def _column_type(key: str) -> Any:
+    import pyarrow as pa
+
+    if key == "geometry":
+        return pa.binary()
+    if key in {"source_id", "area_count"}:
+        return pa.int64()
+    if key in {"source_valid", "coverage_eligible", "presentation_valid"}:
+        return pa.bool_()
+    return pa.string()
+
+
+def _read_table(path: Path) -> Any:
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(path)
+    if len(set(table.column_names)) != len(table.column_names) or any(
+        field.type != _column_type(field.name) for field in table.schema
+    ):
+        raise ValueError(f"Unexpected typed table schema: {path.name}")
+    return table
+
+
+def _validation_document(manifest: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "product_version": PRODUCT_VERSION,
+        "source_crs": manifest["source_crs"],
+        "presentation_crs": manifest["presentation_crs"],
+        "datasets": {
+            service: dataset["validation"] for service, dataset in manifest["datasets"].items()
+        },
+        "results": manifest["validation_results"],
+    }
+
+
 def _write_table(path: Path, rows: list[dict[str, Any]], geometry: bool = False) -> None:
     import pyarrow as pa
     import pyarrow.parquet as pq
 
-    integers = {"source_id", "area_count"}
-    booleans = {"source_valid", "coverage_eligible", "presentation_valid"}
-    schema = pa.schema(
-        [
-            (
-                key,
-                pa.binary()
-                if key == "geometry"
-                else pa.int64()
-                if key in integers
-                else pa.bool_()
-                if key in booleans
-                else pa.string(),
-            )
-            for key in rows[0]
-        ]
-    )
+    schema = pa.schema([(key, _column_type(key)) for key in rows[0]])
     table = pa.Table.from_pylist(rows, schema=schema)
     metadata = {b"watergeo": encode({"product_version": PRODUCT_VERSION})}
     if geometry:
@@ -376,7 +399,7 @@ def build_service_bundle(
                 companies[row["company_id"]] = {
                     "company_id": row["company_id"],
                     "company_name": row["company_name"],
-                    "identity_scope": "reviewed historical publisher grouping; not legal identity",
+                    "identity_scope": COMPANY_IDENTITY_SCOPE,
                 }
                 file = f"areas/{service}/{row['source_id']}.geojson"
                 (staging / file).parent.mkdir(parents=True, exist_ok=True)
@@ -404,6 +427,12 @@ def build_service_bundle(
             "round_trip": "exact source WKB and presentation WKB hashes after GeoJSON round trip",
             "coverage": "invalid source features quarantined; no overlap/gap or legal review",
         }
+        report = staging / "validation-report.json"
+        report.write_bytes(encode(_validation_document(manifest)))
+        manifest["files"][report.name] = {
+            "bytes": report.stat().st_size,
+            "sha256": digest_file(report),
+        }
         payload = encode(manifest)
         (staging / "manifest.json").write_bytes(payload)
         (staging / "manifest.sha256").write_text(hashlib.sha256(payload).hexdigest() + "\n")
@@ -416,8 +445,11 @@ def validate_service_bundle(
     root: Path, expected_manifest_sha256: str | None = None
 ) -> dict[str, Any]:
     """Validate checksums, provenance, relations, and exact WKB/GeoJSON round trips."""
-    import pyarrow.parquet as pq
-
+    if expected_manifest_sha256 is not None and (
+        len(expected_manifest_sha256) != 64
+        or any(c not in "0123456789abcdef" for c in expected_manifest_sha256)
+    ):
+        raise ValueError("Expected manifest SHA-256 must be an externally pinned digest")
     actual = digest_file(root / "manifest.json")
     expected = expected_manifest_sha256 or (root / "manifest.sha256").read_text().strip()
     if actual != expected:
@@ -440,11 +472,18 @@ def validate_service_bundle(
         if file.stat().st_size != evidence["bytes"] or digest_file(file) != evidence["sha256"]:
             raise ValueError(f"File checksum mismatch: {name}")
     identities: set[str] = set()
+    expected_areas: dict[str, dict[str, Any]] = {}
+    expected_services: dict[str, dict[str, Any]] = {}
+    if set(manifest["datasets"]) != set(SERVICES):
+        raise ValueError("Unexpected service datasets")
     for service, (source, contract) in SERVICES.items():
         dataset = manifest["datasets"][service]
         if dataset["sha256"] != source.expected_sha256 or dataset["licence_version"] is not None:
             raise ValueError("Source identity or licence metadata changed")
-        table = pq.read_table(root / f"{service}.parquet")
+        for key in ("dataset", "release", "source_url", "publisher", "distributor", "licence_name"):
+            if dataset.get(key) != getattr(source, key):
+                raise ValueError("Source metadata mismatch")
+        table = _read_table(root / f"{service}.parquet")
         geo = json.loads(table.schema.metadata[b"geo"])
         if CRS.from_json_dict(geo["columns"]["geometry"]["crs"]).to_epsg() != 27700:
             raise ValueError("GeoParquet source CRS changed")
@@ -452,6 +491,7 @@ def validate_service_bundle(
         if len(rows) != contract.expected_record_count:
             raise ValueError("Source count mismatch")
         invalid = set()
+        geometry_types: Counter[str] = Counter()
         layer = json.loads((root / f"{service}.geojson").read_bytes())
         if len(layer["features"]) != len(rows):
             raise ValueError("GeoJSON inventory mismatch")
@@ -460,9 +500,45 @@ def validate_service_bundle(
             if row["boundary_id"] != identity or identity in identities:
                 raise ValueError("Composite identity collision")
             identities.add(identity)
+            if (
+                row["dataset"] != source.dataset
+                or row["service"] != service
+                or row["snapshot_sha256"] != source.expected_sha256
+            ):
+                raise ValueError("Service/snapshot join identity mismatch")
+            if (
+                row["source_geometry_policy"] != SOURCE_GEOMETRY_POLICY
+                or row["presentation_policy"] != PRESENTATION_POLICY
+            ):
+                raise ValueError("Unapproved geometry policy")
+            expected_areas[identity] = {
+                key: value for key, value in row.items() if key != "geometry"
+            }
             if hashlib.sha256(row["geometry"]).hexdigest() != row["source_wkb_sha256"]:
                 raise ValueError("WKB round-trip mismatch")
             geometry = shapely.from_wkb(row["geometry"])
+            geometry_types[geometry.geom_type] += 1
+            source_fields = json.loads(row["source_fields_json"])
+            _validate_publisher_fields(row["source_id"], source_fields)
+            if (
+                source_fields["ID"] != row["source_id"]
+                or any(
+                    source_fields[key] != row[key]
+                    for key in (
+                        "COMPANY",
+                        "Acronym",
+                        "CoType",
+                        "AreaType",
+                        "AreaServed",
+                        "WARNINGS",
+                    )
+                )
+                or source_fields["Version"] != contract.expected_version
+                or row["licence_name"] != source.licence_name
+                or row["licence_version"] is not None
+                or row["source_validity"] != explain_validity(geometry)
+            ):
+                raise ValueError("Publisher fields or licence provenance mismatch")
             projected = shape(feature["geometry"])
             projected_hash = hashlib.sha256(
                 shapely.to_wkb(projected, byte_order=1, include_srid=False)
@@ -489,33 +565,87 @@ def validate_service_bundle(
                 or row["licence_statement"] != SOURCE_LICENCE_STATEMENT
             ):
                 raise ValueError("Geometry eligibility or licence mismatch")
+        if dict(geometry_types) != contract.expected_geometry_types:
+            raise ValueError("Geometry type counts changed")
         if invalid != contract.expected_invalid_ids:
             raise ValueError("Invalid geometry set changed")
         if {r["source_id"] for r in rows} != contract.expected_ids:
             raise ValueError("Source ID inventory changed")
-    areas = pq.read_table(root / "areas.parquet").to_pylist()
-    bridge = pq.read_table(root / "company-area-bridge.parquet").to_pylist()
-    company_rows = pq.read_table(root / "companies.parquet").to_pylist()
-    companies = {r["company_id"] for r in company_rows}
-    if len(companies) != len(company_rows):
-        raise ValueError("Duplicate company dimensions")
-    reviewed = read_crosswalk(root / "company-crosswalk.json")
-    area_by_id = {r["boundary_id"]: r for r in areas}
-    for row in bridge:
-        area = area_by_id.get(row["boundary_id"])
-        if area is None or area["company_id"] != row["company_id"]:
-            raise ValueError("Bridge company mismatch")
-        mapping_row = reviewed.get((area["dataset"], area["COMPANY"], area["Acronym"]))
-        if mapping_row is None or mapping_row["company_id"] != row["company_id"]:
-            raise ValueError("Missing reviewed company mapping")
+        expected_services[service] = {
+            "service": service,
+            "dataset": source.dataset,
+            "snapshot_sha256": source.expected_sha256,
+            "release": source.release,
+            "area_count": len(rows),
+            "attribution": dataset["attribution"],
+            "licence_name": source.licence_name,
+            "licence_version": None,
+        }
+    areas = _read_table(root / "areas.parquet").to_pylist()
+    area_by_id = {row["boundary_id"]: row for row in areas}
+    if len(areas) != len(expected_areas) or area_by_id != expected_areas:
+        raise ValueError("Area dimensions differ from source features or quarantine flags")
+    services = _read_table(root / "services.parquet").to_pylist()
     if (
-        len(areas) != len(identities)
-        or {r["boundary_id"] for r in areas} != identities
-        or len(bridge) != len(identities)
-        or {r["boundary_id"] for r in bridge} != identities
-        or any(r["company_id"] not in companies or not r["review_reference"] for r in bridge)
+        len(services) != len(expected_services)
+        or {row["service"]: row for row in services} != expected_services
     ):
-        raise ValueError("Missing company-to-area mappings")
+        raise ValueError("Service dimension join identity mismatch")
+    if digest_file(root / "company-crosswalk.json") != manifest["crosswalk_sha256"]:
+        raise ValueError("Company crosswalk fingerprint mismatch")
+    reviewed = read_crosswalk(root / "company-crosswalk.json")
+    expected_companies = {}
+    expected_bridge = {}
+    for identity, area in expected_areas.items():
+        mapping_row = reviewed.get((area["dataset"], area["COMPANY"], area["Acronym"]))
+        if (
+            mapping_row is None
+            or mapping_row["company_id"] != area["company_id"]
+            or mapping_row["company_name"] != area["company_name"]
+            or mapping_row["review_reference"] != area["mapping_review"]
+        ):
+            raise ValueError("Missing reviewed company mapping")
+        expected_companies[area["company_id"]] = {
+            "company_id": area["company_id"],
+            "company_name": area["company_name"],
+            "identity_scope": COMPANY_IDENTITY_SCOPE,
+        }
+        expected_bridge[identity] = {
+            "boundary_id": identity,
+            "company_id": area["company_id"],
+            "service": area["service"],
+            "snapshot_sha256": area["snapshot_sha256"],
+            "review_reference": area["mapping_review"],
+        }
+    company_rows = _read_table(root / "companies.parquet").to_pylist()
+    if (
+        len(company_rows) != len(expected_companies)
+        or {row["company_id"]: row for row in company_rows} != expected_companies
+    ):
+        raise ValueError("Company dimension mismatch")
+    bridge = _read_table(root / "company-area-bridge.parquet").to_pylist()
+    if (
+        len(bridge) != len(expected_bridge)
+        or {row["boundary_id"]: row for row in bridge} != expected_bridge
+    ):
+        raise ValueError("Company-to-area bridge join identity mismatch")
+    index = json.loads((root / "index.json").read_bytes())
+    expected_index = [
+        {**area, "geometry_file": f"areas/{area['service']}/{area['source_id']}.geojson"}
+        for area in areas
+    ]
+    if index != {"areas": expected_index, "services": services}:
+        raise ValueError("Browser index differs from verified dimensions")
+    results = manifest["validation_results"]
+    if (
+        results["feature_count"] != len(identities)
+        or results["bridge_count"] != len(bridge)
+        or results["source_invalid_count"] != sum(not area["source_valid"] for area in areas)
+    ):
+        raise ValueError("Validation result count mismatch")
+    report = json.loads((root / "validation-report.json").read_bytes())
+    if report != _validation_document(manifest):
+        raise ValueError("Validation report differs from manifest")
     return manifest
 
 

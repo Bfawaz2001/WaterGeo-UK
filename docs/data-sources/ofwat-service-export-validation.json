@@ -1,6 +1,6 @@
 {
   "product_version": "watergeo-ofwat-services-v1",
-  "manifest_sha256": "a14582d120eba029d6c3147c0a1a6e031d179a14165799eb737aaa13aca51458",
+  "manifest_sha256": "33ae9e8fc5748cedf4b853ca7c6b3d3e5d040cd0d76c4d2d327b3a01eff213a5",
   "crosswalk_sha256": "70f308def856274624d874fc88a5cfcb6857eb40ff8c081ab68d24aac8e21856",
   "runtime": {
     "geos": "3.13.1",
@@ -10,7 +10,7 @@
   "feature_count": 1889,
   "company_count": 25,
   "bridge_count": 1889,
-  "file_count": 1901,
+  "file_count": 1902,
   "services": {
     "water-supply": {
       "source_sha256": "5852ec4481af0ab27e43a2d0d142ca0b55b7a4415eedf68ebe2a20a21fe41f78",
